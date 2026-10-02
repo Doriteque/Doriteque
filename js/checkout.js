@@ -1,118 +1,65 @@
-// js/checkout.js
-import { onProductosChange, onConfigChange, Cart } from './db.js';
-
-let productos = [];
-let config = {};
-
-async function init() {
-    onProductosChange(data => {
-        productos = data;
-        renderResumen();
-    });
-
-    onConfigChange(data => {
-        config = data;
-        renderResumen();
-        // Llenar el select de métodos de pago dinámicamente si se desea, 
-        // pero por ahora usamos los hardcodeados en el HTML que coinciden.
-    });
-
-    // Si el carrito está vacío, no debería estar aquí
-    if (Cart.get().length === 0) {
-        window.location.href = 'index.html';
-    }
-}
-
-function renderResumen() {
-    const cartItems = Cart.get();
-    const container = document.getElementById('resumen-final');
-    
-    if (cartItems.length === 0 || productos.length === 0) return;
-
-    let html = '<h3 style="margin-bottom: 12px;">Tu pedido</h3>';
-    let totalUSD = 0;
-
-    cartItems.forEach(item => {
-        const producto = productos.find(p => p.id === item.id);
-        if (!producto) return;
-
-        const subtotal = producto.precio * item.cantidad;
-        totalUSD += subtotal;
-
-        html += `
-        <div class="resumen-item">
-            <span>${item.cantidad}x ${producto.nombre}</span>
-            <span>$${subtotal.toFixed(2)}</span>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Doriteque - Menú Digital</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-logo">
+            <img src="assets/logo.png" alt="Doriteque Logo" id="header-logo" onerror="this.style.display='none'">
+            <h1 id="header-nombre">Doriteque</h1>
         </div>
-        `;
-    });
+        <a href="carrito.html" class="cart-btn">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span class="cart-badge" id="cart-count">0</span>
+        </a>
+    </header>
 
-    const totalBs = totalUSD * config.tasaBs;
-    html += `
-    <div class="resumen-total">
-        <span>TOTAL:</span>
-        <div style="text-align: right;">
-            <div style="color: var(--rojo);">$${totalUSD.toFixed(2)}</div>
-            <div style="font-size: 0.85rem; color: #666;">Bs ${totalBs.toFixed(2)}</div>
+    <div class="info-bar" id="info-bar">
+        <p id="horario-text">Cargando horario...</p>
+    </div>
+
+    <!-- BUSCADOR -->
+    <div class="buscador-container">
+        <div class="buscador">
+            <i class="fa-solid fa-magnifying-glass buscador-icono"></i>
+            <input type="text" id="input-buscar" placeholder="Buscar producto..." oninput="window.buscarProductos(this.value)">
+            <button class="buscador-limpiar" onclick="limpiarBusqueda()" id="btn-limpiar" style="display: none;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
     </div>
-    `;
 
-    container.innerHTML = html;
-}
+    <nav class="categorias-tabs" id="categorias-tabs"></nav>
 
-// Manejar el envío del formulario
-document.getElementById('formulario-pedido').addEventListener('submit', (e) => {
-    e.preventDefault();
+    <main class="productos-grid" id="productos-grid">
+        <div class="loading">Cargando menú...</div>
+    </main>
 
-    const nombre = document.getElementById('nombre').value.trim();
-    const telefono = document.getElementById('telefono').value.trim();
-    const direccion = document.getElementById('direccion').value.trim();
-    const metodoPago = document.getElementById('metodo-pago').value;
-    const nota = document.getElementById('nota').value.trim();
+    <a href="carrito.html" class="cart-bar" id="cart-bar" style="display: none;">
+        <div class="cart-bar-count" id="cart-bar-count">0</div>
+        <span>Ver pedido</span>
+        <span class="cart-bar-total" id="cart-bar-total">$0.00</span>
+    </a>
 
-    const cartItems = Cart.get();
-    let totalUSD = 0;
-    let detallePedido = '';
+    <footer class="footer">
+        <div class="footer-redes">
+            <a href="#" id="link-instagram" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#" id="link-tiktok" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
+            <a href="#" id="link-whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+        </div>
+        <p id="footer-metodos">Métodos de pago: Cargando...</p>
+        <p style="margin-top: 8px; font-size: 0.75rem;">© 2026 Doriteque</p>
+    </footer>
 
-    cartItems.forEach(item => {
-        const producto = productos.find(p => p.id === item.id);
-        if (!producto) return;
-        const subtotal = producto.precio * item.cantidad;
-        totalUSD += subtotal;
-        detallePedido += `• ${item.cantidad}x ${producto.nombre} - $${subtotal.toFixed(2)}\n`;
-    });
-
-    const totalBs = (totalUSD * config.tasaBs).toFixed(2);
-
-    // Construir el mensaje de WhatsApp
-    let mensaje = `🍔 *NUEVO PEDIDO - DORITEQUE* 🍔\n\n`;
-    mensaje += `👤 *Cliente:* ${nombre}\n`;
-    mensaje += `📱 *Teléfono:* ${telefono}\n`;
-    mensaje += `📍 *Dirección:* ${direccion}\n`;
-    mensaje += `💳 *Pago:* ${metodoPago}\n`;
-    
-    if (nota) {
-        mensaje += `📝 *Nota:* ${nota}\n`;
-    }
-    
-    mensaje += `\n🛒 *DETALLE DEL PEDIDO:*\n${detallePedido}`;
-    mensaje += `---------------------------\n`;
-    mensaje += `💵 *TOTAL:* $${totalUSD.toFixed(2)} (Bs ${totalBs})\n\n`;
-    mensaje += `Quedo atento a la confirmación y datos para el pago. ¡Gracias!`;
-
-    // Codificar el mensaje para URL
-    const mensajeCodificado = encodeURIComponent(mensaje);
-    const urlWhatsApp = `https://wa.me/${config.whatsapp}?text=${mensajeCodificado}`;
-
-    // Abrir WhatsApp
-    window.open(urlWhatsApp, '_blank');
-
-    // Limpiar carrito y redirigir
-    Cart.clear();
-    setTimeout(() => {
-        window.location.href = 'index.html';
-    }, 1000);
-});
-
-init();
+    <script src="js/firebase.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+</html>

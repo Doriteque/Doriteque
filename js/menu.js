@@ -2,6 +2,7 @@ let config = {};
 let productos = [];
 let categorias = [];
 let categoriaActiva = 'todas';
+let busqueda = '';
 
 async function init() {
   await initDatabase();
@@ -14,11 +15,15 @@ async function init() {
   onCategoriasChange(data => {
     categorias = data;
     renderCategorias();
+    renderProductos();
+    setupScrollSpy();
   });
   
   onProductosChange(data => {
     productos = data;
     renderProductos();
+    setupScrollSpy();
+    actualizarBarraCarrito();
   });
   
   actualizarBarraCarrito();
@@ -48,42 +53,94 @@ function renderCategorias() {
       container.querySelectorAll('.categoria-tab').forEach(b => b.classList.remove('active'));
       e.target.classList.add('active');
       categoriaActiva = e.target.dataset.id;
-      renderProductos();
+      
+      if (categoriaActiva === 'todas') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        const seccion = document.getElementById('seccion-' + categoriaActiva);
+        if (seccion) {
+          const offset = 180;
+          const top = seccion.getBoundingClientRect().top + window.pageYOffset - offset;
+          window.scrollTo({ top: top, behavior: 'smooth' });
+        }
+      }
     });
   });
 }
 
 function renderProductos() {
   const container = document.getElementById('productos-grid');
-  const filtrados = categoriaActiva === 'todas' ?
-    productos.filter(p => p.disponible) :
-    productos.filter(p => p.categoriaId === categoriaActiva && p.disponible);
-  
-  if (filtrados.length === 0) {
-    container.innerHTML = '<p class="text-center" style="grid-column: 1/-1; padding: 40px;">No hay productos disponibles.</p>';
-    return;
-  }
+  const textoBusqueda = busqueda.toLowerCase().trim();
   
   let html = '';
-  filtrados.forEach(p => {
-    const precioBs = (p.precio * config.tasaBs).toFixed(2);
-    const imagen = p.imagen || 'https://via.placeholder.com/400x300/1a1a1a/C41E3A?text=Doriteque';
+  const categoriasAMostrar = categoriaActiva === 'todas' ?
+    categorias :
+    categorias.filter(c => c.id === categoriaActiva);
+  
+  categoriasAMostrar.forEach(cat => {
+    const productosCat = productos.filter(p =>
+      p.categoriaId === cat.id &&
+      p.disponible &&
+      (textoBusqueda === '' || p.nombre.toLowerCase().includes(textoBusqueda) || p.descripcion.toLowerCase().includes(textoBusqueda))
+    );
     
-    html += '<article class="producto-card">';
-    html += '<img src="' + imagen + '" alt="' + p.nombre + '" class="producto-img" loading="lazy">';
-    html += '<div class="producto-info">';
-    html += '<h3 class="producto-nombre">' + p.nombre + '</h3>';
-    html += '<p class="producto-desc">' + p.descripcion + '</p>';
-    html += '<div class="producto-precio">$' + p.precio.toFixed(2) + '</div>';
-    html += '<div class="producto-precio-bs">Bs ' + precioBs + '</div>';
-    html += '<button class="btn-agregar" onclick="agregarAlCarrito(\'' + p.id + '\')">';
-    html += '<i class="fa-solid fa-plus"></i> Agregar';
-    html += '</button>';
+    if (productosCat.length === 0) return;
+    
+    html += '<section class="seccion-categoria" id="seccion-' + cat.id + '">';
+    html += '<h2 class="titulo-seccion">' + cat.nombre + '</h2>';
+    html += '<div class="productos-grid-interno">';
+    
+    productosCat.forEach(p => {
+      const precioBs = (p.precio * config.tasaBs).toFixed(2);
+      const imagen = p.imagen || 'https://via.placeholder.com/400x300/1a1a1a/C41E3A?text=Doriteque';
+      
+      html += '<article class="producto-card">';
+      html += '<img src="' + imagen + '" alt="' + p.nombre + '" class="producto-img" loading="lazy">';
+      html += '<div class="producto-info">';
+      html += '<h3 class="producto-nombre">' + p.nombre + '</h3>';
+      html += '<p class="producto-desc">' + p.descripcion + '</p>';
+      html += '<div class="producto-precio">$' + p.precio.toFixed(2) + '</div>';
+      html += '<div class="producto-precio-bs">Bs ' + precioBs + '</div>';
+      html += '<button class="btn-agregar" onclick="agregarAlCarrito(\'' + p.id + '\')">';
+      html += '<i class="fa-solid fa-plus"></i> Agregar';
+      html += '</button>';
+      html += '</div>';
+      html += '</article>';
+    });
+    
     html += '</div>';
-    html += '</article>';
+    html += '</section>';
   });
   
+  if (html === '') {
+    html = '<p class="text-center" style="grid-column: 1/-1; padding: 40px; color: var(--gris-texto);">No hay productos disponibles.</p>';
+  }
+  
   container.innerHTML = html;
+}
+
+function setupScrollSpy() {
+  const secciones = document.querySelectorAll('.seccion-categoria');
+  if (secciones.length === 0) return;
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id.replace('seccion-', '');
+        categoriaActiva = id;
+        
+        document.querySelectorAll('.categoria-tab').forEach(tab => {
+          tab.classList.remove('active');
+          if (tab.dataset.id === id) tab.classList.add('active');
+        });
+      }
+    });
+  }, {
+    rootMargin: '-180px 0px -60% 0px',
+    threshold: 0
+  });
+  
+  secciones.forEach(seccion => observer.observe(seccion));
 }
 
 function actualizarBarraCarrito() {
@@ -111,13 +168,35 @@ function actualizarBarraCarrito() {
 function agregarAlCarrito(productoId) {
   Cart.add(productoId);
   const btn = event.target.closest('.btn-agregar');
-  const originalText = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-check"></i> Agregado';
-  btn.style.background = '#28a745';
-  setTimeout(() => {
-    btn.innerHTML = originalText;
-    btn.style.background = '';
-  }, 800);
+  if (btn) {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Agregado';
+    btn.style.background = '#28a745';
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+      btn.style.background = '';
+    }, 800);
+  }
 }
+
+function buscarProductos(texto) {
+  busqueda = texto;
+  renderProductos();
+  const btnLimpiar = document.getElementById('btn-limpiar');
+  if (btnLimpiar) btnLimpiar.style.display = texto.length > 0 ? 'flex' : 'none';
+}
+
+function limpiarBusqueda() {
+  busqueda = '';
+  const input = document.getElementById('input-buscar');
+  if (input) input.value = '';
+  renderProductos();
+  const btnLimpiar = document.getElementById('btn-limpiar');
+  if (btnLimpiar) btnLimpiar.style.display = 'none';
+}
+
+window.agregarAlCarrito = agregarAlCarrito;
+window.buscarProductos = buscarProductos;
+window.limpiarBusqueda = limpiarBusqueda;
 
 init();
