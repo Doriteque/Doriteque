@@ -3,6 +3,7 @@ let productos = [];
 let categorias = [];
 let categoriaActiva = 'todas';
 let busqueda = '';
+let productoSeleccionado = null;
 
 async function init() {
   await initDatabase();
@@ -32,7 +33,7 @@ async function init() {
 
 function renderConfig() {
   document.getElementById('header-nombre').textContent = config.nombre;
-  document.getElementById('horario-text').textContent = '🕒 ' + config.horario + ' |  Tasa: Bs ' + config.tasaBs;
+  document.getElementById('horario-text').textContent = ' ' + config.horario + ' |  Tasa: Bs ' + config.tasaBs;
   document.getElementById('link-instagram').href = 'https://instagram.com/' + config.instagram;
   document.getElementById('link-tiktok').href = 'https://tiktok.com/@' + config.tiktok;
   document.getElementById('link-whatsapp').href = 'https://wa.me/' + config.whatsapp;
@@ -54,12 +55,15 @@ function renderCategorias() {
       e.target.classList.add('active');
       categoriaActiva = e.target.dataset.id;
       
+      // Centrar la categoría activa
+      e.target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      
       if (categoriaActiva === 'todas') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         const seccion = document.getElementById('seccion-' + categoriaActiva);
         if (seccion) {
-          const offset = 180;
+          const offset = 200;
           const top = seccion.getBoundingClientRect().top + window.pageYOffset - offset;
           window.scrollTo({ top: top, behavior: 'smooth' });
         }
@@ -94,14 +98,14 @@ function renderProductos() {
       const precioBs = (p.precio * config.tasaBs).toFixed(2);
       const imagen = p.imagen || 'https://via.placeholder.com/400x300/1a1a1a/C41E3A?text=Doriteque';
       
-      html += '<article class="producto-card">';
+      html += '<article class="producto-card" onclick="abrirModal(\'' + p.id + '\')">';
       html += '<img src="' + imagen + '" alt="' + p.nombre + '" class="producto-img" loading="lazy">';
       html += '<div class="producto-info">';
       html += '<h3 class="producto-nombre">' + p.nombre + '</h3>';
       html += '<p class="producto-desc">' + p.descripcion + '</p>';
       html += '<div class="producto-precio">$' + p.precio.toFixed(2) + '</div>';
       html += '<div class="producto-precio-bs">Bs ' + precioBs + '</div>';
-      html += '<button class="btn-agregar" onclick="agregarAlCarrito(\'' + p.id + '\')">';
+      html += '<button class="btn-agregar" onclick="event.stopPropagation(); agregarAlCarrito(\'' + p.id + '\')">';
       html += '<i class="fa-solid fa-plus"></i> Agregar';
       html += '</button>';
       html += '</div>';
@@ -131,12 +135,15 @@ function setupScrollSpy() {
         
         document.querySelectorAll('.categoria-tab').forEach(tab => {
           tab.classList.remove('active');
-          if (tab.dataset.id === id) tab.classList.add('active');
+          if (tab.dataset.id === id) {
+            tab.classList.add('active');
+            tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          }
         });
       }
     });
   }, {
-    rootMargin: '-180px 0px -60% 0px',
+    rootMargin: '-200px 0px -60% 0px',
     threshold: 0
   });
   
@@ -179,6 +186,44 @@ function agregarAlCarrito(productoId) {
   }
 }
 
+function abrirModal(productoId) {
+  const producto = productos.find(p => p.id === productoId);
+  if (!producto) return;
+  
+  productoSeleccionado = producto;
+  
+  const imagen = producto.imagen || 'https://via.placeholder.com/400x300/1a1a1a/C41E3A?text=Doriteque';
+  const precioBs = (producto.precio * config.tasaBs).toFixed(2);
+  
+  document.getElementById('modal-img').src = imagen;
+  document.getElementById('modal-img').alt = producto.nombre;
+  document.getElementById('modal-nombre').textContent = producto.nombre;
+  document.getElementById('modal-precio-usd').textContent = '$' + producto.precio.toFixed(2);
+  document.getElementById('modal-precio-bs').textContent = 'Bs ' + precioBs;
+  document.getElementById('modal-desc').textContent = producto.descripcion;
+  
+  const btnAgregar = document.getElementById('modal-btn-agregar');
+  btnAgregar.onclick = () => {
+    Cart.add(producto.id);
+    btnAgregar.innerHTML = '<i class="fa-solid fa-check"></i> Agregado al pedido';
+    btnAgregar.style.background = '#28a745';
+    setTimeout(() => {
+      btnAgregar.innerHTML = '<i class="fa-solid fa-plus"></i> Agregar al pedido';
+      btnAgregar.style.background = '';
+      cerrarModal();
+    }, 1000);
+  };
+  
+  document.getElementById('modal-producto').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarModal() {
+  document.getElementById('modal-producto').style.display = 'none';
+  document.body.style.overflow = '';
+  productoSeleccionado = null;
+}
+
 function buscarProductos(texto) {
   busqueda = texto;
   renderProductos();
@@ -195,8 +240,21 @@ function limpiarBusqueda() {
   if (btnLimpiar) btnLimpiar.style.display = 'none';
 }
 
+// Cerrar modal al hacer click fuera
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('modal-producto');
+  if (e.target === modal) cerrarModal();
+});
+
+// Cerrar modal con tecla Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') cerrarModal();
+});
+
 window.agregarAlCarrito = agregarAlCarrito;
 window.buscarProductos = buscarProductos;
 window.limpiarBusqueda = limpiarBusqueda;
+window.abrirModal = abrirModal;
+window.cerrarModal = cerrarModal;
 
 init();

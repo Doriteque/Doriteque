@@ -6,6 +6,8 @@
     <title>Carrito - Doriteque</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <header class="header">
@@ -18,20 +20,18 @@
     </header>
 
     <main class="checkout-container">
-        <div id="carrito-vacio" class="text-center hidden" style="padding: 40px 0;">
-            <i class="fa-solid fa-cart-arrow-down" style="font-size: 3rem; color: #ccc; margin-bottom: 16px;"></i>
-            <h3>Tu carrito está vacío</h3>
-            <p style="color: #666; margin-bottom: 20px;">Agrega productos deliciosos desde el menú.</p>
+        <div id="carrito-vacio" class="text-center hidden" style="padding: 60px 20px;">
+            <i class="fa-solid fa-cart-arrow-down" style="font-size: 4rem; color: var(--rojo); margin-bottom: 20px;"></i>
+            <h3 style="color: var(--blanco); margin-bottom: 12px;">Tu carrito está vacío</h3>
+            <p style="color: var(--gris-texto); margin-bottom: 24px;">Agrega productos deliciosos desde el menú.</p>
             <a href="index.html" class="btn-secondary" style="text-decoration: none; display: inline-block;">Ir al menú</a>
         </div>
 
         <div id="carrito-lleno">
-            <h2>Resumen del pedido</h2>
-            <div id="lista-carrito" class="resumen-pedido">
-                <!-- Se inyecta con JS -->
-            </div>
+            <h2 class="titulo-seccion">Resumen del pedido</h2>
+            <div id="lista-carrito" class="resumen-pedido"></div>
 
-            <div class="resumen-pedido" style="margin-top: 20px;">
+            <div class="resumen-pedido total-box">
                 <div class="resumen-item">
                     <span>Subtotal:</span>
                     <span id="subtotal-usd">$0.00</span>
@@ -39,8 +39,8 @@
                 <div class="resumen-total">
                     <span>TOTAL A PAGAR:</span>
                     <div style="text-align: right;">
-                        <div id="total-usd" style="color: var(--rojo);">$0.00</div>
-                        <div id="total-bs" style="font-size: 0.9rem; color: #666;">Bs 0.00</div>
+                        <div id="total-usd" style="color: var(--rojo-brillante);">$0.00</div>
+                        <div id="total-bs" style="font-size: 0.9rem; color: var(--gris-texto);">Bs 0.00</div>
                     </div>
                 </div>
             </div>
@@ -51,6 +51,8 @@
         </div>
     </main>
 
-    <script type="module" src="js/cart.js"></script>
+    <script src="js/firebase.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/cart.js"></script>
 </body>
 </html>

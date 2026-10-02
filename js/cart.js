@@ -1,7 +1,5 @@
 let productos = [];
-let config = {};
-let productosCargados = false;
-let configCargado = false;
+let config = { tasaBs: 36.50 };
 
 async function init() {
     const cartItems = Cart.get();
@@ -14,14 +12,12 @@ async function init() {
     
     onProductosChange(data => {
         productos = data;
-        productosCargados = true;
-        if (configCargado) renderCarrito();
+        renderCarrito();
     });
     
     onConfigChange(data => {
         config = data;
-        configCargado = true;
-        if (productosCargados) renderCarrito();
+        renderCarrito();
     });
 }
 
@@ -50,20 +46,19 @@ function renderCarrito() {
         const subtotal = producto.precio * item.cantidad;
         totalUSD += subtotal;
         
-        html += '<div class="resumen-item" style="gap: 12px;">';
-        html += '<div style="flex: 1;">';
-        html += '<div style="font-weight: 700; color: var(--blanco);">' + producto.nombre + '</div>';
-        html += '<div style="font-size: 0.85rem; color: var(--gris-texto);">$' + producto.precio.toFixed(2) + ' c/u</div>';
+        html += '<div class="carrito-item">';
+        html += '<img src="' + (producto.imagen || 'https://via.placeholder.com/80/1a1a1a/C41E3A?text=D') + '" class="carrito-item-img" alt="' + producto.nombre + '">';
+        html += '<div class="carrito-item-info">';
+        html += '<div class="carrito-item-nombre">' + producto.nombre + '</div>';
+        html += '<div class="carrito-item-precio">$' + producto.precio.toFixed(2) + ' c/u</div>';
         html += '</div>';
-        html += '<div style="display: flex; align-items: center; gap: 8px;">';
+        html += '<div class="carrito-item-controles">';
         html += '<button class="btn-cantidad" onclick="cambiarCantidad(\'' + item.id + '\', ' + (item.cantidad - 1) + ')">-</button>';
-        html += '<span style="font-weight: 700; min-width: 20px; text-align: center; color: var(--blanco);">' + item.cantidad + '</span>';
+        html += '<span class="carrito-item-cantidad">' + item.cantidad + '</span>';
         html += '<button class="btn-cantidad" onclick="cambiarCantidad(\'' + item.id + '\', ' + (item.cantidad + 1) + ')">+</button>';
         html += '</div>';
-        html += '<div style="font-weight: 700; min-width: 60px; text-align: right; color: var(--rojo-brillante);">$' + subtotal.toFixed(2) + '</div>';
-        html += '<button class="btn-eliminar" onclick="eliminarProducto(\'' + item.id + '\')">';
-        html += '<i class="fa-solid fa-trash"></i>';
-        html += '</button>';
+        html += '<div class="carrito-item-subtotal">$' + subtotal.toFixed(2) + '</div>';
+        html += '<button class="btn-eliminar" onclick="eliminarProducto(\'' + item.id + '\')"><i class="fa-solid fa-trash"></i></button>';
         html += '</div>';
     });
     
@@ -77,12 +72,12 @@ function renderCarrito() {
 
 function cambiarCantidad(productoId, nuevaCantidad) {
     Cart.updateCantidad(productoId, nuevaCantidad);
-    setTimeout(() => location.reload(), 300);
+    setTimeout(() => location.reload(), 400);
 }
 
 function eliminarProducto(productoId) {
     Cart.remove(productoId);
-    setTimeout(() => location.reload(), 300);
+    setTimeout(() => location.reload(), 400);
 }
 
 window.cambiarCantidad = cambiarCantidad;

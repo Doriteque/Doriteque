@@ -6,7 +6,6 @@
     <title>Doriteque - Menú Digital</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase compat (sin módulos) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
@@ -22,8 +21,18 @@
         </a>
     </header>
 
-    <div class="info-bar" id="info-bar">
+    <div class="info-bar">
         <p id="horario-text">Cargando horario...</p>
+    </div>
+
+    <div class="buscador-container">
+        <div class="buscador">
+            <i class="fa-solid fa-magnifying-glass buscador-icono"></i>
+            <input type="text" id="input-buscar" placeholder="Buscar producto..." oninput="window.buscarProductos(this.value)">
+            <button class="buscador-limpiar" onclick="limpiarBusqueda()" id="btn-limpiar" style="display: none;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
     </div>
 
     <nav class="categorias-tabs" id="categorias-tabs"></nav>
@@ -38,6 +47,25 @@
         <span class="cart-bar-total" id="cart-bar-total">$0.00</span>
     </a>
 
+    <!-- MODAL DE PRODUCTO -->
+    <div class="modal-overlay" id="modal-producto" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-cerrar" onclick="cerrarModal()"><i class="fa-solid fa-xmark"></i></button>
+            <img src="" alt="" class="modal-img" id="modal-img">
+            <div class="modal-info">
+                <h2 class="modal-nombre" id="modal-nombre"></h2>
+                <div class="modal-precio">
+                    <span id="modal-precio-usd"></span>
+                    <span class="modal-precio-bs" id="modal-precio-bs"></span>
+                </div>
+                <p class="modal-desc" id="modal-desc"></p>
+                <button class="btn-agregar btn-agregar-modal" id="modal-btn-agregar">
+                    <i class="fa-solid fa-plus"></i> Agregar al pedido
+                </button>
+            </div>
+        </div>
+    </div>
+
     <footer class="footer">
         <div class="footer-redes">
             <a href="#" id="link-instagram" target="_blank"><i class="fa-brands fa-instagram"></i></a>
@@ -51,7 +79,5 @@
     <script src="js/firebase.js"></script>
     <script src="js/db.js"></script>
     <script src="js/menu.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
 </body>
 </html>
