@@ -1,0 +1,25 @@
+/* Botones de cantidad en el carrito */
+.btn-cantidad {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    background: var(--blanco);
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-cantidad:hover {
+    background: var(--negro);
+    color: var(--blanco);
+    border-color: var(--negro);
+}
+
+.btn-eliminar:hover {
+    transform: scale(1.1);
+}

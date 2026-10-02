@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Carrito - Doriteque</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-logo">
+            <a href="index.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 12px;">
+                <i class="fa-solid fa-arrow-left"></i>
+                <h1>Mi Pedido</h1>
+            </a>
+        </div>
+    </header>
+
+    <main class="checkout-container">
+        <div id="carrito-vacio" class="text-center hidden" style="padding: 40px 0;">
+            <i class="fa-solid fa-cart-arrow-down" style="font-size: 3rem; color: #ccc; margin-bottom: 16px;"></i>
+            <h3>Tu carrito está vacío</h3>
+            <p style="color: #666; margin-bottom: 20px;">Agrega productos deliciosos desde el menú.</p>
+            <a href="index.html" class="btn-secondary" style="text-decoration: none; display: inline-block;">Ir al menú</a>
+        </div>
+
+        <div id="carrito-lleno">
+            <h2>Resumen del pedido</h2>
+            <div id="lista-carrito" class="resumen-pedido">
+                <!-- Se inyecta con JS -->
+            </div>
+
+            <div class="resumen-pedido" style="margin-top: 20px;">
+                <div class="resumen-item">
+                    <span>Subtotal:</span>
+                    <span id="subtotal-usd">$0.00</span>
+                </div>
+                <div class="resumen-total">
+                    <span>TOTAL A PAGAR:</span>
+                    <div style="text-align: right;">
+                        <div id="total-usd" style="color: var(--rojo);">$0.00</div>
+                        <div id="total-bs" style="font-size: 0.9rem; color: #666;">Bs 0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="checkout.html" class="btn-enviar" style="text-decoration: none; display: block; text-align: center; margin-top: 20px;">
+                Continuar con los datos de entrega <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </main>
+
+    <script type="module" src="js/cart.js"></script>
+</body>
+</html>
