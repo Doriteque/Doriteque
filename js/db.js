@@ -1,11 +1,9 @@
 // js/db.js
-import { db, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, orderBy } from './firebase.js';
-
 const COL_PRODUCTOS = 'productos';
 const COL_CATEGORIAS = 'categorias';
 const COL_CONFIG = 'config';
 
-export const CONFIG_DEFAULT = {
+const CONFIG_DEFAULT = {
     nombre: "Doriteque",
     whatsapp: "584245566545",
     email: "Locodori59@gmail.com",
@@ -17,14 +15,14 @@ export const CONFIG_DEFAULT = {
     logo: "assets/logo.png"
 };
 
-export const CATEGORIAS_DEFAULT = [
+const CATEGORIAS_DEFAULT = [
     { id: "cat1", nombre: "Dorilocos", orden: 1 },
     { id: "cat2", nombre: "Hamburguesas", orden: 2 },
     { id: "cat3", nombre: "Bebidas", orden: 3 },
     { id: "cat4", nombre: "Adicionales", orden: 4 }
 ];
 
-export const PRODUCTOS_DEFAULT = [
+const PRODUCTOS_DEFAULT = [
     { id: "p1", nombre: "RUFFLES GRANDE", descripcion: "Carne, pollo, chorizo, maiz, queso, lechuga, pico de gallo, 5 salsas", precio: 14.00, categoriaId: "cat1", imagen: "", disponible: true },
     { id: "p2", nombre: "SUPER DORILOCO", descripcion: "Doriloco grande: carne, pollo, chorizo, lechuga, pico de gallo, queso, aguacate, maíz, todas las salsas", precio: 13.00, categoriaId: "cat1", imagen: "", disponible: true },
     { id: "p3", nombre: "DORILOCO PEQUEÑO NORMAL", descripcion: "Carne o pollo, pico de gallo, lechuga, maiz, queso, salsas", precio: 5.00, categoriaId: "cat1", imagen: "", disponible: true },
@@ -42,48 +40,45 @@ export const PRODUCTOS_DEFAULT = [
     { id: "p15", nombre: "DORITO", descripcion: "1 bolsa de Doritos", precio: 1.40, categoriaId: "cat4", imagen: "", disponible: true }
 ];
 
-// Inicializar datos si está vacío
-export async function initDatabase() {
-    const configRef = doc(db, COL_CONFIG, 'main');
-    const configSnap = await getDoc(configRef);
+async function initDatabase() {
+    const configRef = db.collection(COL_CONFIG).doc('main');
+    const configSnap = await configRef.get();
     
-    if (!configSnap.exists()) {
-        await setDoc(configRef, CONFIG_DEFAULT);
-        const catRef = collection(db, COL_CATEGORIAS);
-        for (const cat of CATEGORIAS_DEFAULT) await setDoc(doc(catRef, cat.id), cat);
-        
-        const prodRef = collection(db, COL_PRODUCTOS);
-        for (const prod of PRODUCTOS_DEFAULT) await setDoc(doc(prodRef, prod.id), prod);
+    if (!configSnap.exists) {
+        await configRef.set(CONFIG_DEFAULT);
+        const catRef = db.collection(COL_CATEGORIAS);
+        for (const cat of CATEGORIAS_DEFAULT) {
+            await catRef.doc(cat.id).set(cat);
+        }
+        const prodRef = db.collection(COL_PRODUCTOS);
+        for (const prod of PRODUCTOS_DEFAULT) {
+            await prodRef.doc(prod.id).set(prod);
+        }
         console.log("BD Inicializada");
     }
 }
 
-// Escuchar cambios en tiempo real
-export function onProductosChange(callback) {
-    const q = query(collection(db, COL_PRODUCTOS), orderBy('nombre', 'asc'));
-    return onSnapshot(q, (snapshot) => {
+function onProductosChange(callback) {
+    return db.collection(COL_PRODUCTOS).orderBy('nombre', 'asc').onSnapshot((snapshot) => {
         const productos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         callback(productos);
     });
 }
 
-export function onCategoriasChange(callback) {
-    const q = query(collection(db, COL_CATEGORIAS), orderBy('orden', 'asc'));
-    return onSnapshot(q, (snapshot) => {
+function onCategoriasChange(callback) {
+    return db.collection(COL_CATEGORIAS).orderBy('orden', 'asc').onSnapshot((snapshot) => {
         const categorias = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         callback(categorias);
     });
 }
 
-export function onConfigChange(callback) {
-    const docRef = doc(db, COL_CONFIG, 'main');
-    return onSnapshot(docRef, (doc) => {
-        if (doc.exists()) callback(doc.data());
+function onConfigChange(callback) {
+    return db.collection(COL_CONFIG).doc('main').onSnapshot((doc) => {
+        if (doc.exists) callback(doc.data());
     });
 }
 
-// Carrito (LocalStorage)
-export const Cart = {
+const Cart = {
     get: () => JSON.parse(localStorage.getItem('doriteque_cart') || '[]'),
     add: (productoId) => {
         const cart = Cart.get();
