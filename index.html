@@ -6,30 +6,28 @@
     <title>Doriteque - Menú Digital</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <header class="header">
         <div class="header-logo">
-            <img src="assets/logo.png" alt="Doriteque Logo" id="header-logo" onerror="this.style.display='none'">
+            <img src="assets/logo.png" alt="Logo" id="header-logo" onerror="this.style.display='none'">
             <h1 id="header-nombre">Doriteque</h1>
         </div>
-        <a href="carrito.html" class="cart-btn">
+        <button class="cart-btn" onclick="app.toggleCart()">
             <i class="fa-solid fa-cart-shopping"></i>
             <span class="cart-badge" id="cart-count">0</span>
-        </a>
+        </button>
     </header>
 
     <div class="info-bar">
-        <p id="horario-text">Cargando horario...</p>
+        <p id="horario-text">Cargando...</p>
     </div>
 
     <div class="buscador-container">
         <div class="buscador">
             <i class="fa-solid fa-magnifying-glass buscador-icono"></i>
-            <input type="text" id="input-buscar" placeholder="Buscar producto..." oninput="window.buscarProductos(this.value)">
-            <button class="buscador-limpiar" onclick="limpiarBusqueda()" id="btn-limpiar" style="display: none;">
+            <input type="text" id="input-buscar" placeholder="Buscar producto..." autocomplete="off">
+            <button class="buscador-limpiar" id="btn-limpiar" style="display: none;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -41,29 +39,73 @@
         <div class="loading">Cargando menú...</div>
     </main>
 
-    <a href="carrito.html" class="cart-bar" id="cart-bar" style="display: none;">
-        <div class="cart-bar-count" id="cart-bar-count">0</div>
-        <span>Ver pedido</span>
-        <span class="cart-bar-total" id="cart-bar-total">$0.00</span>
-    </a>
-
-    <!-- MODAL DE PRODUCTO -->
-    <div class="modal-overlay" id="modal-producto" style="display: none;">
-        <div class="modal-content">
-            <button class="modal-cerrar" onclick="cerrarModal()"><i class="fa-solid fa-xmark"></i></button>
-            <img src="" alt="" class="modal-img" id="modal-img">
-            <div class="modal-info">
-                <h2 class="modal-nombre" id="modal-nombre"></h2>
-                <div class="modal-precio">
-                    <span id="modal-precio-usd"></span>
-                    <span class="modal-precio-bs" id="modal-precio-bs"></span>
+    <!-- MODAL DE PRODUCTO (detalles) -->
+    <div class="product-modal-overlay" id="product-modal" style="display: none;">
+        <div class="product-modal-content">
+            <button class="product-modal-close" onclick="app.closeProductModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <img src="" alt="" class="product-modal-img" id="modal-img">
+            <div class="product-modal-info">
+                <h2 class="product-modal-title" id="modal-title"></h2>
+                <div class="product-modal-price">
+                    <span class="price-usd" id="modal-price-usd"></span>
+                    <span class="price-bs" id="modal-price-bs"></span>
                 </div>
-                <p class="modal-desc" id="modal-desc"></p>
-                <button class="btn-agregar btn-agregar-modal" id="modal-btn-agregar">
-                    <i class="fa-solid fa-plus"></i> Agregar al pedido
+                <p class="product-modal-desc" id="modal-desc"></p>
+                <button class="btn-add-to-cart" onclick="app.addToCart(app.productoSeleccionado.id)">
+                    <i class="fa-solid fa-cart-plus"></i> Agregar al pedido
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- MODAL DE PERSONALIZACIÓN (modificadores) -->
+    <div id="customization-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content customization-modal-content">
+            <div class="modal-header">
+                <h3 id="customization-title">Personalizar</h3>
+                <button class="modal-close" onclick="app.closeCustomizationModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="customization-content"></div>
+            <div class="modal-footer customization-footer">
+                <div class="customization-total">
+                    <span>Extras:</span>
+                    <span id="customization-total-extra">$0.00</span>
+                </div>
+                <button class="btn-secondary" onclick="app.closeCustomizationModal()">Cancelar</button>
+                <button class="btn-primary" onclick="app.confirmCustomization()">Agregar al pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DEL CARRITO -->
+    <div class="cart-modal-overlay" id="cart-modal" style="display: none;">
+        <div class="cart-modal-content">
+            <div class="cart-modal-header">
+                <h2>Tu Pedido</h2>
+                <button class="cart-modal-close" onclick="app.toggleCart()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="cart-items-container" class="cart-items-container"></div>
+            <div class="cart-modal-footer">
+                <div class="cart-total">
+                    <span>Subtotal:</span>
+                    <span id="cart-total-usd">$0.00</span>
+                </div>
+                <div class="cart-total-bs" id="cart-total-bs">Bs 0.00</div>
+                <button class="btn-whatsapp" onclick="app.checkout()">
+                    <i class="fa-solid fa-arrow-right"></i> Continuar con los datos de entrega
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cart-bar-floating" id="cart-bar-floating" onclick="app.toggleCart()">
+        <div class="cart-bar-count" id="cart-bar-count">0</div>
+        <span>Ver pedido</span>
+        <span class="cart-bar-total" id="cart-bar-total">$0.00</span>
     </div>
 
     <footer class="footer">
@@ -73,11 +115,11 @@
             <a href="#" id="link-whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
         </div>
         <p id="footer-metodos">Métodos de pago: Cargando...</p>
-        <p style="margin-top: 8px; font-size: 0.75rem;">© 2026 Doriteque</p>
+        <p style="margin-top: 8px; font-size: 0.75rem; opacity: 0.6;">© 2026 Doriteque</p>
     </footer>
 
-    <script src="js/firebase.js"></script>
-    <script src="js/db.js"></script>
-    <script src="js/menu.js"></script>
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/db.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>

@@ -6,59 +6,93 @@
     <title>Finalizar Pedido - Doriteque</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/checkout.css">
 </head>
 <body>
-    <header class="header">
-        <div class="header-logo">
-            <a href="carrito.html" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 12px;">
-                <i class="fa-solid fa-arrow-left"></i>
-                <h1>Datos de entrega</h1>
-            </a>
-        </div>
+    <header class="checkout-header">
+        <button class="btn-back" onclick="window.history.back()">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1>Finalizar Pedido</h1>
+        <div style="width: 40px;"></div>
     </header>
 
     <main class="checkout-container">
-        <div id="resumen-final" class="resumen-pedido">
-            <!-- Se inyecta con JS -->
-        </div>
+        <!-- TU PEDIDO -->
+        <section class="checkout-card">
+            <h2 class="card-title">Tu pedido</h2>
+            <div class="edit-cart-link" onclick="window.history.back()">
+                <i class="fa-solid fa-bars"></i> Editar carrito (<span id="edit-cart-count">0</span>)
+            </div>
+            <div id="checkout-items" class="checkout-items"></div>
+        </section>
 
-        <form id="formulario-pedido">
+        <!-- MÉTODO DE PAGO -->
+        <section class="checkout-card">
+            <h2 class="card-title">Método de pago</h2>
+            <div id="payment-methods" class="payment-methods"></div>
+        </section>
+
+        <!-- TOTALES -->
+        <section class="checkout-card totals-card">
+            <div class="total-row">
+                <span>Subtotal</span>
+                <span id="checkout-subtotal">USD$ 0.00</span>
+            </div>
+            <div class="total-row total-final">
+                <span>Total</span>
+                <span id="checkout-total-usd">USD$ 0.00</span>
+            </div>
+        </section>
+
+        <!-- COMPLETA TUS DATOS -->
+        <section class="checkout-card">
+            <h2 class="card-title">Completa tus datos</h2>
+            
             <div class="form-group">
                 <label>Nombre completo <span class="required">*</span></label>
-                <input type="text" id="nombre" required placeholder="Ej: Juan Pérez">
+                <input type="text" id="client-name" placeholder="Escribe tu nombre completo">
+                <small class="form-hint">Escribe tu nombre completo</small>
             </div>
 
             <div class="form-group">
-                <label>Número de teléfono <span class="required">*</span></label>
-                <input type="tel" id="telefono" required placeholder="Ej: 0412-1234567">
+                <label>Nro. de WhatsApp <span class="required">*</span></label>
+                <div class="phone-input-wrapper">
+                    <div class="country-flag">
+                        <span class="flag-emoji">🇻🇪</span>
+                        <select id="client-country">
+                            <option value="58">+58</option>
+                            <option value="57">+57</option>
+                            <option value="51">+51</option>
+                            <option value="1">+1</option>
+                        </select>
+                    </div>
+                    <input type="tel" id="client-phone" placeholder="Escribe tu número">
+                </div>
+                <small class="form-hint">Escribe tu número de WhatsApp o Teléfono</small>
             </div>
 
             <div class="form-group">
-                <label>Dirección de entrega <span class="required">*</span></label>
-                <textarea id="direccion" required placeholder="Urbanización, calle, número de casa, punto de referencia..."></textarea>
+                <label>Dirección <span class="required">*</span></label>
+                <textarea id="client-address" rows="3" placeholder="Escribe tu dirección (Calle o Avenida y luego referencia)"></textarea>
             </div>
 
             <div class="form-group">
-                <label>Método de pago <span class="required">*</span></label>
-                <select id="metodo-pago" required>
-                    <option value="">Selecciona una opción</option>
-                    <option value="Pago Móvil">Pago Móvil</option>
-                    <option value="Efectivo Bs">Efectivo Bs</option>
-                    <option value="Efectivo Divisa">Efectivo Divisa ($)</option>
-                </select>
+                <label>Alguna observación adicional (Ejemplo: Alergias) <span class="required">*</span></label>
+                <textarea id="client-note" rows="2" placeholder="Ej: Sin cebolla, salsa aparte..."></textarea>
             </div>
+        </section>
 
-            <div class="form-group">
-                <label>Nota (Opcional)</label>
-                <textarea id="nota" placeholder="Ej: Sin cebolla en la hamburguesa, salsa de ajo aparte..."></textarea>
-            </div>
+        <!-- BOTÓN ENVIAR -->
+        <button class="btn-send-order" onclick="checkout.sendOrder()">
+            Enviar datos
+        </button>
 
-            <button type="submit" class="btn-enviar">
-                <i class="fa-brands fa-whatsapp"></i> Enviar pedido por WhatsApp
-            </button>
-        </form>
+        <p class="checkout-disclaimer">
+            <i class="fa-brands fa-whatsapp"></i> Se requerirá de WhatsApp móvil o web para enviar el mensaje
+        </p>
     </main>
 
-    <script type="module" src="js/checkout.js"></script>
+    <script src="js/checkout.js"></script>
 </body>
 </html>

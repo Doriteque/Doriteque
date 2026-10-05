@@ -1,65 +1,167 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Doriteque - Menú Digital</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-</head>
-<body>
-    <header class="header">
-        <div class="header-logo">
-            <img src="assets/logo.png" alt="Doriteque Logo" id="header-logo" onerror="this.style.display='none'">
-            <h1 id="header-nombre">Doriteque</h1>
-        </div>
-        <a href="carrito.html" class="cart-btn">
-            <i class="fa-solid fa-cart-shopping"></i>
-            <span class="cart-badge" id="cart-count">0</span>
-        </a>
-    </header>
+const checkout = {
+  config: {},
+  menu: { productos: [], modificadores: [] },
+  cart: [],
+  selectedPayment: '',
+  
+  async init() {
+    try {
+      const [configRes, menuRes] = await Promise.all([
+        fetch('config.json?t=' + Date.now()),
+        fetch('menu.json?t=' + Date.now())
+      ]);
+      this.config = await configRes.json();
+      this.menu = await menuRes.json();
+      
+      if (!this.menu.modificadores) this.menu.modificadores = [];
+      
+      this.cart = JSON.parse(localStorage.getItem('doriteque_cart')) || [];
+      
+      if (this.cart.length === 0) {
+        alert('Tu carrito está vacío.');
+        window.location.href = 'index.html';
+        return;
+      }
+      
+      this.renderItems();
+      this.renderPaymentMethods();
+    } catch (error) {
+      console.error(error);
+      alert('Error al cargar los datos.');
+    }
+  },
+  
+  renderItems() {
+    const container = document.getElementById('checkout-items');
+    let html = '';
+    let totalUSD = 0;
+    let totalItems = 0;
+    
+    this.cart.forEach(item => {
+      const prod = this.menu.productos.find(p => p.id === item.id);
+      if (!prod) return;
+      
+      let precioUnitario = prod.precio;
+      let opcionesTexto = '';
+      
+      if (item.opciones) {
+        Object.keys(item.opciones).forEach(modNombre => {
+          const opciones = item.opciones[modNombre];
+          opciones.forEach(opNombre => {
+            const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
+            if (mod) {
+              const op = mod.opciones.find(o => o.nombre === opNombre);
+              if (op) precioUnitario += op.precio;
+            }
+          });
+          opcionesTexto += '<div class="checkout-item-opciones">' + modNombre + ': ' + opciones.join(', ') + '</div>';
+        });
+      }
+      
+      const subtotal = precioUnitario * item.qty;
+      totalUSD += subtotal;
+      totalItems += item.qty;
+      
+      html += '<div class="checkout-item">';
+      html += '<div class="checkout-item-info">';
+      html += '<div class="checkout-item-name">' + prod.nombre + '</div>';
+      if (opcionesTexto) html += opcionesTexto;
+      html += '<div class="checkout-item-qty">' + item.qty + 'x $' + precioUnitario.toFixed(2) + '</div>';
+      html += '</div>';
+      html += '<div class="checkout-item-price">USD$ ' + subtotal.toFixed(2) + '</div>';
+      html += '</div>';
+    });
+    
+    container.innerHTML = html;
+    document.getElementById('edit-cart-count').textContent = totalItems;
+    document.getElementById('checkout-subtotal').textContent = 'USD$ ' + totalUSD.toFixed(2);
+    document.getElementById('checkout-total-usd').textContent = 'USD$ ' + totalUSD.toFixed(2);
+  },
+  
+  renderPaymentMethods() {
+    const container = document.getElementById('payment-methods');
+    let html = '';
+    
+    this.config.metodosPago.forEach((method, index) => {
+      html += '<div class="payment-option" onclick="checkout.selectPayment(\'' + method + '\', this)">';
+      html += '<input type="radio" name="payment" value="' + method + '" id="payment-' + index + '">';
+      html += '<label for="payment-' + index + '">' + method + '</label>';
+      html += '</div>';
+    });
+    
+    container.innerHTML = html;
+  },
+  
+  selectPayment(method, element) {
+    this.selectedPayment = method;
+    document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+    element.classList.add('selected');
+    element.querySelector('input').checked = true;
+  },
+  
+  sendOrder() {
+    const name = document.getElementById('client-name').value.trim();
+    const country = document.getElementById('client-country').value;
+    const phone = document.getElementById('client-phone').value.trim();
+    const address = document.getElementById('client-address').value.trim();
+    const note = document.getElementById('client-note').value.trim();
+    
+    if (!name) { alert('Ingresa tu nombre completo.'); return; }
+    if (!phone) { alert('Ingresa tu número de WhatsApp.'); return; }
+    if (!address) { alert('Ingresa tu dirección de entrega.'); return; }
+    if (!this.selectedPayment) { alert('Selecciona un método de pago.'); return; }
+    
+    let totalUSD = 0;
+    let detalle = '';
+    
+    this.cart.forEach(item => {
+      const prod = this.menu.productos.find(p => p.id === item.id);
+      if (!prod) return;
+      
+      let precioUnitario = prod.precio;
+      let opcionesTexto = '';
+      
+      if (item.opciones) {
+        Object.keys(item.opciones).forEach(modNombre => {
+          const opciones = item.opciones[modNombre];
+          opciones.forEach(opNombre => {
+            const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
+            if (mod) {
+              const op = mod.opciones.find(o => o.nombre === opNombre);
+              if (op) precioUnitario += op.precio;
+            }
+          });
+          opcionesTexto += ' (' + modNombre + ': ' + opciones.join(', ') + ')';
+        });
+      }
+      
+      const sub = precioUnitario * item.qty;
+      totalUSD += sub;
+      detalle += '• ' + item.qty + 'x ' + prod.nombre + opcionesTexto + ' - $' + sub.toFixed(2) + '\n';
+    });
+    
+    const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
+    const fullPhone = country + phone;
+    
+    let mensaje = '🍔 *NUEVO PEDIDO - ' + this.config.nombre.toUpperCase() + '* 🍔\n\n';
+    mensaje += '👤 *Cliente:* ' + name + '\n';
+    mensaje += '📱 *WhatsApp:* +' + fullPhone + '\n';
+    mensaje += '📍 *Dirección:* ' + address + '\n';
+    mensaje += '💳 *Pago:* ' + this.selectedPayment + '\n';
+    if (note) mensaje += '📝 *Nota:* ' + note + '\n';
+    mensaje += '\n🛒 *DETALLE DEL PEDIDO:*\n' + detalle;
+    mensaje += '---------------------------\n';
+    mensaje += '💵 *TOTAL:* $' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
+    mensaje += 'Quedo atento a la confirmación. ¡Gracias!';
+    
+    const url = 'https://wa.me/' + this.config.whatsapp + '?text=' + encodeURIComponent(mensaje);
+    window.open(url, '_blank');
+    
+    localStorage.removeItem('doriteque_cart');
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 1000);
+  }
+};
 
-    <div class="info-bar" id="info-bar">
-        <p id="horario-text">Cargando horario...</p>
-    </div>
-
-    <!-- BUSCADOR -->
-    <div class="buscador-container">
-        <div class="buscador">
-            <i class="fa-solid fa-magnifying-glass buscador-icono"></i>
-            <input type="text" id="input-buscar" placeholder="Buscar producto..." oninput="window.buscarProductos(this.value)">
-            <button class="buscador-limpiar" onclick="limpiarBusqueda()" id="btn-limpiar" style="display: none;">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    </div>
-
-    <nav class="categorias-tabs" id="categorias-tabs"></nav>
-
-    <main class="productos-grid" id="productos-grid">
-        <div class="loading">Cargando menú...</div>
-    </main>
-
-    <a href="carrito.html" class="cart-bar" id="cart-bar" style="display: none;">
-        <div class="cart-bar-count" id="cart-bar-count">0</div>
-        <span>Ver pedido</span>
-        <span class="cart-bar-total" id="cart-bar-total">$0.00</span>
-    </a>
-
-    <footer class="footer">
-        <div class="footer-redes">
-            <a href="#" id="link-instagram" target="_blank"><i class="fa-brands fa-instagram"></i></a>
-            <a href="#" id="link-tiktok" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
-            <a href="#" id="link-whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
-        </div>
-        <p id="footer-metodos">Métodos de pago: Cargando...</p>
-        <p style="margin-top: 8px; font-size: 0.75rem;">© 2026 Doriteque</p>
-    </footer>
-
-    <script src="js/firebase.js"></script>
-    <script src="js/db.js"></script>
-    <script src="js/menu.js"></script>
-</body>
-</html>
+document.addEventListener('DOMContentLoaded', () => checkout.init());

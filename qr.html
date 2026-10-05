@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador QR - Doriteque</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/qr.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <header class="qr-header">
+        <button class="btn-back" onclick="window.location.href='index.html'">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <h1><i class="fa-solid fa-qrcode"></i> Generador QR</h1>
+        <div style="width: 40px;"></div>
+    </header>
+
+    <main class="qr-container">
+        <section class="qr-config">
+            <h2 class="section-title">
+                <i class="fa-solid fa-palette"></i> Personaliza tu QR
+            </h2>
+            
+            <div class="form-group">
+                <label>URL del menú (a donde lleva el QR)</label>
+                <input type="text" id="qr-url" placeholder="https://doriteque.github.io">
+                <small class="form-hint">La dirección web de tu menú digital</small>
+            </div>
+
+            <div class="form-group">
+                <label>Texto debajo del QR</label>
+                <input type="text" id="qr-text" placeholder="¡Escanea y pide ahora!" value="¡Escanea y pide ahora!">
+            </div>
+
+            <div class="form-group">
+                <label>Color principal</label>
+                <div class="color-options">
+                    <div class="color-option selected" data-color="#C41E3A" style="background: #C41E3A;" onclick="selectColor(this)"></div>
+                    <div class="color-option" data-color="#FF1744" style="background: #FF1744;" onclick="selectColor(this)"></div>
+                    <div class="color-option" data-color="#000000" style="background: #000000; border: 2px solid #333;" onclick="selectColor(this)"></div>
+                    <div class="color-option" data-color="#FF6B00" style="background: #FF6B00;" onclick="selectColor(this)"></div>
+                    <div class="color-option" data-color="#FFD700" style="background: #FFD700;" onclick="selectColor(this)"></div>
+                    <div class="color-option" data-color="#00C853" style="background: #00C853;" onclick="selectColor(this)"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Estilo del QR</label>
+                <div class="style-options">
+                    <div class="style-option selected" data-style="classic" onclick="selectStyle(this)">
+                        <i class="fa-solid fa-square"></i> Clásico
+                    </div>
+                    <div class="style-option" data-style="rounded" onclick="selectStyle(this)">
+                        <i class="fa-solid fa-circle"></i> Redondeado
+                    </div>
+                    <div class="style-option" data-style="dots" onclick="selectStyle(this)">
+                        <i class="fa-solid fa-circle-dot"></i> Puntos
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-logo" checked onchange="generateQR()">
+                    Mostrar logo de Doriteque en el centro
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-frame" checked onchange="generateQR()">
+                    Marco decorativo
+                </label>
+            </div>
+        </section>
+
+        <section class="qr-preview-section">
+            <h2 class="section-title">
+                <i class="fa-solid fa-eye"></i> Vista previa
+            </h2>
+            
+            <div id="qr-card" class="qr-card">
+                <div class="qr-card-inner">
+                    <div class="qr-card-header">
+                        <img src="assets/logo.png" alt="Doriteque" class="qr-logo-top" onerror="this.style.display='none'">
+                        <h3>DORITEQUE</h3>
+                        <p class="qr-tagline">Menú Digital</p>
+                    </div>
+                    
+                    <div class="qr-code-container">
+                        <div id="qrcode"></div>
+                    </div>
+                    
+                    <div class="qr-card-footer">
+                        <p class="qr-text-display" id="qr-text-display">¡ESCANEAA Y PIDE AHORA!</p>
+                        <div class="qr-social">
+                            <i class="fa-brands fa-instagram"></i>
+                            <i class="fa-brands fa-whatsapp"></i>
+                            <i class="fa-brands fa-tiktok"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="qr-frame-border" id="qr-frame-border"></div>
+            </div>
+
+            <button class="btn-download" onclick="downloadQR()">
+                <i class="fa-solid fa-download"></i> Descargar QR (PNG)
+            </button>
+
+            <p class="qr-tip">
+                <i class="fa-solid fa-lightbulb"></i> Imprime este QR y pégalo en mesas, mostrador o tarjetas.
+            </p>
+        </section>
+    </main>
+
+    <script src="js/qr.js"></script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+/* CHECKOUT - Estilo Sakura adaptado a Doriteque */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    min-height: 100vh;
+}
+
+/* HEADER */
+.checkout-header {
+    background: #1a1a1a;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid #C41E3A;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.checkout-header h1 {
+    color: #FF1744;
+    font-size: 1.3rem;
+    font-weight: 900;
+}
+
+.btn-back {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 8px;
+}
+
+/* CONTAINER */
+.checkout-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px 16px;
+    padding-bottom: 100px;
+}
+
+/* CARDS */
+.checkout-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+}
+
+.edit-cart-link {
+    color: #C41E3A;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.edit-cart-link:hover {
+    text-decoration: underline;
+}
+
+/* ITEMS DEL PEDIDO */
+.checkout-items {
+    margin-top: 8px;
+}
+
+.checkout-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px dashed #ddd;
+}
+
+.checkout-item:last-child {
+    border-bottom: none;
+}
+
+.checkout-item-qty {
+    color: #666;
+    font-size: 0.95rem;
+    flex: 1;
+}
+
+.checkout-item-name {
+    color: #1a1a1a;
+    font-weight: 600;
+    font-size: 0.95rem;
+    flex: 2;
+}
+
+.checkout-item-price {
+    color: #1a1a1a;
+    font-weight: 800;
+    font-size: 1rem;
+    min-width: 80px;
+    text-align: right;
+}
+
+/* TOTALES */
+.totals-card {
+    border-top: 3px solid #C41E3A;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    font-size: 1rem;
+    color: #1a1a1a;
+}
+
+.total-final {
+    font-size: 1.3rem;
+    font-weight: 900;
+    border-top: 1px solid #ddd;
+    margin-top: 8px;
+    padding-top: 16px;
+}
+
+/* MÉTODOS DE PAGO */
+.payment-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.payment-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.payment-option:hover {
+    border-color: #C41E3A;
+}
+
+.payment-option.selected {
+    border-color: #C41E3A;
+    background: rgba(196, 30, 58, 0.05);
+}
+
+.payment-option input[type="radio"] {
+    width: 22px;
+    height: 22px;
+    accent-color: #C41E3A;
+    cursor: pointer;
+}
+
+.payment-option label {
+    flex: 1;
+    color: #1a1a1a;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 0;
+}
+
+/* FORMULARIO */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: #1a1a1a;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+}
+
+.required {
+    color: #C41E3A;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 14px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    color: #1a1a1a;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #C41E3A;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-hint {
+    display: block;
+    color: #999;
+    font-size: 0.8rem;
+    margin-top: 4px;
+}
+
+/* INPUT DE TELÉFONO */
+.phone-input-wrapper {
+    display: flex;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.phone-input-wrapper:focus-within {
+    border-color: #C41E3A;
+}
+
+.country-flag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    background: #f5f5f5;
+    border-right: 2px solid #ddd;
+}
+
+.flag-emoji {
+    font-size: 1.3rem;
+}
+
+.country-flag select {
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    cursor: pointer;
+    outline: none;
+}
+
+.phone-input-wrapper input {
+    flex: 1;
+    border: none;
+    border-radius: 0;
+}
+
+.phone-input-wrapper input:focus {
+    border: none;
+}
+
+/* BOTÓN ENVIAR */
+.btn-send-order {
+    width: 100%;
+    padding: 18px;
+    background: #1a1a1a;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 1.15rem;
+    font-weight: 900;
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: all 0.2s;
+}
+
+.btn-send-order:active {
+    background: #C41E3A;
+    transform: scale(0.98);
+}
+
+.checkout-disclaimer {
+    text-align: center;
+    color: #999;
+    font-size: 0.85rem;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+    .checkout-container {
+        padding: 16px 12px;
+    }
+    .checkout-card {
+        padding: 16px;
+    }
+}

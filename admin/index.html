@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Doriteque</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-box">
+            <img src="../assets/logo.png" alt="Logo" class="login-logo" onerror="this.style.display='none'">
+            <h1>Doriteque Admin</h1>
+            <p class="login-subtitle">Panel de administración</p>
+            
+            <div class="form-group">
+                <label>Usuario</label>
+                <input type="text" id="login-user" placeholder="Ingresa tu usuario">
+            </div>
+            
+            <div class="form-group">
+                <label>Contraseña</label>
+                <div class="password-input-container">
+                    <input type="password" id="login-pass" placeholder="Ingresa tu contraseña">
+                    <button type="button" class="btn-toggle-password" onclick="admin.togglePassword()">
+                        <i class="fa-solid fa-eye" id="toggle-password-icon"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <button class="btn-login" onclick="admin.login()">Ingresar</button>
+            <p id="login-error" class="login-error" style="display: none;">Usuario o contraseña incorrectos</p>
+        </div>
+    </div>
+
+    <!-- PANEL PRINCIPAL -->
+    <div id="admin-panel" style="display: none;">
+        <header class="admin-header">
+            <div class="admin-header-left">
+                <img src="../assets/logo.png" alt="Logo" class="admin-logo" onerror="this.style.display='none'">
+                <h1>Panel Admin</h1>
+            </div>
+            <div class="admin-header-right">
+                <a href="../index.html" class="btn-ver-tienda" target="_blank">
+                    <i class="fa-solid fa-eye"></i> Ver tienda
+                </a>
+                <button class="btn-logout" onclick="admin.logout()">
+                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+                </button>
+            </div>
+        </header>
+
+        <nav class="admin-tabs">
+            <button class="admin-tab active" data-tab="productos" onclick="admin.switchTab('productos')">
+                <i class="fa-solid fa-burger"></i> Productos
+            </button>
+            <button class="admin-tab" data-tab="categorias" onclick="admin.switchTab('categorias')">
+                <i class="fa-solid fa-list"></i> Categorías
+            </button>
+            <button class="admin-tab" data-tab="modificadores" onclick="admin.switchTab('modificadores')">
+                <i class="fa-solid fa-sliders"></i> Modificadores
+            </button>
+            <button class="admin-tab" data-tab="config" onclick="admin.switchTab('config')">
+                <i class="fa-solid fa-gear"></i> Configuración
+            </button>
+            <button class="admin-tab" data-tab="cuenta" onclick="admin.switchTab('cuenta')">
+                <i class="fa-solid fa-user-shield"></i> Cuenta
+            </button>
+        </nav>
+
+        <main class="admin-content">
+            
+            <!-- TAB PRODUCTOS -->
+            <section id="tab-productos" class="admin-tab-content active">
+                <div class="tab-header">
+                    <h2>Gestión de Productos</h2>
+                    <button class="btn-primary" onclick="admin.openProductModal()">
+                        <i class="fa-solid fa-plus"></i> Nuevo producto
+                    </button>
+                </div>
+                <div id="productos-list" class="admin-list"></div>
+            </section>
+
+            <!-- TAB CATEGORÍAS -->
+            <section id="tab-categorias" class="admin-tab-content">
+                <div class="tab-header">
+                    <h2>Gestión de Categorías</h2>
+                    <button class="btn-primary" onclick="admin.openCategoryModal()">
+                        <i class="fa-solid fa-plus"></i> Nueva categoría
+                    </button>
+                </div>
+                <div id="categorias-list" class="admin-list"></div>
+            </section>
+
+            <!-- TAB MODIFICADORES -->
+            <section id="tab-modificadores" class="admin-tab-content">
+                <div class="tab-header">
+                    <h2>Gestión de Modificadores</h2>
+                    <button class="btn-primary" onclick="admin.openModifierModal()">
+                        <i class="fa-solid fa-plus"></i> Nuevo modificador
+                    </button>
+                </div>
+                <div class="instructions-box">
+                    <h3><i class="fa-solid fa-lightbulb"></i> ¿Cómo funcionan los modificadores?</h3>
+                    <ol>
+                        <li><strong>Crea un modificador:</strong> Ej: "Proteína" con opciones [Carne, Pollo, Chorizo]</li>
+                        <li><strong>Asígna-lo a un producto:</strong> Ve a Productos → Editar → Toca el chip "Proteína"</li>
+                        <li><strong>El cliente verá la pregunta:</strong> Cuando agregue ese producto al carrito, se le preguntará qué opción elegir</li>
+                    </ol>
+                </div>
+                <div id="modificadores-list" class="admin-list"></div>
+            </section>
+
+            <!-- TAB CONFIGURACIÓN -->
+            <section id="tab-config" class="admin-tab-content">
+                <h2>Configuración General</h2>
+                <div class="config-form">
+                    <div class="form-group">
+                        <label>Nombre del negocio</label>
+                        <input type="text" id="cfg-nombre">
+                    </div>
+                    <div class="form-group">
+                        <label>Número de WhatsApp (con código país, sin +)</label>
+                        <input type="text" id="cfg-whatsapp" placeholder="584245566545">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="cfg-email">
+                    </div>
+                    <div class="form-group">
+                        <label>Usuario de Instagram (sin @)</label>
+                        <input type="text" id="cfg-instagram">
+                    </div>
+                    <div class="form-group">
+                        <label>Usuario de TikTok (sin @)</label>
+                        <input type="text" id="cfg-tiktok">
+                    </div>
+                    <div class="form-group">
+                        <label>Horario</label>
+                        <input type="text" id="cfg-horario">
+                    </div>
+                    <div class="form-group">
+                        <label>Tasa del dólar (Bs)</label>
+                        <input type="number" step="0.01" id="cfg-tasa">
+                    </div>
+                    <div class="form-group">
+                        <label>Métodos de pago (separados por coma)</label>
+                        <input type="text" id="cfg-metodos" placeholder="Pago Móvil, Efectivo Bs, Efectivo Divisa">
+                    </div>
+                    <div class="form-group">
+                        <label>URL del logo</label>
+                        <input type="text" id="cfg-logo" placeholder="assets/logo.png">
+                    </div>
+                    <button class="btn-primary" onclick="admin.saveConfig()">
+                        <i class="fa-solid fa-save"></i> Guardar configuración
+                    </button>
+                </div>
+            </section>
+
+            <!-- TAB CUENTA -->
+            <section id="tab-cuenta" class="admin-tab-content">
+                <h2>Cambiar credenciales de acceso</h2>
+                <div class="config-form">
+                    <div class="form-group">
+                        <label>Nuevo usuario</label>
+                        <input type="text" id="acc-user">
+                    </div>
+                    <div class="form-group">
+                        <label>Nueva contraseña</label>
+                        <input type="password" id="acc-pass">
+                    </div>
+                    <button class="btn-primary" onclick="admin.saveCredentials()">
+                        <i class="fa-solid fa-save"></i> Actualizar credenciales
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <button class="btn-export" onclick="admin.exportJSON()">
+            <i class="fa-solid fa-download"></i> Exportar JSON
+        </button>
+    </div>
+
+    <!-- MODAL PRODUCTO -->
+    <div id="product-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="product-modal-title">Nuevo producto</h3>
+                <button class="modal-close" onclick="admin.closeProductModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="prod-id">
+                <div class="form-group">
+                    <label>Nombre del producto *</label>
+                    <input type="text" id="prod-nombre">
+                </div>
+                <div class="form-group">
+                    <label>Descripción *</label>
+                    <textarea id="prod-descripcion" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Precio (USD) *</label>
+                    <input type="number" step="0.01" id="prod-precio">
+                </div>
+                <div class="form-group">
+                    <label>Categoría *</label>
+                    <select id="prod-categoria"></select>
+                </div>
+                <div class="form-group">
+                    <label>URL de imagen (opcional)</label>
+                    <input type="text" id="prod-imagen" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>O subir imagen desde tu dispositivo</label>
+                    <input type="file" id="prod-imagen-file" accept="image/*" onchange="admin.handleImageUpload(event)">
+                    <div id="image-preview-container" style="margin-top: 8px; display: none;">
+                        <img id="image-preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #333;">
+                        <button type="button" class="btn-secondary" style="margin-top: 8px; font-size: 0.8rem; padding: 6px 12px;" onclick="admin.removeImagePreview()">Quitar imagen</button>
+                    </div>
+                </div>
+                <div class="form-group" id="prod-modificadores-section">
+                    <label style="display: block; color: white; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">
+                        <i class="fa-solid fa-sliders" style="color: #FF1744;"></i> Modificadores del producto
+                    </label>
+                    <p style="color: #b0b0b0; font-size: 0.8rem; margin-bottom: 12px; line-height: 1.4;">
+                        Toca los que aplican a este producto. Ej: Si es una hamburguesa, activa "Proteína" para que el cliente elija Carne o Pollo.
+                    </p>
+                    <div class="modificadores-chips" id="modificadores-chips-container"></div>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="prod-disponible" checked>
+                        Producto disponible
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="admin.closeProductModal()">Cancelar</button>
+                <button class="btn-primary" onclick="admin.saveProduct()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CATEGORÍA -->
+    <div id="category-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="category-modal-title">Nueva categoría</h3>
+                <button class="modal-close" onclick="admin.closeCategoryModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cat-id">
+                <div class="form-group">
+                    <label>Nombre de la categoría</label>
+                    <input type="text" id="cat-nombre">
+                </div>
+                <div class="form-group">
+                    <label>Orden (número)</label>
+                    <input type="number" id="cat-orden" value="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="admin.closeCategoryModal()">Cancelar</button>
+                <button class="btn-primary" onclick="admin.saveCategory()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL MODIFICADOR -->
+    <div id="modifier-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modifier-modal-title">Nuevo modificador</h3>
+                <button class="modal-close" onclick="admin.closeModifierModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="mod-id">
+                <div class="form-group">
+                    <label>Nombre del modificador *</label>
+                    <input type="text" id="mod-nombre" placeholder="Ej: Proteína, Queso extra, Salsas">
+                </div>
+                <div class="form-group">
+                    <label>Tipo *</label>
+                    <select id="mod-tipo">
+                        <option value="unico">Único (solo puede elegir 1)</option>
+                        <option value="multiple">Múltiple (puede elegir varios)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="mod-obligatorio">
+                        Es obligatorio elegir una opción
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label>Opciones *</label>
+                    <div id="opciones-container"></div>
+                    <button type="button" class="btn-secondary" style="margin-top: 10px; font-size: 0.85rem;" onclick="admin.addOpcion()">
+                        <i class="fa-solid fa-plus"></i> Agregar opción
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="admin.closeModifierModal()">Cancelar</button>
+                <button class="btn-primary" onclick="admin.saveModifier()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
