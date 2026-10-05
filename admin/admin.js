@@ -2,6 +2,8 @@ const admin = {
     config: {},
     menu: { categorias: [], productos: [], modificadores: [] },
     credentials: { user: 'admin', pass: 'doriteque2026' },
+    unsubConfig: null,
+    unsubMenu: null,
 
     async init() {
         const savedCreds = localStorage.getItem('doriteque_admin_creds');
@@ -81,32 +83,39 @@ const admin = {
 
     logout() {
         sessionStorage.removeItem('doriteque_admin_logged');
+        if (this.unsubConfig) this.unsubConfig();
+        if (this.unsubMenu) this.unsubMenu();
         location.reload();
     },
 
     async loadDashboard() {
         try {
-            const timestamp = Date.now();
-            const [configRes, menuRes] = await Promise.all([
-                fetch('../config.json?t=' + timestamp),
-                fetch('../menu.json?t=' + timestamp)
-            ]);
-            this.config = await configRes.json();
-            this.menu = await menuRes.json();
+            // Escuchar cambios en tiempo real desde Firebase
+            this.unsubConfig = window.onSnapshot(window.doc(window.db, 'config', 'main'), (docSnap) => {
+                if (docSnap.exists()) {
+                    this.config = docSnap.data();
+                    this.fillConfigForm();
+                }
+            });
 
-            if (!this.menu.modificadores) this.menu.modificadores = [];
+            this.unsubMenu = window.onSnapshot(window.doc(window.db, 'menu', 'main'), (docSnap) => {
+                if (docSnap.exists()) {
+                    this.menu = docSnap.data();
+                    if (!this.menu.modificadores) this.menu.modificadores = [];
+                    if (!this.menu.categorias) this.menu.categorias = [];
+                    if (!this.menu.productos) this.menu.productos = [];
+                    
+                    this.renderProducts();
+                    this.renderCategories();
+                    this.renderModifiers();
+                }
+            });
 
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('admin-panel').style.display = 'block';
-
-            this.fillConfigForm();
-            this.renderProducts();
-            this.renderCategories();
-            this.renderModifiers();
-            this.fillCredentialsForm();
         } catch (error) {
-            alert('Error al cargar los datos.');
             console.error(error);
+            alert('Error al conectar con Firebase: ' + error.message);
         }
     },
 
@@ -129,17 +138,26 @@ const admin = {
         document.getElementById('cfg-logo').value = this.config.logo || '';
     },
 
-    saveConfig() {
-        this.config.nombre = document.getElementById('cfg-nombre').value.trim();
-        this.config.whatsapp = document.getElementById('cfg-whatsapp').value.trim();
-        this.config.email = document.getElementById('cfg-email').value.trim();
-        this.config.instagram = document.getElementById('cfg-instagram').value.trim();
-        this.config.tiktok = document.getElementById('cfg-tiktok').value.trim();
-        this.config.horario = document.getElementById('cfg-horario').value.trim();
-        this.config.tasaBs = parseFloat(document.getElementById('cfg-tasa').value) || 36.50;
-        this.config.metodosPago = document.getElementById('cfg-metodos').value.split(',').map(s => s.trim()).filter(s => s);
-        this.config.logo = document.getElementById('cfg-logo').value.trim();
-        alert('Configuración guardada en memoria. Usa "Exportar JSON" para descargar.');
+    async saveConfig() {
+        try {
+            const newConfig = {
+                nombre: document.getElementById('cfg-nombre').value.trim(),
+                whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
+                email: document.getElementById('cfg-email').value.trim(),
+                instagram: document.getElementById('cfg-instagram').value.trim(),
+                tiktok: document.getElementById('cfg-tiktok').value.trim(),
+                horario: document.getElementById('cfg-horario').value.trim(),
+                tasaBs: parseFloat(document.getElementById('cfg-tasa').value) || 36.50,
+                metodosPago: document.getElementById('cfg-metodos').value.split(',').map(s => s.trim()).filter(s => s),
+                logo: document.getElementById('cfg-logo').value.trim()
+            };
+
+            await window.setDoc(window.doc(window.db, 'config', 'main'), newConfig);
+            alert('✅ Configuración guardada en la nube. Los cambios se ven al instante en la tienda.');
+        } catch (error) {
+            console.error(error);
+            alert('Error al guardar: ' + error.message);
+        }
     },
 
     fillCredentialsForm() {
@@ -158,8 +176,8 @@ const admin = {
 
     renderProducts() {
         const container = document.getElementById('productos-list');
-        if (this.menu.productos.length === 0) {
-            container.innerHTML = '<p style="color: #b0b0b0; text-align: center; padding: 20px;">No hay productos.</p>';
+        if (!this.menu.productos || this.menu.productos.length === 0) {
+            container.innerHTML = '<p style="color: #b0b0b0; text-align: center; padding: 20px;">No hay productos. Crea el primero.</p>';
             return;
         }
         let html = '';
@@ -188,7 +206,7 @@ const admin = {
 
     renderCategories() {
         const container = document.getElementById('categorias-list');
-        if (this.menu.categorias.length === 0) {
+        if (!this.menu.categorias || this.menu.categorias.length === 0) {
             container.innerHTML = '<p style="color: #b0b0b0; text-align: center; padding: 20px;">No hay categorías.</p>';
             return;
         }
@@ -212,7 +230,7 @@ const admin = {
     renderModifiers() {
         const container = document.getElementById('modificadores-list');
         if (!container) return;
-        if (this.menu.modificadores.length === 0) {
+        if (!this.menu.modificadores || this.menu.modificadores.length === 0) {
             container.innerHTML = '<p style="color: #b0b0b0; text-align: center; padding: 20px;">No hay modificadores. Crea el primero.</p>';
             return;
         }
@@ -243,15 +261,15 @@ const admin = {
         const title = document.getElementById('product-modal-title');
         const select = document.getElementById('prod-categoria');
         select.innerHTML = '<option value="">Selecciona una categoría</option>';
-        this.menu.categorias.forEach(c => {
+        (this.menu.categorias || []).forEach(c => {
             select.innerHTML += '<option value="' + c.id + '">' + c.nombre + '</option>';
         });
 
         const modsSection = document.getElementById('modificadores-chips-container');
         if (modsSection) {
             modsSection.innerHTML = '';
-            if (this.menu.modificadores.length === 0) {
-                modsSection.innerHTML = '<p style="color: #b0b0b0; font-size: 0.85rem;">No hay modificadores creados. Ve a la pestaña "Modificadores" para crearlos primero.</p>';
+            if (!this.menu.modificadores || this.menu.modificadores.length === 0) {
+                modsSection.innerHTML = '<p style="color: #b0b0b0; font-size: 0.85rem;">No hay modificadores creados.</p>';
             } else {
                 this.menu.modificadores.forEach(m => {
                     let isChecked = false;
@@ -354,7 +372,7 @@ const admin = {
         document.getElementById('image-preview').src = '';
     },
 
-    saveProduct() {
+    async saveProduct() {
         const id = document.getElementById('prod-id').value;
         const nombre = document.getElementById('prod-nombre').value.trim();
         const descripcion = document.getElementById('prod-descripcion').value.trim();
@@ -384,28 +402,65 @@ const admin = {
             modificadoresIds: modificadoresIds
         };
 
-        if (id) {
-            const idx = this.menu.productos.findIndex(p => String(p.id) === String(id));
-            if (idx !== -1) this.menu.productos[idx] = productoData;
-        } else {
-            this.menu.productos.push(productoData);
+        try {
+            const newProductos = [...(this.menu.productos || [])];
+            if (id) {
+                const idx = newProductos.findIndex(p => String(p.id) === String(id));
+                if (idx !== -1) newProductos[idx] = productoData;
+            } else {
+                newProductos.push(productoData);
+            }
+
+            const newMenu = {
+                categorias: this.menu.categorias || [],
+                productos: newProductos,
+                modificadores: this.menu.modificadores || []
+            };
+
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            this.closeProductModal();
+            alert('✅ Producto guardado en la nube. Los cambios se ven al instante en la tienda.');
+        } catch (error) {
+            console.error(error);
+            alert('Error al guardar: ' + error.message);
         }
-
-        this.closeProductModal();
-        this.renderProducts();
-        alert('Producto guardado. Usa "Exportar JSON" para aplicar cambios.');
     },
 
-    deleteProduct(id) {
+    async deleteProduct(id) {
         if (!confirm('¿Eliminar este producto?')) return;
-        this.menu.productos = this.menu.productos.filter(p => String(p.id) !== String(id));
-        this.renderProducts();
-        alert('Producto eliminado. Usa "Exportar JSON".');
+        try {
+            const newProductos = this.menu.productos.filter(p => String(p.id) !== String(id));
+            const newMenu = {
+                categorias: this.menu.categorias || [],
+                productos: newProductos,
+                modificadores: this.menu.modificadores || []
+            };
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            alert('✅ Producto eliminado.');
+        } catch (error) {
+            console.error(error);
+            alert('Error al eliminar: ' + error.message);
+        }
     },
 
-    toggleProduct(id) {
-        const p = this.menu.productos.find(x => String(x.id) === String(id));
-        if (p) { p.disponible = !p.disponible; this.renderProducts(); }
+    async toggleProduct(id) {
+        try {
+            const newProductos = this.menu.productos.map(p => {
+                if (String(p.id) === String(id)) {
+                    return { ...p, disponible: !p.disponible };
+                }
+                return p;
+            });
+            const newMenu = {
+                categorias: this.menu.categorias || [],
+                productos: newProductos,
+                modificadores: this.menu.modificadores || []
+            };
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+        } catch (error) {
+            console.error(error);
+            alert('Error: ' + error.message);
+        }
     },
 
     editCategory(id) {
@@ -426,7 +481,7 @@ const admin = {
             title.textContent = 'Nueva categoría';
             document.getElementById('cat-id').value = '';
             document.getElementById('cat-nombre').value = '';
-            document.getElementById('cat-orden').value = this.menu.categorias.length + 1;
+            document.getElementById('cat-orden').value = (this.menu.categorias || []).length + 1;
         }
         modal.style.display = 'flex';
     },
@@ -435,30 +490,52 @@ const admin = {
         document.getElementById('category-modal').style.display = 'none';
     },
 
-    saveCategory() {
+    async saveCategory() {
         const id = document.getElementById('cat-id').value;
         const nombre = document.getElementById('cat-nombre').value.trim();
         const orden = parseInt(document.getElementById('cat-orden').value) || 1;
         if (!nombre) { alert('El nombre es obligatorio.'); return; }
         const catData = { id: id || 'cat' + Date.now(), nombre, orden };
-        if (id) {
-            const idx = this.menu.categorias.findIndex(c => String(c.id) === String(id));
-            if (idx !== -1) this.menu.categorias[idx] = catData;
-        } else {
-            this.menu.categorias.push(catData);
+
+        try {
+            const newCategorias = [...(this.menu.categorias || [])];
+            if (id) {
+                const idx = newCategorias.findIndex(c => String(c.id) === String(id));
+                if (idx !== -1) newCategorias[idx] = catData;
+            } else {
+                newCategorias.push(catData);
+            }
+            const newMenu = {
+                categorias: newCategorias,
+                productos: this.menu.productos || [],
+                modificadores: this.menu.modificadores || []
+            };
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            this.closeCategoryModal();
+            alert('✅ Categoría guardada.');
+        } catch (error) {
+            console.error(error);
+            alert('Error: ' + error.message);
         }
-        this.closeCategoryModal();
-        this.renderCategories();
-        alert('Categoría guardada. Usa "Exportar JSON".');
     },
 
-    deleteCategory(id) {
+    async deleteCategory(id) {
         const count = this.menu.productos.filter(p => String(p.categoriaId) === String(id)).length;
         if (count > 0) { alert('No puedes eliminar esta categoría porque tiene ' + count + ' producto(s).'); return; }
         if (!confirm('¿Eliminar esta categoría?')) return;
-        this.menu.categorias = this.menu.categorias.filter(c => String(c.id) !== String(id));
-        this.renderCategories();
-        alert('Categoría eliminada. Usa "Exportar JSON".');
+        try {
+            const newCategorias = this.menu.categorias.filter(c => String(c.id) !== String(id));
+            const newMenu = {
+                categorias: newCategorias,
+                productos: this.menu.productos || [],
+                modificadores: this.menu.modificadores || []
+            };
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            alert('✅ Categoría eliminada.');
+        } catch (error) {
+            console.error(error);
+            alert('Error: ' + error.message);
+        }
     },
 
     openModifierModal(modId = null) {
@@ -502,7 +579,7 @@ const admin = {
         container.appendChild(div);
     },
 
-    saveModifier() {
+    async saveModifier() {
         const id = document.getElementById('mod-id').value;
         const nombre = document.getElementById('mod-nombre').value.trim();
         const tipo = document.getElementById('mod-tipo').value;
@@ -531,32 +608,52 @@ const admin = {
 
         const modData = { id: id || 'mod' + Date.now(), nombre, tipo, obligatorio, opciones };
 
-        if (id) {
-            const idx = this.menu.modificadores.findIndex(m => String(m.id) === String(id));
-            if (idx !== -1) this.menu.modificadores[idx] = modData;
-        } else {
-            this.menu.modificadores.push(modData);
+        try {
+            const newMods = [...(this.menu.modificadores || [])];
+            if (id) {
+                const idx = newMods.findIndex(m => String(m.id) === String(id));
+                if (idx !== -1) newMods[idx] = modData;
+            } else {
+                newMods.push(modData);
+            }
+            const newMenu = {
+                categorias: this.menu.categorias || [],
+                productos: this.menu.productos || [],
+                modificadores: newMods
+            };
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            this.closeModifierModal();
+            alert('✅ Modificador guardado.');
+        } catch (error) {
+            console.error(error);
+            alert('Error: ' + error.message);
         }
-
-        this.closeModifierModal();
-        this.renderModifiers();
-        alert('Modificador guardado. Usa "Exportar JSON" para aplicar cambios.');
     },
 
     editModifier(id) {
         this.openModifierModal(String(id));
     },
 
-    deleteModifier(id) {
+    async deleteModifier(id) {
         const productosUsando = this.menu.productos.filter(p => p.modificadoresIds && p.modificadoresIds.includes(id)).length;
         if (productosUsando > 0) {
             alert('No puedes eliminar este modificador porque está asignado a ' + productosUsando + ' producto(s).');
             return;
         }
         if (!confirm('¿Eliminar este modificador?')) return;
-        this.menu.modificadores = this.menu.modificadores.filter(m => String(m.id) !== String(id));
-        this.renderModifiers();
-        alert('Modificador eliminado. Usa "Exportar JSON".');
+        try {
+            const newMods = this.menu.modificadores.filter(m => String(m.id) !== String(id));
+            const newMenu = {
+                categorias: this.menu.categorias || [],
+                productos: this.menu.productos || [],
+                modificadores: newMods
+            };
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            alert('✅ Modificador eliminado.');
+        } catch (error) {
+            console.error(error);
+            alert('Error: ' + error.message);
+        }
     },
 
     exportJSON() {
@@ -569,9 +666,9 @@ const admin = {
             a.click();
             URL.revokeObjectURL(url);
         };
-        download('config.json', this.config);
-        setTimeout(() => download('menu.json', this.menu), 500);
-        alert('Archivos descargados. Reemplázalos en GitHub.');
+        download('config-backup.json', this.config);
+        setTimeout(() => download('menu-backup.json', this.menu), 500);
+        alert('Archivos de respaldo descargados. (Ya no son necesarios, los datos están en la nube)');
     }
 };
 

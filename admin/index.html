@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="admin.css">
+    <script type="module" src="../js/firebase.js"></script>
 </head>
 <body>
     <!-- PANTALLA DE LOGIN -->
@@ -180,7 +181,7 @@
         </main>
 
         <button class="btn-export" onclick="admin.exportJSON()">
-            <i class="fa-solid fa-download"></i> Exportar JSON
+            <i class="fa-solid fa-download"></i> Exportar JSON (backup)
         </button>
     </div>
 
@@ -228,7 +229,7 @@
                         <i class="fa-solid fa-sliders" style="color: #FF1744;"></i> Modificadores del producto
                     </label>
                     <p style="color: #b0b0b0; font-size: 0.8rem; margin-bottom: 12px; line-height: 1.4;">
-                        Toca los que aplican a este producto. Ej: Si es una hamburguesa, activa "Proteína" para que el cliente elija Carne o Pollo.
+                        Toca los que aplican a este producto.
                     </p>
                     <div class="modificadores-chips" id="modificadores-chips-container"></div>
                 </div>
