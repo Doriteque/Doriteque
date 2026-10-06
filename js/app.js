@@ -1,12 +1,20 @@
 const app = {
     config: {},
     menu: { categorias: [], productos: [], modificadores: [] },
-    cart: JSON.parse(localStorage.getItem('doriteque_cart')) || [],
+    cart: [],
     categoriaActiva: 'todas',
     busqueda: '',
     productoSeleccionado: null,
 
     async init() {
+        // Cargar carrito desde localStorage
+        try {
+            const savedCart = localStorage.getItem('doriteque_cart');
+            this.cart = savedCart ? JSON.parse(savedCart) : [];
+        } catch (e) {
+            this.cart = [];
+        }
+
         if (!window.loadConfig || !window.loadMenu) {
             setTimeout(() => this.init(), 500);
             return;
@@ -27,9 +35,11 @@ const app = {
                 this.renderCategorias();
                 this.renderProductos();
                 this.updateCartUI();
+                
+                // Scroll spy después de renderizar
+                setTimeout(() => this.setupScrollSpy(), 300);
             });
 
-            this.setupScrollSpy();
             this.setupEventListeners();
         } catch (error) {
             console.error('Error cargando datos:', error);
@@ -322,9 +332,13 @@ const app = {
         let totalItems = 0;
         
         this.cart.forEach(item => {
+            if (!item || !item.id) return;
+            
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (prod) {
-                let precioUnitario = prod.precio;
+                let precioUnitario = prod.precio || 0;
+                const qty = item.qty || 1;
+                
                 if (item.opciones) {
                     Object.keys(item.opciones).forEach(modNombre => {
                         const opciones = item.opciones[modNombre];
@@ -332,17 +346,17 @@ const app = {
                             const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
                             if (mod) {
                                 const op = mod.opciones.find(o => o.nombre === opNombre);
-                                if (op) precioUnitario += op.precio;
+                                if (op) precioUnitario += op.precio || 0;
                             }
                         });
                     });
                 }
-                totalUSD += precioUnitario * item.qty;
-                totalItems += item.qty;
+                totalUSD += precioUnitario * qty;
+                totalItems += qty;
             }
         });
         
-        return { totalUSD, totalItems };
+        return { totalUSD: totalUSD || 0, totalItems: totalItems || 0 };
     },
 
     updateCartUI() {
@@ -356,7 +370,6 @@ const app = {
         const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
         document.getElementById('cart-total-bs').textContent = 'Bs ' + totalBs;
         
-        // Actualizar barra flotante
         const cartBar = document.getElementById('cart-bar-floating');
         if (cartBar) {
             if (totalItems > 0) {
@@ -383,10 +396,12 @@ const app = {
         let html = '';
 
         this.cart.forEach(item => {
+            if (!item || !item.id) return;
+            
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
             
-            let precioUnitario = prod.precio;
+            let precioUnitario = prod.precio || 0;
             let opcionesTexto = '';
             
             if (item.opciones) {
@@ -396,24 +411,25 @@ const app = {
                         const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
                         if (mod) {
                             const op = mod.opciones.find(o => o.nombre === opNombre);
-                            if (op) precioUnitario += op.precio;
+                            if (op) precioUnitario += op.precio || 0;
                         }
                     });
                     opcionesTexto += '<div class="cart-item-opciones">' + modNombre + ': ' + opciones.join(', ') + '</div>';
                 });
             }
             
-            const subtotal = precioUnitario * item.qty;
+            const qty = item.qty || 1;
+            const subtotal = precioUnitario * qty;
 
             html += '<div class="cart-item">';
             html += '<div class="cart-item-info">';
             html += '<div class="cart-item-nombre">' + prod.nombre + '</div>';
             if (opcionesTexto) html += opcionesTexto;
-            html += '<div class="cart-item-precio">' + item.qty + ' × $' + precioUnitario.toFixed(2) + ' = $' + subtotal.toFixed(2) + '</div>';
+            html += '<div class="cart-item-precio">' + qty + ' × $' + precioUnitario.toFixed(2) + ' = $' + subtotal.toFixed(2) + '</div>';
             html += '</div>';
             html += '<div class="cart-item-controles">';
             html += '<button class="btn-cantidad" onclick="app.updateCartQty(\'' + item.id + '\', -1)">−</button>';
-            html += '<span>' + item.qty + '</span>';
+            html += '<span>' + qty + '</span>';
             html += '<button class="btn-cantidad" onclick="app.updateCartQty(\'' + item.id + '\', 1)">+</button>';
             html += '</div>';
             html += '<button class="btn-eliminar" onclick="app.removeFromCart(\'' + item.id + '\')"><i class="fa-solid fa-trash"></i></button>';
@@ -441,6 +457,9 @@ const app = {
     },
 
     setupScrollSpy() {
+        const secciones = document.querySelectorAll('.seccion-categoria');
+        if (secciones.length === 0) return;
+
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -458,15 +477,11 @@ const app = {
                 }
             });
         }, {
-            rootMargin: '-150px 0px -60% 0px',
-            threshold: 0
+            rootMargin: '-100px 0px -70% 0px',
+            threshold: 0.1
         });
 
-        setTimeout(() => {
-            document.querySelectorAll('.seccion-categoria').forEach(seccion => {
-                observer.observe(seccion);
-            });
-        }, 100);
+        secciones.forEach(seccion => observer.observe(seccion));
     },
 
     setupEventListeners() {

@@ -8,6 +8,9 @@ const checkout = {
 
     async init() {
         try {
+            const savedCart = localStorage.getItem('doriteque_cart');
+            this.cart = savedCart ? JSON.parse(savedCart) : [];
+
             if (!window.loadConfig || !window.loadMenu) {
                 setTimeout(() => this.init(), 500);
                 return;
@@ -24,8 +27,6 @@ const checkout = {
                 this.renderItems();
             });
 
-            this.cart = JSON.parse(localStorage.getItem('doriteque_cart')) || [];
-
             if (this.cart.length === 0) {
                 alert('Tu carrito está vacío.');
                 window.location.href = 'index.html';
@@ -41,11 +42,9 @@ const checkout = {
     },
 
     setupDateTime() {
-        // Fecha y hora automática: 30 minutos desde ahora
         const now = new Date();
         now.setMinutes(now.getMinutes() + 30);
         
-        // Formatear para mostrar
         const options = { 
             year: 'numeric', 
             month: '2-digit', 
@@ -57,7 +56,6 @@ const checkout = {
         
         document.getElementById('datetime-text').textContent = formatted;
         
-        // Guardar en formato ISO para el mensaje
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById('client-datetime').value = now.toISOString().slice(0, 16);
     },
@@ -164,9 +162,14 @@ const checkout = {
     openAddressModal() {
         const modal = document.getElementById('address-modal');
         modal.style.display = 'flex';
+        
         setTimeout(() => {
-            document.getElementById('address-search').focus();
-        }, 100);
+            const searchInput = document.getElementById('address-search');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 300);
     },
 
     closeAddressModal() {
@@ -200,10 +203,12 @@ const checkout = {
         let totalItems = 0;
 
         this.cart.forEach(item => {
+            if (!item || !item.id) return;
+            
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
             
-            let precioUnitario = prod.precio;
+            let precioUnitario = prod.precio || 0;
             let opcionesTexto = '';
             
             if (item.opciones) {
@@ -213,22 +218,23 @@ const checkout = {
                         const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
                         if (mod) {
                             const op = mod.opciones.find(o => o.nombre === opNombre);
-                            if (op) precioUnitario += op.precio;
+                            if (op) precioUnitario += op.precio || 0;
                         }
                     });
                     opcionesTexto += '<div class="checkout-item-opciones">' + modNombre + ': ' + opciones.join(', ') + '</div>';
                 });
             }
             
-            const subtotal = precioUnitario * item.qty;
+            const qty = item.qty || 1;
+            const subtotal = precioUnitario * qty;
             totalUSD += subtotal;
-            totalItems += item.qty;
+            totalItems += qty;
 
             html += '<div class="checkout-item">';
             html += '<div class="checkout-item-info">';
             html += '<div class="checkout-item-name">' + prod.nombre + '</div>';
             if (opcionesTexto) html += opcionesTexto;
-            html += '<div class="checkout-item-qty">' + item.qty + 'x $' + precioUnitario.toFixed(2) + '</div>';
+            html += '<div class="checkout-item-qty">' + qty + 'x $' + precioUnitario.toFixed(2) + '</div>';
             html += '</div>';
             html += '<div class="checkout-item-price">USD$ ' + subtotal.toFixed(2) + '</div>';
             html += '</div>';
@@ -283,10 +289,12 @@ const checkout = {
         let detalle = '';
         
         this.cart.forEach(item => {
+            if (!item || !item.id) return;
+            
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
             
-            let precioUnitario = prod.precio;
+            let precioUnitario = prod.precio || 0;
             let opcionesTexto = '';
             
             if (item.opciones) {
@@ -296,16 +304,17 @@ const checkout = {
                         const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
                         if (mod) {
                             const op = mod.opciones.find(o => o.nombre === opNombre);
-                            if (op) precioUnitario += op.precio;
+                            if (op) precioUnitario += op.precio || 0;
                         }
                     });
                     opcionesTexto += ' (' + modNombre + ': ' + opciones.join(', ') + ')';
                 });
             }
             
-            const sub = precioUnitario * item.qty;
+            const qty = item.qty || 1;
+            const sub = precioUnitario * qty;
             totalUSD += sub;
-            detalle += '• ' + item.qty + 'x ' + prod.nombre + opcionesTexto + ' | precio ' + precioUnitario.toFixed(0) + ' | total ' + sub.toFixed(0) + '\n';
+            detalle += '• ' + qty + 'x ' + prod.nombre + opcionesTexto + ' | precio ' + precioUnitario.toFixed(0) + ' | total ' + sub.toFixed(0) + '\n';
         });
 
         const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
@@ -329,15 +338,15 @@ const checkout = {
             mapaLink = 'https://whata.app/m/?lat=' + this.selectedCoords.lat + '&lon=' + this.selectedCoords.lon + '&address=' + encodeURIComponent(address);
         }
 
-        const header = this.config.msgHeader || '🍔 *NUEVO PEDIDO*';
+        const header = this.config.msgHeader || ' *NUEVO PEDIDO*';
         const greeting = this.config.msgGreeting || '';
         
         let mensaje = header + ' - ' + negocio + '\n\n';
         if (greeting) mensaje += greeting + '\n\n';
         mensaje += '👤 *Nombre completo*\n' + name + '\n\n';
-        mensaje += '📱 *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
+        mensaje += ' *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
         if (fechaHora) mensaje += '📅 *Fecha y hora*\n' + fechaHora + '\n\n';
-        if (note) mensaje += '⚠️ *Alguna observación adicional (Ejemplo Alergias)*\n' + note + '\n\n';
+        if (note) mensaje += '⚠️ *Alguna observación adicional*\n' + note + '\n\n';
         
         if (address) {
             mensaje += '📍 *Mapa de ubicación*\n' + address;
@@ -346,7 +355,7 @@ const checkout = {
             if (mapaLink) mensaje += mapaLink + '\n';
         }
         
-        mensaje += '\n *Detalle*\n' + detalle;
+        mensaje += '\n📝 *Detalle*\n' + detalle;
         mensaje += '---------------------------\n\n';
         mensaje += '💵 *Sub-total:* USD$ ' + totalUSD.toFixed(2) + '\n';
         mensaje += '💵 *TOTAL DE LA ORDEN:* USD$ ' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
