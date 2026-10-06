@@ -52,9 +52,7 @@ const checkout = {
             hour: '2-digit', 
             minute: '2-digit' 
         };
-        const formatted = now.toLocaleString('es-VE', options);
-        
-        document.getElementById('datetime-text').textContent = formatted;
+        document.getElementById('datetime-text').textContent = now.toLocaleString('es-VE', options);
         
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById('client-datetime').value = now.toISOString().slice(0, 16);
@@ -67,18 +65,8 @@ const checkout = {
 
         if (!searchInput) return;
 
-        // Prevenir que el click se propague al body
-        searchInput.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-
-        searchInput.addEventListener('touchstart', (e) => {
-            e.stopPropagation();
-        }, { passive: true });
-
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
-            
             clearTimeout(debounceTimer);
             
             if (query.length < 3) {
@@ -90,13 +78,18 @@ const checkout = {
                 this.searchAddress(query);
             }, 300);
         });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#address-search') && !e.target.closest('#address-suggestions')) {
+                setTimeout(() => suggestionsContainer.classList.remove('active'), 200);
+            }
+        });
     },
 
     async searchAddress(query) {
         try {
             const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ve&limit=5`);
             const results = await response.json();
-            
             const suggestionsContainer = document.getElementById('address-suggestions');
             suggestionsContainer.innerHTML = '';
 
@@ -121,10 +114,7 @@ const checkout = {
                     </div>
                 `;
                 
-                div.onclick = (e) => {
-                    e.stopPropagation();
-                    this.selectAddress(result);
-                };
+                div.onclick = () => this.selectAddress(result);
                 suggestionsContainer.appendChild(div);
             });
 
@@ -141,65 +131,9 @@ const checkout = {
             lon: parseFloat(result.lon)
         };
         
-        document.getElementById('address-search').value = '';
+        document.getElementById('client-address').value = result.display_name;
+        document.getElementById('address-search').value = result.display_name;
         document.getElementById('address-suggestions').classList.remove('active');
-        this.updateAddressDisplay();
-    },
-
-    updateAddressDisplay() {
-        const display = document.getElementById('address-display');
-        if (this.selectedAddress) {
-            display.classList.add('has-value');
-            display.innerHTML = `
-                <i class="fa-solid fa-location-dot"></i>
-                <span>${this.selectedAddress.split(',')[0]}</span>
-            `;
-        } else {
-            display.classList.remove('has-value');
-            display.innerHTML = `
-                <i class="fa-solid fa-location-dot"></i>
-                <span>Seleccionar ubicación</span>
-            `;
-        }
-    },
-
-    openAddressModal() {
-        const modal = document.getElementById('address-modal');
-        modal.classList.remove('address-modal-hidden');
-        modal.classList.add('address-modal-visible');
-        
-        // Enfocar el input después de que el modal sea visible
-        setTimeout(() => {
-            const searchInput = document.getElementById('address-search');
-            if (searchInput) {
-                searchInput.focus();
-            }
-        }, 100);
-    },
-
-    closeAddressModal() {
-        const modal = document.getElementById('address-modal');
-        modal.classList.remove('address-modal-visible');
-        modal.classList.add('address-modal-hidden');
-        document.getElementById('address-suggestions').classList.remove('active');
-        document.getElementById('address-search').value = '';
-    },
-
-    acceptAddress() {
-        const detailInput = document.getElementById('address-detail-input');
-        const detail = detailInput.value.trim();
-        
-        if (!this.selectedAddress) {
-            alert('Por favor selecciona una dirección de la lista');
-            return;
-        }
-        
-        document.getElementById('client-address').value = this.selectedAddress;
-        document.getElementById('client-address-detail').value = detail;
-        
-        this.closeAddressModal();
-        detailInput.value = '';
-        this.updateAddressDisplay();
     },
 
     renderItems() {
@@ -212,7 +146,6 @@ const checkout = {
 
         this.cart.forEach(item => {
             if (!item || !item.id) return;
-            
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
             
@@ -249,15 +182,9 @@ const checkout = {
         });
 
         container.innerHTML = html;
-        
-        const editCount = document.getElementById('edit-cart-count');
-        if (editCount) editCount.textContent = totalItems;
-        
-        const subtotalEl = document.getElementById('checkout-subtotal');
-        if (subtotalEl) subtotalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
-        
-        const totalEl = document.getElementById('checkout-total-usd');
-        if (totalEl) totalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
+        document.getElementById('edit-cart-count').textContent = totalItems;
+        document.getElementById('checkout-subtotal').textContent = 'USD$ ' + totalUSD.toFixed(2);
+        document.getElementById('checkout-total-usd').textContent = 'USD$ ' + totalUSD.toFixed(2);
     },
 
     renderPaymentMethods() {
@@ -273,7 +200,6 @@ const checkout = {
             html += '<label for="payment-' + index + '">' + method + '</label>';
             html += '</div>';
         });
-
         container.innerHTML = html;
     },
 
@@ -288,8 +214,8 @@ const checkout = {
         const name = document.getElementById('client-name').value.trim();
         const country = document.getElementById('client-country').value;
         const phone = document.getElementById('client-phone').value.trim();
-        const address = document.getElementById('client-address').value.trim();
-        const addressDetail = document.getElementById('client-address-detail').value.trim();
+        const address = document.getElementById('client-address').value.trim() || document.getElementById('address-search').value.trim();
+        const addressDetail = document.getElementById('address-detail-input').value.trim();
         const datetime = document.getElementById('client-datetime').value;
         const note = document.getElementById('client-note').value.trim();
 
@@ -298,7 +224,6 @@ const checkout = {
         
         this.cart.forEach(item => {
             if (!item || !item.id) return;
-            
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
             
@@ -332,13 +257,7 @@ const checkout = {
         let fechaHora = '';
         if (datetime) {
             const dt = new Date(datetime);
-            fechaHora = dt.toLocaleString('es-VE', { 
-                year: 'numeric', 
-                month: '2-digit', 
-                day: '2-digit',
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
+            fechaHora = dt.toLocaleString('es-VE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
         }
 
         let mapaLink = '';
@@ -346,13 +265,13 @@ const checkout = {
             mapaLink = 'https://whata.app/m/?lat=' + this.selectedCoords.lat + '&lon=' + this.selectedCoords.lon + '&address=' + encodeURIComponent(address);
         }
 
-        const header = this.config.msgHeader || ' *NUEVO PEDIDO*';
+        const header = this.config.msgHeader || '🍔 *NUEVO PEDIDO*';
         const greeting = this.config.msgGreeting || '';
         
         let mensaje = header + ' - ' + negocio + '\n\n';
         if (greeting) mensaje += greeting + '\n\n';
         mensaje += '👤 *Nombre completo*\n' + name + '\n\n';
-        mensaje += ' *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
+        mensaje += '📱 *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
         if (fechaHora) mensaje += '📅 *Fecha y hora*\n' + fechaHora + '\n\n';
         if (note) mensaje += '⚠️ *Observación adicional*\n' + note + '\n\n';
         
@@ -367,7 +286,7 @@ const checkout = {
         mensaje += '---------------------------\n\n';
         mensaje += '💵 *Sub-total:* USD$ ' + totalUSD.toFixed(2) + '\n';
         mensaje += '💵 *TOTAL DE LA ORDEN:* USD$ ' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
-        mensaje += ' *TIPO DE PAGO:* ' + this.selectedPayment;
+        mensaje += '💳 *TIPO DE PAGO:* ' + this.selectedPayment;
 
         return mensaje;
     },
@@ -375,22 +294,19 @@ const checkout = {
     sendOrder() {
         const name = document.getElementById('client-name').value.trim();
         const phone = document.getElementById('client-phone').value.trim();
-        const address = document.getElementById('client-address').value.trim();
+        const address = document.getElementById('client-address').value.trim() || document.getElementById('address-search').value.trim();
 
         if (!name) { alert('Ingresa tu nombre completo.'); return; }
         if (!phone) { alert('Ingresa tu número de WhatsApp.'); return; }
-        if (!address) { alert('Selecciona tu dirección de entrega.'); return; }
+        if (!address) { alert('Escribe o selecciona tu dirección de entrega.'); return; }
         if (!this.selectedPayment) { alert('Selecciona un método de pago.'); return; }
 
         const mensaje = this.buildMessage();
-        
         const url = 'https://wa.me/' + this.config.whatsapp + '?text=' + encodeURIComponent(mensaje);
         window.open(url, '_blank');
 
         localStorage.removeItem('doriteque_cart');
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
+        setTimeout(() => { window.location.href = 'index.html'; }, 1000);
     }
 };
 
