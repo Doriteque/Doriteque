@@ -53,31 +53,31 @@ const app = {
     },
 
     renderCategorias() {
-        const container = document.getElementById('categorias-tabs');
-        let html = '<button class="categoria-tab active" data-id="todas">Todos</button>';
-        this.menu.categorias.forEach(cat => {
-            html += '<button class="categoria-tab" data-id="' + cat.id + '">' + cat.nombre + '</button>';
-        });
-        container.innerHTML = html;
-
-        container.querySelectorAll('.categoria-tab').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                container.querySelectorAll('.categoria-tab').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                this.categoriaActiva = e.target.dataset.id;
-                
-                if (this.categoriaActiva === 'todas') {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                    const seccion = document.getElementById('seccion-' + this.categoriaActiva);
-                    if (seccion) {
-                        const top = seccion.getBoundingClientRect().top + window.pageYOffset - 140;
-                        window.scrollTo({ top: top, behavior: 'smooth' });
-                    }
+    const container = document.getElementById('categorias-tabs');
+    let html = '<button class="categoria-tab active" data-id="todas">Todos</button>';
+    this.menu.categorias.forEach(cat => {
+        html += '<button class="categoria-tab" data-id="' + cat.id + '">' + cat.nombre + '</button>';
+    });
+    container.innerHTML = html;
+    
+    container.querySelectorAll('.categoria-tab').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            container.querySelectorAll('.categoria-tab').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            this.categoriaActiva = e.target.dataset.id;
+            
+            if (this.categoriaActiva === 'todas') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                const seccion = document.getElementById('seccion-' + this.categoriaActiva);
+                if (seccion) {
+                    const top = seccion.getBoundingClientRect().top + window.pageYOffset - 140;
+                    window.scrollTo({ top: top, behavior: 'smooth' });
                 }
-            });
+            }
         });
-    },
+    });
+},
 
     renderProductos() {
         const container = document.getElementById('productos-grid');
@@ -467,7 +467,7 @@ const app = {
             }
         });
     }, {
-        rootMargin: '-200px 0px -60% 0px',
+        rootMargin: '-120px 0px -60% 0px',
         threshold: 0
     });
     

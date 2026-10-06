@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Doriteque</title>
+    <!-- PWA META TAGS -->
+<meta name="theme-color" content="#C41E3A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Doriteque Admin">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="../assets/logo.png">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="admin.css">
@@ -20,7 +27,7 @@
         <form id="login-form">
             <div class="form-group">
                 <label>Correo electrónico</label>
-                <input type="email" id="login-email" placeholder="admin@doriteque.com" required>
+                <input type="email" id="login-email" placeholder="" required>
             </div>
             
             <div class="form-group">
@@ -368,5 +375,19 @@
     </div>
 
     <script src="admin.js"></script>
+    <!-- REGISTRAR SERVICE WORKER -->
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+        .then(registration => {
+            console.log('Service Worker registrado:', registration);
+        })
+        .catch(error => {
+            console.log('Error al registrar Service Worker:', error);
+        });
+}
+</script>
+</body>
+</html>
 </body>
 </html>
