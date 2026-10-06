@@ -7,44 +7,44 @@ const app = {
     productoSeleccionado: null,
 
     async init() {
-    // LIMPIAR CARRITO AL ENTRAR A LA PÁGINA
-    localStorage.removeItem('doriteque_cart');
-    this.cart = [];
-    
-    if (!window.loadConfig || !window.loadMenu) {
-        setTimeout(() => this.init(), 500);
-        return;
-    }
-    
-    try {
-        window.loadConfig((config) => {
-            this.config = config;
-            this.renderConfig();
-        });
-        
-        window.loadMenu((menu) => {
-            this.menu = menu;
-            if (!this.menu.modificadores) this.menu.modificadores = [];
-            if (!this.menu.categorias) this.menu.categorias = [];
-            if (!this.menu.productos) this.menu.productos = [];
-            
-            this.renderCategorias();
-            this.renderProductos();
-            this.updateCartUI();
-            
-            setTimeout(() => this.setupScrollSpy(), 300);
-        });
-        
-        this.setupEventListeners();
-    } catch (error) {
-        console.error('Error cargando datos:', error);
-        document.getElementById('productos-grid').innerHTML = '<p class="loading">Error al cargar el menú. Recarga la página.</p>';
-    }
-},
+        // LIMPIAR CARRITO AL ENTRAR
+        localStorage.removeItem('doriteque_cart');
+        this.cart = [];
+
+        if (!window.loadConfig || !window.loadMenu) {
+            setTimeout(() => this.init(), 500);
+            return;
+        }
+
+        try {
+            window.loadConfig((config) => {
+                this.config = config;
+                this.renderConfig();
+            });
+
+            window.loadMenu((menu) => {
+                this.menu = menu;
+                if (!this.menu.modificadores) this.menu.modificadores = [];
+                if (!this.menu.categorias) this.menu.categorias = [];
+                if (!this.menu.productos) this.menu.productos = [];
+                
+                this.renderCategorias();
+                this.renderProductos();
+                this.updateCartUI();
+                
+                setTimeout(() => this.setupScrollSpy(), 300);
+            });
+
+            this.setupEventListeners();
+        } catch (error) {
+            console.error('Error cargando datos:', error);
+            document.getElementById('productos-grid').innerHTML = '<p class="loading">Error al cargar el menú.</p>';
+        }
+    },
 
     renderConfig() {
         document.getElementById('header-nombre').textContent = this.config.nombre;
-        document.getElementById('horario-text').textContent = ' ' + this.config.horario + ' |  Tasa: Bs ' + this.config.tasaBs;
+        document.getElementById('horario-text').textContent = ' ' + this.config.horario + ' | Tasa: Bs ' + this.config.tasaBs;
         document.getElementById('link-instagram').href = 'https://instagram.com/' + this.config.instagram;
         document.getElementById('link-tiktok').href = 'https://tiktok.com/@' + this.config.tiktok;
         document.getElementById('link-whatsapp').href = 'https://wa.me/' + this.config.whatsapp;
@@ -65,8 +65,6 @@ const app = {
                 container.querySelectorAll('.categoria-tab').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 this.categoriaActiva = e.target.dataset.id;
-                
-                e.target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 
                 if (this.categoriaActiva === 'todas') {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -139,10 +137,8 @@ const app = {
 
         const modal = document.getElementById('product-modal');
         modal.style.display = 'flex';
-        
         modal.offsetHeight;
         modal.classList.add('visible');
-        
         document.body.style.overflow = 'hidden';
     },
 
@@ -466,18 +462,12 @@ const app = {
                     tab.classList.remove('active');
                     if (tab.dataset.id === id) {
                         tab.classList.add('active');
-                        // Scroll horizontal suave SOLO si la tab no está visible
-                        const tabRect = tab.getBoundingClientRect();
-                        const containerRect = container.getBoundingClientRect();
-                        if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
-                            tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                        }
                     }
                 });
             }
         });
     }, {
-        rootMargin: '-120px 0px -60% 0px',
+        rootMargin: '-200px 0px -60% 0px',
         threshold: 0
     });
     
