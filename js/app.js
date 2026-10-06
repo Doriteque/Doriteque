@@ -7,60 +7,40 @@ const app = {
     productoSeleccionado: null,
 
     async init() {
-        // Verificar si viene del checkout y limpiar
-        const referrer = document.referrer;
-        if (referrer.includes('checkout.html')) {
-            localStorage.removeItem('doriteque_cart');
-            this.cart = [];
-        } else {
-            // Cargar carrito normalmente
-            try {
-                const savedCart = localStorage.getItem('doriteque_cart');
-                this.cart = savedCart ? JSON.parse(savedCart) : [];
-            } catch (e) {
-                this.cart = [];
-            }
-        }
-        // ... el resto del código sigue igual
-        // Cargar carrito desde localStorage
-        try {
-            const savedCart = localStorage.getItem('doriteque_cart');
-            this.cart = savedCart ? JSON.parse(savedCart) : [];
-        } catch (e) {
-            this.cart = [];
-        }
-
-        if (!window.loadConfig || !window.loadMenu) {
-            setTimeout(() => this.init(), 500);
-            return;
-        }
-
-        try {
-            window.loadConfig((config) => {
-                this.config = config;
-                this.renderConfig();
-            });
-
-            window.loadMenu((menu) => {
-                this.menu = menu;
-                if (!this.menu.modificadores) this.menu.modificadores = [];
-                if (!this.menu.categorias) this.menu.categorias = [];
-                if (!this.menu.productos) this.menu.productos = [];
-                
-                this.renderCategorias();
-                this.renderProductos();
-                this.updateCartUI();
-                
-                // Scroll spy después de renderizar
-                setTimeout(() => this.setupScrollSpy(), 300);
-            });
-
-            this.setupEventListeners();
-        } catch (error) {
-            console.error('Error cargando datos:', error);
-            document.getElementById('productos-grid').innerHTML = '<p class="loading">Error al cargar el menú. Recarga la página.</p>';
-        }
-    },
+    // LIMPIAR CARRITO AL ENTRAR A LA PÁGINA
+    localStorage.removeItem('doriteque_cart');
+    this.cart = [];
+    
+    if (!window.loadConfig || !window.loadMenu) {
+        setTimeout(() => this.init(), 500);
+        return;
+    }
+    
+    try {
+        window.loadConfig((config) => {
+            this.config = config;
+            this.renderConfig();
+        });
+        
+        window.loadMenu((menu) => {
+            this.menu = menu;
+            if (!this.menu.modificadores) this.menu.modificadores = [];
+            if (!this.menu.categorias) this.menu.categorias = [];
+            if (!this.menu.productos) this.menu.productos = [];
+            
+            this.renderCategorias();
+            this.renderProductos();
+            this.updateCartUI();
+            
+            setTimeout(() => this.setupScrollSpy(), 300);
+        });
+        
+        this.setupEventListeners();
+    } catch (error) {
+        console.error('Error cargando datos:', error);
+        document.getElementById('productos-grid').innerHTML = '<p class="loading">Error al cargar el menú. Recarga la página.</p>';
+    }
+},
 
     renderConfig() {
         document.getElementById('header-nombre').textContent = this.config.nombre;
