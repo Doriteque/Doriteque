@@ -377,11 +377,6 @@ const checkout = {
             fechaHora = d.toLocaleString('es-VE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
         }
 
-        let mapaLink = '';
-        if (this.selectedCoords) {
-            mapaLink = `https://whata.app/m/?lat=${this.selectedCoords.lat}&lon=${this.selectedCoords.lon}&address=${encodeURIComponent(addr)}`;
-        }
-
         const header = (this.config.msgHeader || '🍔 *NUEVO PEDIDO*');
         const greeting = (this.config.msgGreeting || '');
         
@@ -393,11 +388,10 @@ const checkout = {
         if (note) msg += `⚠️ *Observación adicional*\n${note}\n\n`;
         
         if (addr) {
-            msg += ` *Mapa de ubicación*\n${addr}`;
-            if (detail) msg += `. ${detail}`;
-            msg += '\n';
-            if (mapaLink) msg += mapaLink + '\n';
-        }
+    msg += `📍 *Mapa de ubicación*\n${addr}`;
+    if (detail) msg += `. ${detail}`;
+    msg += '\n\n';
+}
         
         msg += `\n📝 *Detalle*\n${detalle}`;
         msg += '---------------------------\n\n';
