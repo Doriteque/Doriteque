@@ -8,7 +8,10 @@ const checkout = {
 
     async init() {
         try {
-            // 1. Limpiar campos del formulario al entrar (pero NO el carrito)
+            // 1. Configurar fecha/hora INMEDIATAMENTE (no esperar al menú)
+            this.setupDateTime();
+
+            // 2. Limpiar campos del formulario al entrar (pero NO el carrito)
             setTimeout(() => {
                 const nameInput = document.getElementById('client-name');
                 if (nameInput) nameInput.value = '';
@@ -28,9 +31,6 @@ const checkout = {
                 const noteInput = document.getElementById('client-note');
                 if (noteInput) noteInput.value = '';
                 
-                const dtText = document.getElementById('datetime-text');
-                if (dtText) dtText.textContent = 'Calculando...';
-                
                 document.querySelectorAll('.payment-option').forEach(opt => {
                     opt.classList.remove('selected');
                     const radio = opt.querySelector('input');
@@ -42,7 +42,7 @@ const checkout = {
                 this.selectedPayment = '';
             }, 100);
 
-            // 2. Cargar carrito
+            // 3. Cargar carrito
             const savedCart = localStorage.getItem('doriteque_cart');
             this.cart = savedCart ? JSON.parse(savedCart) : [];
 
@@ -62,14 +62,13 @@ const checkout = {
                 this.renderItems();
             });
 
-            // 3. Si el carrito está vacío, redirigir al inicio
+            // 4. Si el carrito está vacío, redirigir al inicio
             if (this.cart.length === 0) {
                 alert('Tu carrito está vacío.');
                 window.location.href = 'index.html';
                 return;
             }
 
-            this.setupDateTime();
             this.setupAddressSearch();
         } catch (error) {
             console.error(error);
@@ -267,7 +266,7 @@ const checkout = {
             },
             {
                 enableHighAccuracy: true,
-                timeout: 10000,
+                timeout: 15000,
                 maximumAge: 0
             }
         );
@@ -275,7 +274,8 @@ const checkout = {
 
     async reverseGeocode(lat, lon) {
         try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=es&addressdetails=1`);
+            // Zoom 18 = máxima precisión (nivel de calle/edificio)
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&accept-language=es&addressdetails=1`);
             const data = await response.json();
             
             if (data && data.display_name) {
@@ -286,6 +286,15 @@ const checkout = {
                 };
                 
                 this.selectAddress(result);
+                
+                // Mostrar mensaje de verificación
+                const addressSearch = document.getElementById('address-search');
+                if (addressSearch) {
+                    // Agregar nota visual de que debe verificar
+                    setTimeout(() => {
+                        alert('📍 Dirección obtenida: ' + data.display_name.split(',').slice(0, 3).join(',') + '\n\n⚠️ Verifica que sea correcta. Si no lo es, puedes editarla manualmente o usar el autocompletado.');
+                    }, 300);
+                }
             } else {
                 throw new Error('No se pudo obtener la dirección');
             }
@@ -451,7 +460,7 @@ const checkout = {
         mensaje += '---------------------------\n\n';
         mensaje += '💵 *Sub-total:* USD$ ' + totalUSD.toFixed(2) + '\n';
         mensaje += '💵 *TOTAL DE LA ORDEN:* USD$ ' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
-        mensaje += ' *TIPO DE PAGO:* ' + this.selectedPayment;
+        mensaje += '💳 *TIPO DE PAGO:* ' + this.selectedPayment;
 
         return mensaje;
     },
