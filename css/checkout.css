@@ -351,3 +351,59 @@ body {
 .btn-send-order[style*="25D366"] {
     background: #25D366 !important;
 }
+/* AUTOCOMPLETADO DE DIRECCIÓN */
+.address-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-top: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: none;
+}
+
+.address-suggestions.active {
+    display: block;
+}
+
+.address-suggestion {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+
+.address-suggestion:hover {
+    background: #f5f5f5;
+}
+
+.address-suggestion:last-child {
+    border-bottom: none;
+}
+
+.form-group {
+    position: relative;
+}
+
+input[type="datetime-local"] {
+    width: 100%;
+    padding: 14px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    color: #1a1a1a;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+input[type="datetime-local"]:focus {
+    outline: none;
+    border-color: #C41E3A;
+}

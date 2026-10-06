@@ -701,20 +701,6 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
     document.getElementById('message-preview').style.display = 'block';
     document.getElementById('message-preview').scrollIntoView({ behavior: 'smooth' });
 },
-    exportJSON() {
-        const download = (filename, data) => {
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(url);
-        };
-        download('config-backup.json', this.config);
-        setTimeout(() => download('menu-backup.json', this.menu), 500);
-        alert('Archivos de respaldo descargados. (Ya no son necesarios, los datos están en la nube)');
-    }
 };
 
 document.addEventListener('DOMContentLoaded', () => admin.init());
