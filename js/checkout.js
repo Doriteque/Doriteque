@@ -116,73 +116,85 @@ const checkout = {
   },
   
   buildMessage() {
-    const name = document.getElementById('client-name').value.trim();
-    const country = document.getElementById('client-country').value;
-    const phone = document.getElementById('client-phone').value.trim();
-    const address = document.getElementById('client-address').value.trim();
-    const note = document.getElementById('client-note').value.trim();
+  const name = document.getElementById('client-name').value.trim();
+  const country = document.getElementById('client-country').value;
+  const phone = document.getElementById('client-phone').value.trim();
+  const address = document.getElementById('client-address').value.trim();
+  const note = document.getElementById('client-note').value.trim();
+  
+  let totalUSD = 0;
+  let detalle = '';
+  
+  this.cart.forEach(item => {
+    const prod = this.menu.productos.find(p => p.id === item.id);
+    if (!prod) return;
     
-    let totalUSD = 0;
-    let detalle = '';
+    let precioUnitario = prod.precio;
+    let opcionesTexto = '';
     
-    this.cart.forEach(item => {
-      const prod = this.menu.productos.find(p => p.id === item.id);
-      if (!prod) return;
-      
-      let precioUnitario = prod.precio;
-      let opcionesTexto = '';
-      
-      if (item.opciones) {
-        Object.keys(item.opciones).forEach(modNombre => {
-          const opciones = item.opciones[modNombre];
-          opciones.forEach(opNombre => {
-            const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
-            if (mod) {
-              const op = mod.opciones.find(o => o.nombre === opNombre);
-              if (op) precioUnitario += op.precio;
-            }
-          });
-          opcionesTexto += ' (' + modNombre + ': ' + opciones.join(', ') + ')';
+    if (item.opciones) {
+      Object.keys(item.opciones).forEach(modNombre => {
+        const opciones = item.opciones[modNombre];
+        opciones.forEach(opNombre => {
+          const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
+          if (mod) {
+            const op = mod.opciones.find(o => o.nombre === opNombre);
+            if (op) precioUnitario += op.precio;
+          }
         });
-      }
-      
-      const sub = precioUnitario * item.qty;
-      totalUSD += sub;
-      detalle += '• ' + item.qty + 'x ' + prod.nombre + opcionesTexto + ' - $' + sub.toFixed(2) + '\n';
-    });
+        opcionesTexto += ' (' + modNombre + ': ' + opciones.join(', ') + ')';
+      });
+    }
     
-    const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
-    const fullPhone = country + phone;
-    
-    let mensaje = '🍔 *NUEVO PEDIDO - ' + (this.config.nombre || 'DORITEQUE').toUpperCase() + '* 🍔\n\n';
-    mensaje += '👤 *Cliente:* ' + name + '\n';
-    mensaje += ' *WhatsApp:* +' + fullPhone + '\n';
-    mensaje += '📍 *Dirección:* ' + address + '\n';
-    mensaje += '💳 *Pago:* ' + this.selectedPayment + '\n';
-    if (note) mensaje += '📝 *Nota:* ' + note + '\n';
-    mensaje += '\n🛒 *DETALLE DEL PEDIDO:*\n' + detalle;
-    mensaje += '---------------------------\n';
-    mensaje += '💵 *TOTAL:* $' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
-    mensaje += 'Quedo atento a la confirmación. ¡Gracias!';
-    
-    return mensaje;
-  },
+    const sub = precioUnitario * item.qty;
+    totalUSD += sub;
+    detalle += '• ' + item.qty + 'x ' + prod.nombre + opcionesTexto + ' - $' + sub.toFixed(2) + '\n';
+  });
+  
+  const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
+  const fullPhone = country + phone;
+  const negocio = (this.config.nombre || 'DORITEQUE').toUpperCase();
+  
+  // Plantilla por defecto si no hay una personalizada
+  const plantillaDefault = '🍔 *NUEVO PEDIDO - {negocio}* 🍔\n\n👤 *Cliente:* {cliente}\n📱 *WhatsApp:* +{whatsapp}\n📍 *Dirección:* {direccion}\n💳 *Pago:* {pago}\n{nota}\n\n🛒 *DETALLE DEL PEDIDO:*\n{detalle}---------------------------\n💵 *TOTAL:* ${total_usd} (Bs {total_bs})\n\nQuedo atento a la confirmación. ¡Gracias!';
+  
+  const plantilla = this.config.mensajeWhatsApp || plantillaDefault;
+  
+  let mensaje = plantilla
+    .replace(/{negocio}/g, negocio)
+    .replace(/{cliente}/g, name)
+    .replace(/{whatsapp}/g, fullPhone)
+    .replace(/{direccion}/g, address)
+    .replace(/{pago}/g, this.selectedPayment)
+    .replace(/{nota}/g, note ? '📝 *Nota:* ' + note : '')
+    .replace(/{detalle}/g, detalle)
+    .replace(/{total_usd}/g, totalUSD.toFixed(2))
+    .replace(/{total_bs}/g, totalBs);
+  
+  return mensaje;
+},
   
   previewMessage() {
-    const name = document.getElementById('client-name').value.trim();
-    const phone = document.getElementById('client-phone').value.trim();
-    const address = document.getElementById('client-address').value.trim();
-    
-    if (!name) { alert('Ingresa tu nombre completo.'); return; }
-    if (!phone) { alert('Ingresa tu número de WhatsApp.'); return; }
-    if (!address) { alert('Ingresa tu dirección de entrega.'); return; }
-    if (!this.selectedPayment) { alert('Selecciona un método de pago.'); return; }
-    
-    const mensaje = this.buildMessage();
-    document.getElementById('whatsapp-message').value = mensaje;
-    document.getElementById('message-editor').style.display = 'block';
-    document.getElementById('message-editor').scrollIntoView({ behavior: 'smooth' });
-  },
+  const name = document.getElementById('client-name').value.trim();
+  const phone = document.getElementById('client-phone').value.trim();
+  const address = document.getElementById('client-address').value.trim();
+  
+  if (!name) { alert('Ingresa tu nombre completo.'); return; }
+  if (!phone) { alert('Ingresa tu número de WhatsApp.'); return; }
+  if (!address) { alert('Ingresa tu dirección de entrega.'); return; }
+  if (!this.selectedPayment) { alert('Selecciona un método de pago.'); return; }
+  
+  const mensaje = this.buildMessage();
+  
+  // Enviar directo sin mostrar editor
+  const url = 'https://wa.me/' + this.config.whatsapp + '?text=' + encodeURIComponent(mensaje);
+  window.open(url, '_blank');
+  
+  localStorage.removeItem('doriteque_cart');
+  setTimeout(() => {
+    window.location.href = 'index.html';
+  }, 1000);
+},
   
   sendOrder() {
     const mensaje = document.getElementById('whatsapp-message').value;

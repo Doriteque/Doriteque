@@ -148,9 +148,16 @@
                         <input type="number" step="0.01" id="cfg-tasa">
                     </div>
                     <div class="form-group">
-                        <label>Métodos de pago (separados por coma)</label>
+                        <label>Métodos de pago</label>
                         <input type="text" id="cfg-metodos" placeholder="Pago Móvil, Efectivo Bs, Efectivo Divisa">
                     </div>
+                    <div class="form-group">
+    <label>Plantilla del mensaje de WhatsApp</label>
+    <textarea id="cfg-mensaje" rows="6" placeholder="Usa estas variables: {cliente}, {whatsapp}, {direccion}, {pago}, {nota}, {detalle}, {total_usd}, {total_bs}, {negocio}"></textarea>
+    <small style="color: #b0b0b0; font-size: 0.8rem; display: block; margin-top: 4px;">
+        Variables disponibles: {cliente}, {whatsapp}, {direccion}, {pago}, {nota}, {detalle}, {total_usd}, {total_bs}, {negocio}
+    </small>
+</div>
                     <div class="form-group">
                         <label>URL del logo</label>
                         <input type="text" id="cfg-logo" placeholder="assets/logo.png">
@@ -183,9 +190,6 @@
         <button class="btn-qr" onclick="window.open('../qr.html', '_blank')" style="position: fixed; bottom: 90px; right: 20px; background: #FF6B00; color: white; border: none; padding: 14px 20px; border-radius: 50px; font-weight: 900; font-size: 0.95rem; cursor: pointer; box-shadow: 0 8px 30px rgba(255, 107, 0, 0.4); display: flex; align-items: center; gap: 8px; z-index: 100;">
     <i class="fa-solid fa-qrcode"></i> Generar QR
 </button>
-        <button class="btn-export" onclick="admin.exportJSON()">
-            <i class="fa-solid fa-download"></i> Exportar JSON (backup)
-        </button>
     </div>
 
     <!-- MODAL PRODUCTO -->

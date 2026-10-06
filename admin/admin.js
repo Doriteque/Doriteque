@@ -136,29 +136,31 @@ const admin = {
         document.getElementById('cfg-tasa').value = this.config.tasaBs || 36.50;
         document.getElementById('cfg-metodos').value = (this.config.metodosPago || []).join(', ');
         document.getElementById('cfg-logo').value = this.config.logo || '';
+        document.getElementById('cfg-mensaje').value = this.config.mensajeWhatsApp || '';
     },
 
     async saveConfig() {
-        try {
-            const newConfig = {
-                nombre: document.getElementById('cfg-nombre').value.trim(),
-                whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
-                email: document.getElementById('cfg-email').value.trim(),
-                instagram: document.getElementById('cfg-instagram').value.trim(),
-                tiktok: document.getElementById('cfg-tiktok').value.trim(),
-                horario: document.getElementById('cfg-horario').value.trim(),
-                tasaBs: parseFloat(document.getElementById('cfg-tasa').value) || 36.50,
-                metodosPago: document.getElementById('cfg-metodos').value.split(',').map(s => s.trim()).filter(s => s),
-                logo: document.getElementById('cfg-logo').value.trim()
-            };
-
-            await window.setDoc(window.doc(window.db, 'config', 'main'), newConfig);
-            alert('✅ Configuración guardada en la nube. Los cambios se ven al instante en la tienda.');
-        } catch (error) {
-            console.error(error);
-            alert('Error al guardar: ' + error.message);
-        }
-    },
+    try {
+        const newConfig = {
+            nombre: document.getElementById('cfg-nombre').value.trim(),
+            whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
+            email: document.getElementById('cfg-email').value.trim(),
+            instagram: document.getElementById('cfg-instagram').value.trim(),
+            tiktok: document.getElementById('cfg-tiktok').value.trim(),
+            horario: document.getElementById('cfg-horario').value.trim(),
+            tasaBs: parseFloat(document.getElementById('cfg-tasa').value) || 36.50,
+            metodosPago: document.getElementById('cfg-metodos').value.split(',').map(s => s.trim()).filter(s => s),
+            logo: document.getElementById('cfg-logo').value.trim(),
+            mensajeWhatsApp: document.getElementById('cfg-mensaje').value.trim()
+        };
+        
+        await window.setDoc(window.doc(window.db, 'config', 'main'), newConfig);
+        alert('✅ Configuración guardada en la nube. Los cambios se ven al instante en la tienda.');
+    } catch (error) {
+        console.error(error);
+        alert('Error al guardar: ' + error.message);
+    }
+},
 
     fillCredentialsForm() {
         document.getElementById('acc-user').value = this.credentials.user;

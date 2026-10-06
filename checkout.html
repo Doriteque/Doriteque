@@ -87,25 +87,8 @@
 
         <!-- BOTÓN GENERAR MENSAJE -->
         <button class="btn-send-order" onclick="checkout.previewMessage()">
-            <i class="fa-solid fa-pen-to-square"></i> Generar y revisar mensaje
-        </button>
-
-        <!-- EDITOR DE MENSAJE (oculto al inicio) -->
-        <section id="message-editor" class="checkout-card" style="display: none; margin-top: 16px;">
-            <h2 class="card-title"><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> Mensaje para WhatsApp</h2>
-            <p style="color: #b0b0b0; font-size: 0.85rem; margin-bottom: 12px;">
-                Puedes editar este mensaje antes de enviarlo.
-            </p>
-            <textarea id="whatsapp-message" rows="12" style="width: 100%; padding: 12px; background: #f5f5f5; border: 2px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 0.9rem; color: #1a1a1a; resize: vertical;"></textarea>
-            
-            <button class="btn-send-order" style="margin-top: 16px; background: #25D366;" onclick="checkout.sendOrder()">
-                <i class="fa-brands fa-whatsapp"></i> Enviar por WhatsApp
-            </button>
-        </section>
-
-        <p class="checkout-disclaimer">
-            <i class="fa-solid fa-circle-info"></i> Se abrirá WhatsApp para enviar el mensaje al negocio.
-        </p>
+    <i class="fa-brands fa-whatsapp"></i> Enviar pedido por WhatsApp
+</button>
     </main>
 
     <script src="js/checkout.js"></script>
