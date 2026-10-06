@@ -7,15 +7,12 @@ const app = {
     productoSeleccionado: null,
 
     async init() {
-        // Esperar a que Firebase esté listo
         if (!window.loadConfig || !window.loadMenu) {
-            console.log('Esperando Firebase...');
             setTimeout(() => this.init(), 500);
             return;
         }
 
         try {
-            // Cargar config y menú desde Firebase
             window.loadConfig((config) => {
                 this.config = config;
                 this.renderConfig();
@@ -159,10 +156,6 @@ const app = {
         const producto = this.menu.productos.find(p => p.id === productId);
         if (!producto) return;
 
-        console.log('Producto:', producto);
-        console.log('Modificadores:', producto.modificadoresIds);
-        console.log('Todos los modificadores:', this.menu.modificadores);
-
         const tieneMods = producto.modificadoresIds && 
                           producto.modificadoresIds.length > 0 && 
                           this.menu.modificadores && 
@@ -172,7 +165,6 @@ const app = {
             const modsAsignados = this.menu.modificadores.filter(m => 
                 producto.modificadoresIds.includes(m.id)
             );
-            console.log('Mods asignados:', modsAsignados);
             if (modsAsignados.length > 0) {
                 this.openCustomizationModal(producto);
                 return;
@@ -188,9 +180,6 @@ const app = {
         const modificadores = this.menu.modificadores.filter(m => 
             producto.modificadoresIds.includes(m.id)
         );
-
-        console.log('Abriendo modal de personalización para:', producto.nombre);
-        console.log('Modificadores a mostrar:', modificadores);
 
         const modal = document.getElementById('customization-modal');
         const title = document.getElementById('customization-title');
@@ -329,41 +318,41 @@ const app = {
     },
 
     updateCartUI() {
-    const totalItems = this.cart.reduce((sum, item) => sum + item.qty, 0);
-    
-    let totalUSD = 0;
-    this.cart.forEach(item => {
-        const prod = this.menu.productos.find(p => p.id === item.id);
-        if (prod) {
-            let precioUnitario = prod.precio;
-            if (item.opciones) {
-                Object.keys(item.opciones).forEach(modNombre => {
-                    const opciones = item.opciones[modNombre];
-                    opciones.forEach(opNombre => {
-                        const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
-                        if (mod) {
-                            const op = mod.opciones.find(o => o.nombre === opNombre);
-                            if (op) precioUnitario += op.precio;
-                        }
+        const totalItems = this.cart.reduce((sum, item) => sum + item.qty, 0);
+        
+        let totalUSD = 0;
+        this.cart.forEach(item => {
+            const prod = this.menu.productos.find(p => p.id === item.id);
+            if (prod) {
+                let precioUnitario = prod.precio;
+                if (item.opciones) {
+                    Object.keys(item.opciones).forEach(modNombre => {
+                        const opciones = item.opciones[modNombre];
+                        opciones.forEach(opNombre => {
+                            const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
+                            if (mod) {
+                                const op = mod.opciones.find(o => o.nombre === opNombre);
+                                if (op) precioUnitario += op.precio;
+                            }
+                        });
                     });
-                });
+                }
+                totalUSD += precioUnitario * item.qty;
             }
-            totalUSD += precioUnitario * item.qty;
+        });
+
+        const cartBar = document.getElementById('cart-bar-floating');
+        if (totalItems > 0) {
+            cartBar.classList.add('visible');
+            document.getElementById('cart-bar-total').textContent = 'USD$ ' + totalUSD.toFixed(2);
+        } else {
+            cartBar.classList.remove('visible');
         }
-    });
-    
-    const cartBar = document.getElementById('cart-bar-floating');
-    if (totalItems > 0) {
-        cartBar.classList.add('visible');
-        document.getElementById('cart-bar-total').textContent = 'USD$ ' + totalUSD.toFixed(2);
-    } else {
-        cartBar.classList.remove('visible');
-    }
-    
-    if (document.getElementById('cart-modal').style.display === 'flex') {
-        this.renderCartItems();
-    }
-},
+
+        if (document.getElementById('cart-modal').style.display === 'flex') {
+            this.renderCartItems();
+        }
+    },
 
     renderCartItems() {
         const container = document.getElementById('cart-items-container');
