@@ -8,41 +8,7 @@ const checkout = {
 
     async init() {
         try {
-            // 1. Configurar fecha/hora INMEDIATAMENTE (no esperar al menú)
-            this.setupDateTime();
-
-            // 2. Limpiar campos del formulario al entrar (pero NO el carrito)
-            setTimeout(() => {
-                const nameInput = document.getElementById('client-name');
-                if (nameInput) nameInput.value = '';
-                
-                const phoneInput = document.getElementById('client-phone');
-                if (phoneInput) phoneInput.value = '';
-                
-                const addressInput = document.getElementById('client-address');
-                if (addressInput) addressInput.value = '';
-                
-                const addressSearch = document.getElementById('address-search');
-                if (addressSearch) addressSearch.value = '';
-                
-                const addressDetail = document.getElementById('address-detail-input');
-                if (addressDetail) addressDetail.value = '';
-                
-                const noteInput = document.getElementById('client-note');
-                if (noteInput) noteInput.value = '';
-                
-                document.querySelectorAll('.payment-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                    const radio = opt.querySelector('input');
-                    if (radio) radio.checked = false;
-                });
-                
-                this.selectedAddress = null;
-                this.selectedCoords = null;
-                this.selectedPayment = '';
-            }, 100);
-
-            // 3. Cargar carrito
+            // 1. Cargar carrito PRIMERO
             const savedCart = localStorage.getItem('doriteque_cart');
             this.cart = savedCart ? JSON.parse(savedCart) : [];
 
@@ -62,13 +28,40 @@ const checkout = {
                 this.renderItems();
             });
 
-            // 4. Si el carrito está vacío, redirigir al inicio
+            // 2. Si el carrito está vacío, redirigir
             if (this.cart.length === 0) {
                 alert('Tu carrito está vacío.');
                 window.location.href = 'index.html';
                 return;
             }
 
+            // 3. Limpiar campos (PERO NO la hora)
+            setTimeout(() => {
+                const fieldsToClear = [
+                    'client-name', 'client-phone', 'client-address',
+                    'address-search', 'address-detail-input', 'client-note'
+                ];
+
+                fieldsToClear.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+
+                document.querySelectorAll('.payment-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    const radio = opt.querySelector('input');
+                    if (radio) radio.checked = false;
+                });
+
+                this.selectedAddress = null;
+                this.selectedCoords = null;
+                this.selectedPayment = '';
+            }, 100);
+
+            // 4. Configurar hora DESPUÉS de limpiar (así no se sobrescribe)
+            setTimeout(() => this.setupDateTime(), 200);
+
+            // 5. Setup de búsqueda de dirección
             this.setupAddressSearch();
         } catch (error) {
             console.error(error);
@@ -79,17 +72,17 @@ const checkout = {
     setupDateTime() {
         const now = new Date();
         now.setMinutes(now.getMinutes() + 30);
-        
-        const options = { 
-            year: 'numeric', 
-            month: '2-digit', 
+
+        const options = {
+            year: 'numeric',
+            month: '2-digit',
             day: '2-digit',
-            hour: '2-digit', 
-            minute: '2-digit' 
+            hour: '2-digit',
+            minute: '2-digit'
         };
         const dtText = document.getElementById('datetime-text');
         if (dtText) dtText.textContent = now.toLocaleString('es-VE', options);
-        
+
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const dtInput = document.getElementById('client-datetime');
         if (dtInput) dtInput.value = now.toISOString().slice(0, 16);
@@ -105,7 +98,7 @@ const checkout = {
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
             clearTimeout(debounceTimer);
-            
+
             if (query.length < 3) {
                 suggestionsContainer.classList.remove('active');
                 return;
@@ -127,7 +120,7 @@ const checkout = {
         try {
             const suggestionsContainer = document.getElementById('address-suggestions');
             suggestionsContainer.innerHTML = '';
-            
+
             const cleanQuery = query.trim().replace(/\s+/g, ' ');
             if (cleanQuery.length < 3) {
                 suggestionsContainer.classList.remove('active');
@@ -136,21 +129,21 @@ const checkout = {
 
             // Búsqueda priorizada en Venezuela
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=ve&viewbox=-73.3,12.5,-59.8,0.9&bounded=0&limit=10&addressdetails=1&accept-language=es`;
-            
+
             const response = await fetch(url);
             const results = await response.json();
-            
+
             if (results.length === 0) {
                 // Fallback: búsqueda global
                 const urlFallback = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&limit=10&addressdetails=1&accept-language=es`;
                 const responseFallback = await fetch(urlFallback);
                 const resultsFallback = await responseFallback.json();
-                
+
                 if (resultsFallback.length === 0) {
                     suggestionsContainer.classList.remove('active');
                     return;
                 }
-                
+
                 this.renderSuggestions(resultsFallback, suggestionsContainer);
                 return;
             }
@@ -164,7 +157,7 @@ const checkout = {
     renderSuggestions(results, container) {
         const uniqueResults = [];
         const seen = new Set();
-        
+
         for (const result of results) {
             if (!seen.has(result.display_name)) {
                 seen.add(result.display_name);
@@ -175,11 +168,11 @@ const checkout = {
         uniqueResults.slice(0, 8).forEach(result => {
             const div = document.createElement('div');
             div.className = 'address-suggestion';
-            
+
             const parts = result.display_name.split(',');
             const main = parts[0].trim();
             const sub = parts.slice(1, 4).join(', ').trim();
-            
+
             div.innerHTML = `
                 <i class="fa-solid fa-location-dot"></i>
                 <div class="address-suggestion-text">
@@ -187,7 +180,7 @@ const checkout = {
                     <div class="address-suggestion-sub">${sub}</div>
                 </div>
             `;
-            
+
             div.onclick = () => this.selectAddress(result);
             container.appendChild(div);
         });
@@ -201,20 +194,20 @@ const checkout = {
             lat: parseFloat(result.lat),
             lon: parseFloat(result.lon)
         };
-        
+
         const clientAddress = document.getElementById('client-address');
         if (clientAddress) clientAddress.value = result.display_name;
-        
+
         const addressSearch = document.getElementById('address-search');
         if (addressSearch) addressSearch.value = result.display_name;
-        
+
         const suggestionsContainer = document.getElementById('address-suggestions');
         if (suggestionsContainer) suggestionsContainer.classList.remove('active');
     },
 
     getCurrentLocation() {
         const btn = document.querySelector('.btn-geolocation');
-        
+
         if (!navigator.geolocation) {
             alert('Tu navegador no soporta geolocalización. Por favor escribe tu dirección manualmente.');
             return;
@@ -227,10 +220,10 @@ const checkout = {
             async (position) => {
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
-                
+
                 try {
                     await this.reverseGeocode(lat, lon);
-                    
+
                     btn.classList.remove('loading');
                     btn.innerHTML = '<i class="fa-solid fa-check"></i><span>¡Ubicación encontrada!</span>';
                     setTimeout(() => {
@@ -247,7 +240,7 @@ const checkout = {
                 console.error('Error de geolocalización:', error);
                 btn.classList.remove('loading');
                 btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
-                
+
                 let errorMsg = 'No se pudo obtener tu ubicación. ';
                 switch(error.code) {
                     case error.PERMISSION_DENIED:
@@ -274,27 +267,24 @@ const checkout = {
 
     async reverseGeocode(lat, lon) {
         try {
-            // Zoom 18 = máxima precisión (nivel de calle/edificio)
+            // Zoom 18 = máxima precisión
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&accept-language=es&addressdetails=1`);
             const data = await response.json();
-            
+
             if (data && data.display_name) {
                 const result = {
                     display_name: data.display_name,
                     lat: lat,
                     lon: lon
                 };
-                
+
                 this.selectAddress(result);
-                
-                // Mostrar mensaje de verificación
-                const addressSearch = document.getElementById('address-search');
-                if (addressSearch) {
-                    // Agregar nota visual de que debe verificar
-                    setTimeout(() => {
-                        alert('📍 Dirección obtenida: ' + data.display_name.split(',').slice(0, 3).join(',') + '\n\n⚠️ Verifica que sea correcta. Si no lo es, puedes editarla manualmente o usar el autocompletado.');
-                    }, 300);
-                }
+
+                // Mostrar mensaje claro al cliente
+                const shortAddress = data.display_name.split(',').slice(0, 3).join(',').trim();
+                setTimeout(() => {
+                    alert(`📍 Dirección obtenida:\n\n"${shortAddress}"\n\n⚠️ IMPORTANTE:\n• Esta es una dirección APROXIMADA basada en tu GPS\n• VERIFICA que sea correcta\n• Si no lo es, edítala manualmente en el campo de arriba\n• El enlace del mapa SÍ usará tu ubicación GPS exacta`);
+                }, 500);
             } else {
                 throw new Error('No se pudo obtener la dirección');
             }
@@ -307,7 +297,7 @@ const checkout = {
     renderItems() {
         const container = document.getElementById('checkout-items');
         if (!container) return;
-        
+
         let html = '';
         let totalUSD = 0;
         let totalItems = 0;
@@ -316,10 +306,10 @@ const checkout = {
             if (!item || !item.id) return;
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
-            
+
             let precioUnitario = prod.precio || 0;
             let opcionesTexto = '';
-            
+
             if (item.opciones) {
                 Object.keys(item.opciones).forEach(modNombre => {
                     const opciones = item.opciones[modNombre];
@@ -333,7 +323,7 @@ const checkout = {
                     opcionesTexto += '<div class="checkout-item-opciones">' + modNombre + ': ' + opciones.join(', ') + '</div>';
                 });
             }
-            
+
             const qty = item.qty || 1;
             const subtotal = precioUnitario * qty;
             totalUSD += subtotal;
@@ -350,13 +340,13 @@ const checkout = {
         });
 
         container.innerHTML = html;
-        
+
         const editCount = document.getElementById('edit-cart-count');
         if (editCount) editCount.textContent = totalItems;
-        
+
         const subtotalEl = document.getElementById('checkout-subtotal');
         if (subtotalEl) subtotalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
-        
+
         const totalEl = document.getElementById('checkout-total-usd');
         if (totalEl) totalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
     },
@@ -364,7 +354,7 @@ const checkout = {
     renderPaymentMethods() {
         const container = document.getElementById('payment-methods');
         if (!container) return;
-        
+
         let html = '';
         const metodos = this.config.metodosPago || ['Efectivo'];
 
@@ -395,15 +385,15 @@ const checkout = {
 
         let totalUSD = 0;
         let detalle = '';
-        
+
         this.cart.forEach(item => {
             if (!item || !item.id) return;
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
-            
+
             let precioUnitario = prod.precio || 0;
             let opcionesTexto = '';
-            
+
             if (item.opciones) {
                 Object.keys(item.opciones).forEach(modNombre => {
                     const opciones = item.opciones[modNombre];
@@ -417,7 +407,7 @@ const checkout = {
                     opcionesTexto += ' (' + modNombre + ': ' + opciones.join(', ') + ')';
                 });
             }
-            
+
             const qty = item.qty || 1;
             const sub = precioUnitario * qty;
             totalUSD += sub;
@@ -441,21 +431,21 @@ const checkout = {
 
         const header = this.config.msgHeader || '🍔 *NUEVO PEDIDO*';
         const greeting = this.config.msgGreeting || '';
-        
+
         let mensaje = header + ' - ' + negocio + '\n\n';
         if (greeting) mensaje += greeting + '\n\n';
         mensaje += '👤 *Nombre completo*\n' + name + '\n\n';
-        mensaje += ' *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
+        mensaje += '📱 *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
         if (fechaHora) mensaje += '📅 *Fecha y hora*\n' + fechaHora + '\n\n';
-        if (note) mensaje += '⚠️ *Observación adicional*\n' + note + '\n\n';
-        
+        if (note) mensaje += '️ *Observación adicional*\n' + note + '\n\n';
+
         if (address) {
-            mensaje += '📍 *Mapa de ubicación*\n' + address;
+            mensaje += ' *Mapa de ubicación*\n' + address;
             if (addressDetail) mensaje += '. ' + addressDetail;
             mensaje += '\n';
             if (mapaLink) mensaje += mapaLink + '\n';
         }
-        
+
         mensaje += '\n📝 *Detalle*\n' + detalle;
         mensaje += '---------------------------\n\n';
         mensaje += '💵 *Sub-total:* USD$ ' + totalUSD.toFixed(2) + '\n';
@@ -485,9 +475,9 @@ const checkout = {
         this.selectedAddress = null;
         this.selectedCoords = null;
         this.selectedPayment = '';
-        
-        setTimeout(() => { 
-            window.location.href = 'index.html'; 
+
+        setTimeout(() => {
+            window.location.href = 'index.html';
         }, 1000);
     }
 };
