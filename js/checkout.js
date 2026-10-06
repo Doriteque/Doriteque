@@ -61,49 +61,36 @@ const checkout = {
     },
 
     setupAddressSearch() {
-    const searchInput = document.getElementById('address-search');
-    const suggestionsContainer = document.getElementById('address-suggestions');
-    let debounceTimer;
-    
-    if (!searchInput) return;
-    
-    // Prevenir que el modal se cierre al tocar el input
-    searchInput.addEventListener('touchstart', (e) => {
-        e.stopPropagation();
-    });
-    
-    searchInput.addEventListener('click', (e) => {
-        e.stopPropagation();
-        searchInput.focus();
-    });
-    
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-        
-        clearTimeout(debounceTimer);
-        
-        if (query.length < 3) {
-            suggestionsContainer.classList.remove('active');
-            return;
-        }
-        
-        debounceTimer = setTimeout(() => {
-            this.searchAddress(query);
-        }, 300);
-    });
-    
-    // Cerrar sugerencias al hacer click fuera
-    document.addEventListener('click', (e) => {
-        const modal = document.getElementById('address-modal');
-        if (!modal.classList.contains('active')) return;
-        
-        if (!e.target.closest('#address-search') && !e.target.closest('#address-suggestions')) {
-            setTimeout(() => {
+        const searchInput = document.getElementById('address-search');
+        const suggestionsContainer = document.getElementById('address-suggestions');
+        let debounceTimer;
+
+        if (!searchInput) return;
+
+        // Prevenir que el click se propague al body
+        searchInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        searchInput.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+        }, { passive: true });
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            
+            clearTimeout(debounceTimer);
+            
+            if (query.length < 3) {
                 suggestionsContainer.classList.remove('active');
-            }, 200);
-        }
-    });
-},
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                this.searchAddress(query);
+            }, 300);
+        });
+    },
 
     async searchAddress(query) {
         try {
@@ -134,7 +121,10 @@ const checkout = {
                     </div>
                 `;
                 
-                div.onclick = () => this.selectAddress(result);
+                div.onclick = (e) => {
+                    e.stopPropagation();
+                    this.selectAddress(result);
+                };
                 suggestionsContainer.appendChild(div);
             });
 
@@ -175,25 +165,26 @@ const checkout = {
 
     openAddressModal() {
         const modal = document.getElementById('address-modal');
-        modal.classList.add('active');
+        modal.classList.remove('address-modal-hidden');
+        modal.classList.add('address-modal-visible');
         
-        // Esperar a que la transición CSS termine
+        // Enfocar el input después de que el modal sea visible
         setTimeout(() => {
             const searchInput = document.getElementById('address-search');
             if (searchInput) {
                 searchInput.focus();
-                searchInput.click();
             }
         }, 100);
     },
-    
+
     closeAddressModal() {
         const modal = document.getElementById('address-modal');
-        modal.classList.remove('active');
+        modal.classList.remove('address-modal-visible');
+        modal.classList.add('address-modal-hidden');
         document.getElementById('address-suggestions').classList.remove('active');
         document.getElementById('address-search').value = '';
     },
-    
+
     acceptAddress() {
         const detailInput = document.getElementById('address-detail-input');
         const detail = detailInput.value.trim();
@@ -363,7 +354,7 @@ const checkout = {
         mensaje += '👤 *Nombre completo*\n' + name + '\n\n';
         mensaje += ' *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
         if (fechaHora) mensaje += '📅 *Fecha y hora*\n' + fechaHora + '\n\n';
-        if (note) mensaje += '⚠️ *Alguna observación adicional*\n' + note + '\n\n';
+        if (note) mensaje += '⚠️ *Observación adicional*\n' + note + '\n\n';
         
         if (address) {
             mensaje += '📍 *Mapa de ubicación*\n' + address;
@@ -376,7 +367,7 @@ const checkout = {
         mensaje += '---------------------------\n\n';
         mensaje += '💵 *Sub-total:* USD$ ' + totalUSD.toFixed(2) + '\n';
         mensaje += '💵 *TOTAL DE LA ORDEN:* USD$ ' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
-        mensaje += '💳 *TIPO DE PAGO:* ' + this.selectedPayment;
+        mensaje += ' *TIPO DE PAGO:* ' + this.selectedPayment;
 
         return mensaje;
     },
