@@ -7,6 +7,13 @@ const app = {
     productoSeleccionado: null,
 
     async init() {
+        // Esperar a que Firebase esté listo
+        if (!window.loadConfig || !window.loadMenu) {
+            console.log('Esperando Firebase...');
+            setTimeout(() => this.init(), 500);
+            return;
+        }
+
         try {
             // Cargar config y menú desde Firebase
             window.loadConfig((config) => {
@@ -16,6 +23,10 @@ const app = {
 
             window.loadMenu((menu) => {
                 this.menu = menu;
+                if (!this.menu.modificadores) this.menu.modificadores = [];
+                if (!this.menu.categorias) this.menu.categorias = [];
+                if (!this.menu.productos) this.menu.productos = [];
+                
                 this.renderCategorias();
                 this.renderProductos();
                 this.updateCartUI();
@@ -148,6 +159,10 @@ const app = {
         const producto = this.menu.productos.find(p => p.id === productId);
         if (!producto) return;
 
+        console.log('Producto:', producto);
+        console.log('Modificadores:', producto.modificadoresIds);
+        console.log('Todos los modificadores:', this.menu.modificadores);
+
         const tieneMods = producto.modificadoresIds && 
                           producto.modificadoresIds.length > 0 && 
                           this.menu.modificadores && 
@@ -157,6 +172,7 @@ const app = {
             const modsAsignados = this.menu.modificadores.filter(m => 
                 producto.modificadoresIds.includes(m.id)
             );
+            console.log('Mods asignados:', modsAsignados);
             if (modsAsignados.length > 0) {
                 this.openCustomizationModal(producto);
                 return;
@@ -172,6 +188,9 @@ const app = {
         const modificadores = this.menu.modificadores.filter(m => 
             producto.modificadoresIds.includes(m.id)
         );
+
+        console.log('Abriendo modal de personalización para:', producto.nombre);
+        console.log('Modificadores a mostrar:', modificadores);
 
         const modal = document.getElementById('customization-modal');
         const title = document.getElementById('customization-title');
