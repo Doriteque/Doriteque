@@ -317,10 +317,10 @@ const app = {
         localStorage.setItem('doriteque_cart', JSON.stringify(this.cart));
     },
 
-    updateCartUI() {
-        const totalItems = this.cart.reduce((sum, item) => sum + item.qty, 0);
-        
+    calculateTotal() {
         let totalUSD = 0;
+        let totalItems = 0;
+        
         this.cart.forEach(item => {
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (prod) {
@@ -338,15 +338,34 @@ const app = {
                     });
                 }
                 totalUSD += precioUnitario * item.qty;
+                totalItems += item.qty;
             }
         });
+        
+        return { totalUSD, totalItems };
+    },
 
+    updateCartUI() {
+        const { totalUSD, totalItems } = this.calculateTotal();
+        
+        document.getElementById('cart-count').textContent = totalItems;
+        document.getElementById('cart-modal-count').textContent = totalItems;
+        document.getElementById('cart-total-usd').textContent = 'USD$ ' + totalUSD.toFixed(2);
+        document.getElementById('cart-finalizar-total').textContent = 'USD$ ' + totalUSD.toFixed(2);
+        
+        const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
+        document.getElementById('cart-total-bs').textContent = 'Bs ' + totalBs;
+        
+        // Actualizar barra flotante
         const cartBar = document.getElementById('cart-bar-floating');
-        if (totalItems > 0) {
-            cartBar.classList.add('visible');
-            document.getElementById('cart-bar-total').textContent = 'USD$ ' + totalUSD.toFixed(2);
-        } else {
-            cartBar.classList.remove('visible');
+        if (cartBar) {
+            if (totalItems > 0) {
+                cartBar.classList.add('visible');
+                document.getElementById('cart-bar-count').textContent = totalItems;
+                document.getElementById('cart-bar-total').textContent = 'USD$ ' + totalUSD.toFixed(2);
+            } else {
+                cartBar.classList.remove('visible');
+            }
         }
 
         if (document.getElementById('cart-modal').style.display === 'flex') {
@@ -357,14 +376,11 @@ const app = {
     renderCartItems() {
         const container = document.getElementById('cart-items-container');
         if (this.cart.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color: var(--gris-texto); padding: 20px;">Tu carrito está vacío</p>';
-            document.getElementById('cart-total-usd').textContent = '$0.00';
-            document.getElementById('cart-total-bs').textContent = 'Bs 0.00';
+            container.innerHTML = '<p style="text-align:center; color: #888; padding: 20px;">Tu carrito está vacío</p>';
             return;
         }
 
         let html = '';
-        let totalUSD = 0;
 
         this.cart.forEach(item => {
             const prod = this.menu.productos.find(p => p.id === item.id);
@@ -388,28 +404,23 @@ const app = {
             }
             
             const subtotal = precioUnitario * item.qty;
-            totalUSD += subtotal;
 
             html += '<div class="cart-item">';
             html += '<div class="cart-item-info">';
             html += '<div class="cart-item-nombre">' + prod.nombre + '</div>';
             if (opcionesTexto) html += opcionesTexto;
-            html += '<div class="cart-item-precio">$' + precioUnitario.toFixed(2) + ' c/u</div>';
+            html += '<div class="cart-item-precio">' + item.qty + ' × $' + precioUnitario.toFixed(2) + ' = $' + subtotal.toFixed(2) + '</div>';
             html += '</div>';
             html += '<div class="cart-item-controles">';
-            html += '<button class="btn-cantidad" onclick="app.updateCartQty(\'' + item.id + '\', -1)">-</button>';
+            html += '<button class="btn-cantidad" onclick="app.updateCartQty(\'' + item.id + '\', -1)">−</button>';
             html += '<span>' + item.qty + '</span>';
             html += '<button class="btn-cantidad" onclick="app.updateCartQty(\'' + item.id + '\', 1)">+</button>';
             html += '</div>';
-            html += '<div class="cart-item-subtotal">$' + subtotal.toFixed(2) + '</div>';
             html += '<button class="btn-eliminar" onclick="app.removeFromCart(\'' + item.id + '\')"><i class="fa-solid fa-trash"></i></button>';
             html += '</div>';
         });
 
         container.innerHTML = html;
-        const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
-        document.getElementById('cart-total-usd').textContent = '$' + totalUSD.toFixed(2);
-        document.getElementById('cart-total-bs').textContent = 'Bs ' + totalBs;
     },
 
     toggleCart() {
