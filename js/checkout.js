@@ -155,21 +155,23 @@ const checkout = {
   const fullPhone = country + phone;
   const negocio = (this.config.nombre || 'DORITEQUE').toUpperCase();
   
-  // Plantilla por defecto si no hay una personalizada
-  const plantillaDefault = '🍔 *NUEVO PEDIDO - {negocio}* 🍔\n\n👤 *Cliente:* {cliente}\n📱 *WhatsApp:* +{whatsapp}\n📍 *Dirección:* {direccion}\n💳 *Pago:* {pago}\n{nota}\n\n🛒 *DETALLE DEL PEDIDO:*\n{detalle}---------------------------\n💵 *TOTAL:* ${total_usd} (Bs {total_bs})\n\nQuedo atento a la confirmación. ¡Gracias!';
+  // Usar las partes del mensaje configuradas por el propietario
+  const header = this.config.msgHeader || '🍔 *NUEVO PEDIDO*';
+  const greeting = this.config.msgGreeting || '';
+  const beforeDetail = this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:';
+  const afterTotal = this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar. ¡Gracias por elegirnos!';
   
-  const plantilla = this.config.mensajeWhatsApp || plantillaDefault;
-  
-  let mensaje = plantilla
-    .replace(/{negocio}/g, negocio)
-    .replace(/{cliente}/g, name)
-    .replace(/{whatsapp}/g, fullPhone)
-    .replace(/{direccion}/g, address)
-    .replace(/{pago}/g, this.selectedPayment)
-    .replace(/{nota}/g, note ? '📝 *Nota:* ' + note : '')
-    .replace(/{detalle}/g, detalle)
-    .replace(/{total_usd}/g, totalUSD.toFixed(2))
-    .replace(/{total_bs}/g, totalBs);
+  let mensaje = header + ' - ' + negocio + '\n\n';
+  if (greeting) mensaje += greeting + '\n\n';
+  mensaje += '👤 *Cliente:* ' + name + '\n';
+  mensaje += '📱 *WhatsApp:* +' + fullPhone + '\n';
+  mensaje += '📍 *Dirección:* ' + address + '\n';
+  mensaje += '💳 *Pago:* ' + this.selectedPayment + '\n';
+  if (note) mensaje += '📝 *Nota:* ' + note + '\n';
+  mensaje += '\n' + beforeDetail + '\n' + detalle;
+  mensaje += '---------------------------\n';
+  mensaje += '💵 *TOTAL:* $' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
+  mensaje += afterTotal;
   
   return mensaje;
 },

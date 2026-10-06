@@ -152,11 +152,48 @@
                         <input type="text" id="cfg-metodos" placeholder="Pago Móvil, Efectivo Bs, Efectivo Divisa">
                     </div>
                     <div class="form-group">
-    <label>Plantilla del mensaje de WhatsApp</label>
-    <textarea id="cfg-mensaje" rows="6" placeholder="Usa estas variables: {cliente}, {whatsapp}, {direccion}, {pago}, {nota}, {detalle}, {total_usd}, {total_bs}, {negocio}"></textarea>
-    <small style="color: #b0b0b0; font-size: 0.8rem; display: block; margin-top: 4px;">
-        Variables disponibles: {cliente}, {whatsapp}, {direccion}, {pago}, {nota}, {detalle}, {total_usd}, {total_bs}, {negocio}
-    </small>
+    <label><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> Mensaje que recibes en WhatsApp</label>
+    <p style="color: #b0b0b0; font-size: 0.8rem; margin-bottom: 12px;">
+        Edita las partes del mensaje. Los datos del cliente (nombre, dirección, etc.) se llenan automáticamente.
+    </p>
+    
+    <div class="message-editor">
+        <div class="editor-section">
+            <label> Encabezado</label>
+            <input type="text" id="msg-header" value="🍔 *NUEVO PEDIDO*" placeholder="Ej: 🍔 Nuevo pedido">
+        </div>
+        
+        <div class="editor-section">
+            <label> Saludo al cliente</label>
+            <input type="text" id="msg-greeting" value="¡Gracias por tu pedido!" placeholder="Ej: ¡Hola! Gracias por tu pedido">
+        </div>
+        
+        <div class="editor-section">
+            <label>📝 Texto antes del detalle</label>
+            <textarea id="msg-before-detail" rows="2" placeholder="Ej: Aquí tienes el detalle de tu pedido:">Aquí tienes el detalle de tu pedido:</textarea>
+        </div>
+        
+        <div class="editor-section">
+            <label>✅ Texto después del total</label>
+            <textarea id="msg-after-total" rows="2" placeholder="Ej: Te contactaremos pronto para confirmar.">Te contactaremos pronto para confirmar. ¡Gracias por elegirnos!</textarea>
+        </div>
+        
+        <div class="editor-section">
+            <label>📱 Número de WhatsApp del negocio</label>
+            <input type="text" id="msg-business-phone" value="" placeholder="Se usa el número de configuración" readonly style="background: #1a1a1a; color: #b0b0b0;">
+            <small style="color: #b0b0b0; font-size: 0.75rem;">Este número se toma de la configuración de arriba</small>
+        </div>
+    </div>
+    
+    <button type="button" class="btn-secondary" style="margin-top: 12px; font-size: 0.85rem;" onclick="admin.previewMessage()">
+        <i class="fa-solid fa-eye"></i> Ver vista previa del mensaje
+    </button>
+</div>
+
+<!-- Vista previa del mensaje -->
+<div id="message-preview" class="message-preview" style="display: none;">
+    <h4 style="color: white; margin-bottom: 10px;"><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> Así se verá el mensaje:</h4>
+    <div id="message-preview-content" style="background: #f5f5f5; color: #1a1a1a; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; max-height: 300px; overflow-y: auto;"></div>
 </div>
                     <div class="form-group">
                         <label>URL del logo</label>

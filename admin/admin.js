@@ -137,6 +137,11 @@ const admin = {
         document.getElementById('cfg-metodos').value = (this.config.metodosPago || []).join(', ');
         document.getElementById('cfg-logo').value = this.config.logo || '';
         document.getElementById('cfg-mensaje').value = this.config.mensajeWhatsApp || '';
+        document.getElementById('msg-header').value = this.config.msgHeader || '🍔 *NUEVO PEDIDO*';
+document.getElementById('msg-greeting').value = this.config.msgGreeting || '¡Gracias por tu pedido!';
+document.getElementById('msg-before-detail').value = this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:';
+document.getElementById('msg-after-total').value = this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar. ¡Gracias por elegirnos!';
+document.getElementById('msg-business-phone').value = this.config.whatsapp || '';
     },
 
     async saveConfig() {
@@ -151,7 +156,10 @@ const admin = {
             tasaBs: parseFloat(document.getElementById('cfg-tasa').value) || 36.50,
             metodosPago: document.getElementById('cfg-metodos').value.split(',').map(s => s.trim()).filter(s => s),
             logo: document.getElementById('cfg-logo').value.trim(),
-            mensajeWhatsApp: document.getElementById('cfg-mensaje').value.trim()
+            msgHeader: document.getElementById('msg-header').value.trim(),
+            msgGreeting: document.getElementById('msg-greeting').value.trim(),
+            msgBeforeDetail: document.getElementById('msg-before-detail').value.trim(),
+            msgAfterTotal: document.getElementById('msg-after-total').value.trim()
         };
         
         await window.setDoc(window.doc(window.db, 'config', 'main'), newConfig);
@@ -658,6 +666,41 @@ const admin = {
         }
     },
 
+    previewMessage() {
+    const header = document.getElementById('msg-header').value || '🍔 *NUEVO PEDIDO*';
+    const greeting = document.getElementById('msg-greeting').value || '';
+    const beforeDetail = document.getElementById('msg-before-detail').value || '';
+    const afterTotal = document.getElementById('msg-after-total').value || '';
+    const negocio = (this.config.nombre || 'DORITEQUE').toUpperCase();
+    
+    // Datos de ejemplo para la vista previa
+    const ejemplo = {
+        cliente: 'Juan Pérez',
+        whatsapp: '584241234567',
+        direccion: 'Av. Principal, Casa #123',
+        pago: 'Pago Móvil',
+        nota: 'Sin cebolla por favor',
+        detalle: '• 2x HAMBURGUESA NORMAL (Proteína: Carne) - $11.00\n• 1x COCA-COLA 1LT - $1.50\n',
+        total_usd: '12.50',
+        total_bs: '456.25'
+    };
+    
+    let mensaje = header + ' - ' + negocio + '\n\n';
+    if (greeting) mensaje += greeting + '\n\n';
+    mensaje += '👤 *Cliente:* ' + ejemplo.cliente + '\n';
+    mensaje += '📱 *WhatsApp:* +' + ejemplo.whatsapp + '\n';
+    mensaje += '📍 *Dirección:* ' + ejemplo.direccion + '\n';
+    mensaje += ' *Pago:* ' + ejemplo.pago + '\n';
+    if (ejemplo.nota) mensaje += '📝 *Nota:* ' + ejemplo.nota + '\n';
+    mensaje += '\n' + beforeDetail + '\n' + ejemplo.detalle;
+    mensaje += '---------------------------\n';
+    mensaje += '💵 *TOTAL:* $' + ejemplo.total_usd + ' (Bs ' + ejemplo.total_bs + ')\n\n';
+    mensaje += afterTotal;
+    
+    document.getElementById('message-preview-content').textContent = mensaje;
+    document.getElementById('message-preview').style.display = 'block';
+    document.getElementById('message-preview').scrollIntoView({ behavior: 'smooth' });
+},
     exportJSON() {
         const download = (filename, data) => {
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
