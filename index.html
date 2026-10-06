@@ -102,11 +102,15 @@
         </div>
     </div>
 
-    <div class="cart-bar-floating" id="cart-bar-floating" onclick="app.toggleCart()">
-        <div class="cart-bar-count" id="cart-bar-count">0</div>
-        <span>Ver pedido</span>
-        <span class="cart-bar-total" id="cart-bar-total">$0.00</span>
-    </div>
+    <div class="cart-bar-floating" id="cart-bar-floating">
+    <button class="cart-bar-finalizar" onclick="app.checkout()">
+        <span id="cart-bar-text">Finalizar pedido</span>
+        <span class="cart-bar-total" id="cart-bar-total">USD$ 0.00</span>
+    </button>
+    <button class="cart-bar-seguir" onclick="app.toggleCart()">
+        <i class="fa-solid fa-arrow-left"></i> Seguir comprando
+    </button>
+</div>
 
     <footer class="footer">
         <div class="footer-redes">

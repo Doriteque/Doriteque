@@ -329,44 +329,41 @@ const app = {
     },
 
     updateCartUI() {
-        const totalItems = this.cart.reduce((sum, item) => sum + item.qty, 0);
-        
-        let totalUSD = 0;
-        this.cart.forEach(item => {
-            const prod = this.menu.productos.find(p => p.id === item.id);
-            if (prod) {
-                let precioUnitario = prod.precio;
-                if (item.opciones) {
-                    Object.keys(item.opciones).forEach(modNombre => {
-                        const opciones = item.opciones[modNombre];
-                        opciones.forEach(opNombre => {
-                            const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
-                            if (mod) {
-                                const op = mod.opciones.find(o => o.nombre === opNombre);
-                                if (op) precioUnitario += op.precio;
-                            }
-                        });
+    const totalItems = this.cart.reduce((sum, item) => sum + item.qty, 0);
+    
+    let totalUSD = 0;
+    this.cart.forEach(item => {
+        const prod = this.menu.productos.find(p => p.id === item.id);
+        if (prod) {
+            let precioUnitario = prod.precio;
+            if (item.opciones) {
+                Object.keys(item.opciones).forEach(modNombre => {
+                    const opciones = item.opciones[modNombre];
+                    opciones.forEach(opNombre => {
+                        const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
+                        if (mod) {
+                            const op = mod.opciones.find(o => o.nombre === opNombre);
+                            if (op) precioUnitario += op.precio;
+                        }
                     });
-                }
-                totalUSD += precioUnitario * item.qty;
+                });
             }
-        });
-
-        document.getElementById('cart-count').textContent = totalItems;
-
-        const cartBar = document.getElementById('cart-bar-floating');
-        if (totalItems > 0) {
-            cartBar.classList.add('visible');
-            document.getElementById('cart-bar-count').textContent = totalItems;
-            document.getElementById('cart-bar-total').textContent = '$' + totalUSD.toFixed(2);
-        } else {
-            cartBar.classList.remove('visible');
+            totalUSD += precioUnitario * item.qty;
         }
-
-        if (document.getElementById('cart-modal').style.display === 'flex') {
-            this.renderCartItems();
-        }
-    },
+    });
+    
+    const cartBar = document.getElementById('cart-bar-floating');
+    if (totalItems > 0) {
+        cartBar.classList.add('visible');
+        document.getElementById('cart-bar-total').textContent = 'USD$ ' + totalUSD.toFixed(2);
+    } else {
+        cartBar.classList.remove('visible');
+    }
+    
+    if (document.getElementById('cart-modal').style.display === 'flex') {
+        this.renderCartItems();
+    }
+},
 
     renderCartItems() {
         const container = document.getElementById('cart-items-container');

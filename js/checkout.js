@@ -238,7 +238,6 @@ const checkout = {
         const fullPhone = country + phone;
         const negocio = (this.config.nombre || 'DORITEQUE').toUpperCase();
 
-        // Formatear fecha y hora
         let fechaHora = '';
         if (datetime) {
             const dt = new Date(datetime);
@@ -251,7 +250,6 @@ const checkout = {
             });
         }
 
-        // Generar enlace de whata.app si hay coordenadas
         let mapaLink = '';
         if (this.selectedCoords) {
             mapaLink = 'https://whata.app/m/?lat=' + this.selectedCoords.lat + '&lon=' + this.selectedCoords.lon + '&address=' + encodeURIComponent(address);
@@ -272,7 +270,7 @@ const checkout = {
             mensaje += '📍 *Mapa de ubicación:* ' + address + '\n';
             if (mapaLink) mensaje += mapaLink + '\n';
         }
-        if (reference) mensaje += ' *Referencia:* ' + reference + '\n';
+        if (reference) mensaje += '📝 *Referencia:* ' + reference + '\n';
         mensaje += '\n' + beforeDetail + '\n' + detalle;
         mensaje += '---------------------------\n';
         mensaje += '💵 *Sub-total:* USD$ ' + totalUSD.toFixed(2) + '\n';
