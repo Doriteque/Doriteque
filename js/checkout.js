@@ -8,15 +8,18 @@ const checkout = {
 
     async init() {
         try {
-            // 1. Cargar carrito PRIMERO
+            // 1. Cargar carrito
             const savedCart = localStorage.getItem('doriteque_cart');
             this.cart = savedCart ? JSON.parse(savedCart) : [];
 
+            // 2. Verificar que Firebase esté cargado
             if (!window.loadConfig || !window.loadMenu) {
-                setTimeout(() => this.init(), 500);
+                console.error('Firebase no está cargado');
+                alert('Error: No se pudo conectar. Recarga la página.');
                 return;
             }
 
+            // 3. Cargar config y menú
             window.loadConfig((config) => {
                 this.config = config;
                 this.renderPaymentMethods();
@@ -28,21 +31,17 @@ const checkout = {
                 this.renderItems();
             });
 
-            // 2. Si el carrito está vacío, redirigir
+            // 4. Si el carrito está vacío, redirigir
             if (this.cart.length === 0) {
                 alert('Tu carrito está vacío.');
                 window.location.href = 'index.html';
                 return;
             }
 
-            // 3. Limpiar campos (PERO NO la hora)
+            // 5. Limpiar campos
             setTimeout(() => {
-                const fieldsToClear = [
-                    'client-name', 'client-phone', 'client-address',
-                    'address-search', 'address-detail-input', 'client-note'
-                ];
-
-                fieldsToClear.forEach(id => {
+                const fields = ['client-name', 'client-phone', 'client-address', 'address-search', 'address-detail-input', 'client-note'];
+                fields.forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });
@@ -58,31 +57,29 @@ const checkout = {
                 this.selectedPayment = '';
             }, 100);
 
-            // 4. Configurar hora DESPUÉS de limpiar (así no se sobrescribe)
+            // 6. Configurar hora
             setTimeout(() => this.setupDateTime(), 200);
 
-            // 5. Setup de búsqueda de dirección
+            // 7. Setup de búsqueda
             this.setupAddressSearch();
         } catch (error) {
-            console.error(error);
-            alert('Error al cargar los datos.');
+            console.error('Error en init:', error);
+            alert('Error al cargar: ' + error.message);
         }
     },
 
     setupDateTime() {
         const now = new Date();
         now.setMinutes(now.getMinutes() + 30);
-
-        const options = {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        };
+        
         const dtText = document.getElementById('datetime-text');
-        if (dtText) dtText.textContent = now.toLocaleString('es-VE', options);
-
+        if (dtText) {
+            dtText.textContent = now.toLocaleString('es-VE', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+        
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const dtInput = document.getElementById('client-datetime');
         if (dtInput) dtInput.value = now.toISOString().slice(0, 16);
@@ -90,7 +87,7 @@ const checkout = {
 
     setupAddressSearch() {
         const searchInput = document.getElementById('address-search');
-        const suggestionsContainer = document.getElementById('address-suggestions');
+        const suggestions = document.getElementById('address-suggestions');
         let debounceTimer;
 
         if (!searchInput) return;
@@ -98,81 +95,75 @@ const checkout = {
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
             clearTimeout(debounceTimer);
-
+            
             if (query.length < 3) {
-                suggestionsContainer.classList.remove('active');
+                suggestions.classList.remove('active');
                 return;
             }
 
-            debounceTimer = setTimeout(() => {
-                this.searchAddress(query);
-            }, 300);
+            debounceTimer = setTimeout(() => this.searchAddress(query), 300);
         });
 
         document.addEventListener('click', (e) => {
             if (!e.target.closest('#address-search') && !e.target.closest('#address-suggestions')) {
-                setTimeout(() => suggestionsContainer.classList.remove('active'), 200);
+                setTimeout(() => suggestions.classList.remove('active'), 200);
             }
         });
     },
 
     async searchAddress(query) {
         try {
-            const suggestionsContainer = document.getElementById('address-suggestions');
-            suggestionsContainer.innerHTML = '';
-
+            const container = document.getElementById('address-suggestions');
+            container.innerHTML = '';
+            
             const cleanQuery = query.trim().replace(/\s+/g, ' ');
             if (cleanQuery.length < 3) {
-                suggestionsContainer.classList.remove('active');
+                container.classList.remove('active');
                 return;
             }
 
-            // Búsqueda priorizada en Venezuela
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=ve&viewbox=-73.3,12.5,-59.8,0.9&bounded=0&limit=10&addressdetails=1&accept-language=es`;
-
             const response = await fetch(url);
             const results = await response.json();
-
+            
             if (results.length === 0) {
-                // Fallback: búsqueda global
-                const urlFallback = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&limit=10&addressdetails=1&accept-language=es`;
-                const responseFallback = await fetch(urlFallback);
-                const resultsFallback = await responseFallback.json();
-
-                if (resultsFallback.length === 0) {
-                    suggestionsContainer.classList.remove('active');
+                const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&limit=10&addressdetails=1&accept-language=es`;
+                const response2 = await fetch(url2);
+                const results2 = await response2.json();
+                
+                if (results2.length === 0) {
+                    container.classList.remove('active');
                     return;
                 }
-
-                this.renderSuggestions(resultsFallback, suggestionsContainer);
+                this.renderSuggestions(results2, container);
                 return;
             }
 
-            this.renderSuggestions(results, suggestionsContainer);
+            this.renderSuggestions(results, container);
         } catch (error) {
             console.error('Error buscando dirección:', error);
         }
     },
 
     renderSuggestions(results, container) {
-        const uniqueResults = [];
+        const unique = [];
         const seen = new Set();
-
-        for (const result of results) {
+        
+        results.forEach(result => {
             if (!seen.has(result.display_name)) {
                 seen.add(result.display_name);
-                uniqueResults.push(result);
+                unique.push(result);
             }
-        }
+        });
 
-        uniqueResults.slice(0, 8).forEach(result => {
+        unique.slice(0, 8).forEach(result => {
             const div = document.createElement('div');
             div.className = 'address-suggestion';
-
+            
             const parts = result.display_name.split(',');
             const main = parts[0].trim();
             const sub = parts.slice(1, 4).join(', ').trim();
-
+            
             div.innerHTML = `
                 <i class="fa-solid fa-location-dot"></i>
                 <div class="address-suggestion-text">
@@ -180,7 +171,7 @@ const checkout = {
                     <div class="address-suggestion-sub">${sub}</div>
                 </div>
             `;
-
+            
             div.onclick = () => this.selectAddress(result);
             container.appendChild(div);
         });
@@ -194,22 +185,22 @@ const checkout = {
             lat: parseFloat(result.lat),
             lon: parseFloat(result.lon)
         };
-
-        const clientAddress = document.getElementById('client-address');
-        if (clientAddress) clientAddress.value = result.display_name;
-
-        const addressSearch = document.getElementById('address-search');
-        if (addressSearch) addressSearch.value = result.display_name;
-
-        const suggestionsContainer = document.getElementById('address-suggestions');
-        if (suggestionsContainer) suggestionsContainer.classList.remove('active');
+        
+        const addr = document.getElementById('client-address');
+        if (addr) addr.value = result.display_name;
+        
+        const search = document.getElementById('address-search');
+        if (search) search.value = result.display_name;
+        
+        const suggestions = document.getElementById('address-suggestions');
+        if (suggestions) suggestions.classList.remove('active');
     },
 
     getCurrentLocation() {
         const btn = document.querySelector('.btn-geolocation');
-
+        
         if (!navigator.geolocation) {
-            alert('Tu navegador no soporta geolocalización. Por favor escribe tu dirección manualmente.');
+            alert('Tu navegador no soporta geolocalización.');
             return;
         }
 
@@ -217,73 +208,40 @@ const checkout = {
         btn.innerHTML = '<i class="fa-solid fa-spinner"></i><span>Obteniendo ubicación...</span>';
 
         navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-
+            async (pos) => {
                 try {
-                    await this.reverseGeocode(lat, lon);
-
+                    await this.reverseGeocode(pos.coords.latitude, pos.coords.longitude);
                     btn.classList.remove('loading');
                     btn.innerHTML = '<i class="fa-solid fa-check"></i><span>¡Ubicación encontrada!</span>';
                     setTimeout(() => {
                         btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
                     }, 2000);
-                } catch (error) {
-                    console.error('Error en reverse geocoding:', error);
-                    alert('No se pudo obtener la dirección. Por favor escríbela manualmente.');
+                } catch (err) {
+                    alert('No se pudo obtener la dirección.');
                     btn.classList.remove('loading');
                     btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
                 }
             },
-            (error) => {
-                console.error('Error de geolocalización:', error);
+            (err) => {
                 btn.classList.remove('loading');
                 btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
-
-                let errorMsg = 'No se pudo obtener tu ubicación. ';
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMsg += 'Por favor permite el acceso a la ubicación en tu navegador.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMsg += 'La información de ubicación no está disponible.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMsg += 'La solicitud de ubicación tardó demasiado.';
-                        break;
-                    default:
-                        errorMsg += 'Error desconocido.';
-                }
-                alert(errorMsg);
+                alert('Error de ubicación: ' + err.message);
             },
-            {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0
-            }
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
     },
 
     async reverseGeocode(lat, lon) {
         try {
-            // Zoom 18 = máxima precisión
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&accept-language=es&addressdetails=1`);
             const data = await response.json();
-
+            
             if (data && data.display_name) {
-                const result = {
-                    display_name: data.display_name,
-                    lat: lat,
-                    lon: lon
-                };
-
-                this.selectAddress(result);
-
-                // Mostrar mensaje claro al cliente
-                const shortAddress = data.display_name.split(',').slice(0, 3).join(',').trim();
+                this.selectAddress({ display_name: data.display_name, lat, lon });
+                
+                const shortAddr = data.display_name.split(',').slice(0, 3).join(',').trim();
                 setTimeout(() => {
-                    alert(`📍 Dirección obtenida:\n\n"${shortAddress}"\n\n⚠️ IMPORTANTE:\n• Esta es una dirección APROXIMADA basada en tu GPS\n• VERIFICA que sea correcta\n• Si no lo es, edítala manualmente en el campo de arriba\n• El enlace del mapa SÍ usará tu ubicación GPS exacta`);
+                    alert(`📍 Dirección:\n\n"${shortAddr}"\n\n⚠️ VERIFICA que sea correcta. Si no, edítala manualmente.`);
                 }, 500);
             } else {
                 throw new Error('No se pudo obtener la dirección');
@@ -297,7 +255,7 @@ const checkout = {
     renderItems() {
         const container = document.getElementById('checkout-items');
         if (!container) return;
-
+        
         let html = '';
         let totalUSD = 0;
         let totalItems = 0;
@@ -306,179 +264,171 @@ const checkout = {
             if (!item || !item.id) return;
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
-
-            let precioUnitario = prod.precio || 0;
-            let opcionesTexto = '';
-
+            
+            let price = prod.precio || 0;
+            let optsText = '';
+            
             if (item.opciones) {
-                Object.keys(item.opciones).forEach(modNombre => {
-                    const opciones = item.opciones[modNombre];
-                    opciones.forEach(opNombre => {
-                        const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
-                        if (mod) {
-                            const op = mod.opciones.find(o => o.nombre === opNombre);
-                            if (op) precioUnitario += op.precio || 0;
+                Object.keys(item.opciones).forEach(mod => {
+                    item.opciones[mod].forEach(opt => {
+                        const m = this.menu.modificadores.find(x => x.nombre === mod);
+                        if (m) {
+                            const o = m.opciones.find(x => x.nombre === opt);
+                            if (o) price += o.precio || 0;
                         }
                     });
-                    opcionesTexto += '<div class="checkout-item-opciones">' + modNombre + ': ' + opciones.join(', ') + '</div>';
+                    optsText += `<div class="checkout-item-opciones">${mod}: ${item.opciones[mod].join(', ')}</div>`;
                 });
             }
-
+            
             const qty = item.qty || 1;
-            const subtotal = precioUnitario * qty;
-            totalUSD += subtotal;
+            const sub = price * qty;
+            totalUSD += sub;
             totalItems += qty;
 
-            html += '<div class="checkout-item">';
-            html += '<div class="checkout-item-info">';
-            html += '<div class="checkout-item-name">' + prod.nombre + '</div>';
-            if (opcionesTexto) html += opcionesTexto;
-            html += '<div class="checkout-item-qty">' + qty + 'x $' + precioUnitario.toFixed(2) + '</div>';
-            html += '</div>';
-            html += '<div class="checkout-item-price">USD$ ' + subtotal.toFixed(2) + '</div>';
-            html += '</div>';
+            html += `<div class="checkout-item">
+                <div class="checkout-item-info">
+                    <div class="checkout-item-name">${prod.nombre}</div>
+                    ${optsText}
+                    <div class="checkout-item-qty">${qty}x $${price.toFixed(2)}</div>
+                </div>
+                <div class="checkout-item-price">USD$ ${sub.toFixed(2)}</div>
+            </div>`;
         });
 
         container.innerHTML = html;
-
-        const editCount = document.getElementById('edit-cart-count');
-        if (editCount) editCount.textContent = totalItems;
-
-        const subtotalEl = document.getElementById('checkout-subtotal');
-        if (subtotalEl) subtotalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
-
-        const totalEl = document.getElementById('checkout-total-usd');
-        if (totalEl) totalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
+        
+        const ec = document.getElementById('edit-cart-count');
+        if (ec) ec.textContent = totalItems;
+        
+        const st = document.getElementById('checkout-subtotal');
+        if (st) st.textContent = 'USD$ ' + totalUSD.toFixed(2);
+        
+        const tt = document.getElementById('checkout-total-usd');
+        if (tt) tt.textContent = 'USD$ ' + totalUSD.toFixed(2);
     },
 
     renderPaymentMethods() {
         const container = document.getElementById('payment-methods');
         if (!container) return;
-
-        let html = '';
-        const metodos = this.config.metodosPago || ['Efectivo'];
-
-        metodos.forEach((method, index) => {
-            html += '<div class="payment-option" onclick="checkout.selectPayment(\'' + method + '\', this)">';
-            html += '<input type="radio" name="payment" value="' + method + '" id="payment-' + index + '">';
-            html += '<label for="payment-' + index + '">' + method + '</label>';
-            html += '</div>';
-        });
-        container.innerHTML = html;
+        
+        const methods = this.config.metodosPago || ['Efectivo'];
+        container.innerHTML = methods.map((m, i) => `
+            <div class="payment-option" onclick="checkout.selectPayment('${m}', this)">
+                <input type="radio" name="payment" value="${m}" id="pay-${i}">
+                <label for="pay-${i}">${m}</label>
+            </div>
+        `).join('');
     },
 
-    selectPayment(method, element) {
+    selectPayment(method, el) {
         this.selectedPayment = method;
         document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
-        element.classList.add('selected');
-        element.querySelector('input').checked = true;
+        el.classList.add('selected');
+        el.querySelector('input').checked = true;
     },
 
     buildMessage() {
-        const name = document.getElementById('client-name').value.trim();
+        const name = (document.getElementById('client-name').value || '').trim();
         const country = document.getElementById('client-country').value;
-        const phone = document.getElementById('client-phone').value.trim();
-        const address = document.getElementById('client-address').value.trim() || document.getElementById('address-search').value.trim();
-        const addressDetail = document.getElementById('address-detail-input').value.trim();
-        const datetime = document.getElementById('client-datetime').value;
-        const note = document.getElementById('client-note').value.trim();
+        const phone = (document.getElementById('client-phone').value || '').trim();
+        const addr = (document.getElementById('client-address').value || document.getElementById('address-search').value || '').trim();
+        const detail = (document.getElementById('address-detail-input').value || '').trim();
+        const dt = document.getElementById('client-datetime').value;
+        const note = (document.getElementById('client-note').value || '').trim();
 
-        let totalUSD = 0;
+        let total = 0;
         let detalle = '';
-
+        
         this.cart.forEach(item => {
             if (!item || !item.id) return;
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
-
-            let precioUnitario = prod.precio || 0;
-            let opcionesTexto = '';
-
+            
+            let price = prod.precio || 0;
+            let opts = '';
+            
             if (item.opciones) {
-                Object.keys(item.opciones).forEach(modNombre => {
-                    const opciones = item.opciones[modNombre];
-                    opciones.forEach(opNombre => {
-                        const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
-                        if (mod) {
-                            const op = mod.opciones.find(o => o.nombre === opNombre);
-                            if (op) precioUnitario += op.precio || 0;
+                Object.keys(item.opciones).forEach(mod => {
+                    item.opciones[mod].forEach(opt => {
+                        const m = this.menu.modificadores.find(x => x.nombre === mod);
+                        if (m) {
+                            const o = m.opciones.find(x => x.nombre === opt);
+                            if (o) price += o.precio || 0;
                         }
                     });
-                    opcionesTexto += ' (' + modNombre + ': ' + opciones.join(', ') + ')';
+                    opts += ` (${mod}: ${item.opciones[mod].join(', ')})`;
                 });
             }
-
+            
             const qty = item.qty || 1;
-            const sub = precioUnitario * qty;
-            totalUSD += sub;
-            detalle += '• ' + qty + 'x ' + prod.nombre + opcionesTexto + ' | precio ' + precioUnitario.toFixed(0) + ' | total ' + sub.toFixed(0) + '\n';
+            const sub = price * qty;
+            total += sub;
+            detalle += `• ${qty}x ${prod.nombre}${opts} | precio ${price.toFixed(0)} | total ${sub.toFixed(0)}\n`;
         });
 
-        const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
+        const totalBs = (total * (this.config.tasaBs || 1000)).toFixed(2);
         const fullPhone = country + phone;
-        const negocio = (this.config.nombre || 'DORITEQUE').toUpperCase();
+        const negocio = ((this.config.nombre || 'DORITEQUE')).toUpperCase();
 
         let fechaHora = '';
-        if (datetime) {
-            const dt = new Date(datetime);
-            fechaHora = dt.toLocaleString('es-VE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        if (dt) {
+            const d = new Date(dt);
+            fechaHora = d.toLocaleString('es-VE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
         }
 
         let mapaLink = '';
         if (this.selectedCoords) {
-            mapaLink = 'https://whata.app/m/?lat=' + this.selectedCoords.lat + '&lon=' + this.selectedCoords.lon + '&address=' + encodeURIComponent(address);
+            mapaLink = `https://whata.app/m/?lat=${this.selectedCoords.lat}&lon=${this.selectedCoords.lon}&address=${encodeURIComponent(addr)}`;
         }
 
-        const header = this.config.msgHeader || '🍔 *NUEVO PEDIDO*';
-        const greeting = this.config.msgGreeting || '';
-
-        let mensaje = header + ' - ' + negocio + '\n\n';
-        if (greeting) mensaje += greeting + '\n\n';
-        mensaje += '👤 *Nombre completo*\n' + name + '\n\n';
-        mensaje += '📱 *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
-        if (fechaHora) mensaje += '📅 *Fecha y hora*\n' + fechaHora + '\n\n';
-        if (note) mensaje += '️ *Observación adicional*\n' + note + '\n\n';
-
-        if (address) {
-            mensaje += ' *Mapa de ubicación*\n' + address;
-            if (addressDetail) mensaje += '. ' + addressDetail;
-            mensaje += '\n';
-            if (mapaLink) mensaje += mapaLink + '\n';
+        const header = (this.config.msgHeader || '🍔 *NUEVO PEDIDO*');
+        const greeting = (this.config.msgGreeting || '');
+        
+        let msg = header + ' - ' + negocio + '\n\n';
+        if (greeting) msg += greeting + '\n\n';
+        msg += `👤 *Nombre completo*\n${name}\n\n`;
+        msg += `📱 *Nro. de WhatsApp*\n+${fullPhone}\n\n`;
+        if (fechaHora) msg += `📅 *Fecha y hora*\n${fechaHora}\n\n`;
+        if (note) msg += `⚠️ *Observación adicional*\n${note}\n\n`;
+        
+        if (addr) {
+            msg += ` *Mapa de ubicación*\n${addr}`;
+            if (detail) msg += `. ${detail}`;
+            msg += '\n';
+            if (mapaLink) msg += mapaLink + '\n';
         }
+        
+        msg += `\n📝 *Detalle*\n${detalle}`;
+        msg += '---------------------------\n\n';
+        msg += `💵 *Sub-total:* USD$ ${total.toFixed(2)}\n`;
+        msg += `💵 *TOTAL DE LA ORDEN:* USD$ ${total.toFixed(2)} (Bs ${totalBs})\n\n`;
+        msg += `💳 *TIPO DE PAGO:* ${this.selectedPayment}`;
 
-        mensaje += '\n📝 *Detalle*\n' + detalle;
-        mensaje += '---------------------------\n\n';
-        mensaje += '💵 *Sub-total:* USD$ ' + totalUSD.toFixed(2) + '\n';
-        mensaje += '💵 *TOTAL DE LA ORDEN:* USD$ ' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
-        mensaje += '💳 *TIPO DE PAGO:* ' + this.selectedPayment;
-
-        return mensaje;
+        return msg;
     },
 
     sendOrder() {
-        const name = document.getElementById('client-name').value.trim();
-        const phone = document.getElementById('client-phone').value.trim();
-        const address = document.getElementById('client-address').value.trim() || document.getElementById('address-search').value.trim();
+        const name = (document.getElementById('client-name').value || '').trim();
+        const phone = (document.getElementById('client-phone').value || '').trim();
+        const addr = (document.getElementById('client-address').value || document.getElementById('address-search').value || '').trim();
 
-        if (!name) { alert('Ingresa tu nombre completo.'); return; }
-        if (!phone) { alert('Ingresa tu número de WhatsApp.'); return; }
-        if (!address) { alert('Escribe o selecciona tu dirección de entrega.'); return; }
-        if (!this.selectedPayment) { alert('Selecciona un método de pago.'); return; }
+        if (!name) { alert('Ingresa tu nombre.'); return; }
+        if (!phone) { alert('Ingresa tu WhatsApp.'); return; }
+        if (!addr) { alert('Ingresa tu dirección.'); return; }
+        if (!this.selectedPayment) { alert('Selecciona método de pago.'); return; }
 
-        const mensaje = this.buildMessage();
-        const url = 'https://wa.me/' + this.config.whatsapp + '?text=' + encodeURIComponent(mensaje);
+        const msg = this.buildMessage();
+        const url = `https://wa.me/${this.config.whatsapp}?text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank');
 
-        // LIMPIAR TODO DESPUÉS DE ENVIAR
         localStorage.removeItem('doriteque_cart');
         this.cart = [];
         this.selectedAddress = null;
         this.selectedCoords = null;
         this.selectedPayment = '';
-
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
+        
+        setTimeout(() => { window.location.href = 'index.html'; }, 1000);
     }
 };
 
