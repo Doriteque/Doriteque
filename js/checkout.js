@@ -61,35 +61,49 @@ const checkout = {
     },
 
     setupAddressSearch() {
-        const searchInput = document.getElementById('address-search');
-        const suggestionsContainer = document.getElementById('address-suggestions');
-        let debounceTimer;
-
-        if (!searchInput) return;
-
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.trim();
-            
-            clearTimeout(debounceTimer);
-            
-            if (query.length < 3) {
+    const searchInput = document.getElementById('address-search');
+    const suggestionsContainer = document.getElementById('address-suggestions');
+    let debounceTimer;
+    
+    if (!searchInput) return;
+    
+    // Prevenir que el modal se cierre al tocar el input
+    searchInput.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+    });
+    
+    searchInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+        searchInput.focus();
+    });
+    
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        clearTimeout(debounceTimer);
+        
+        if (query.length < 3) {
+            suggestionsContainer.classList.remove('active');
+            return;
+        }
+        
+        debounceTimer = setTimeout(() => {
+            this.searchAddress(query);
+        }, 300);
+    });
+    
+    // Cerrar sugerencias al hacer click fuera
+    document.addEventListener('click', (e) => {
+        const modal = document.getElementById('address-modal');
+        if (!modal.classList.contains('active')) return;
+        
+        if (!e.target.closest('#address-search') && !e.target.closest('#address-suggestions')) {
+            setTimeout(() => {
                 suggestionsContainer.classList.remove('active');
-                return;
-            }
-
-            debounceTimer = setTimeout(() => {
-                this.searchAddress(query);
-            }, 300);
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#address-search') && !e.target.closest('#address-suggestions')) {
-                setTimeout(() => {
-                    suggestionsContainer.classList.remove('active');
-                }, 200);
-            }
-        });
-    },
+            }, 200);
+        }
+    });
+},
 
     async searchAddress(query) {
         try {
@@ -161,23 +175,25 @@ const checkout = {
 
     openAddressModal() {
         const modal = document.getElementById('address-modal');
-        modal.style.display = 'flex';
+        modal.classList.add('active');
         
+        // Esperar a que la transición CSS termine
         setTimeout(() => {
             const searchInput = document.getElementById('address-search');
             if (searchInput) {
                 searchInput.focus();
-                searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                searchInput.click();
             }
-        }, 300);
+        }, 100);
     },
-
+    
     closeAddressModal() {
         const modal = document.getElementById('address-modal');
-        modal.style.display = 'none';
+        modal.classList.remove('active');
         document.getElementById('address-suggestions').classList.remove('active');
+        document.getElementById('address-search').value = '';
     },
-
+    
     acceptAddress() {
         const detailInput = document.getElementById('address-detail-input');
         const detail = detailInput.value.trim();
@@ -192,6 +208,7 @@ const checkout = {
         
         this.closeAddressModal();
         detailInput.value = '';
+        this.updateAddressDisplay();
     },
 
     renderItems() {

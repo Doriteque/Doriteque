@@ -91,8 +91,8 @@
             </div>
 
             <div class="form-group">
-                <label>Alguna observación adicional (Ejemplo: Alergias)</label>
-                <textarea id="client-note" rows="2" placeholder="Ej: Sin cebolla, salsa aparte..."></textarea>
+                <label>Observación adicional</label>
+                <textarea id="client-note" rows="2" placeholder="Escribe aquí..."></textarea>
             </div>
         </section>
 
@@ -105,32 +105,32 @@
         </p>
     </main>
 
-    <div id="address-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content address-modal-content">
-            <div class="modal-header">
-                <h3><i class="fa-solid fa-location-dot" style="color: #C41E3A;"></i> Dirección</h3>
-                <button class="modal-close" onclick="checkout.closeAddressModal()">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+    <div id="address-modal" class="modal-overlay" style="visibility: hidden; opacity: 0; pointer-events: none;">
+    <div class="modal-content address-modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-location-dot" style="color: #C41E3A;"></i> Dirección</h3>
+            <button class="modal-close" onclick="checkout.closeAddressModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="address-input-wrapper">
+                <i class="fa-solid fa-map"></i>
+                <input type="text" id="address-search" placeholder="Escribe tu dirección..." autocomplete="off" inputmode="text">
             </div>
-            <div class="modal-body">
-                <div class="address-input-wrapper">
-                    <i class="fa-solid fa-map"></i>
-                    <input type="text" id="address-search" placeholder="Escribe tu dirección..." autocomplete="off">
-                </div>
-                <div id="address-suggestions" class="address-suggestions"></div>
-                
-                <div class="address-detail-wrapper">
-                    <i class="fa-solid fa-location-crosshairs"></i>
-                    <input type="text" id="address-detail-input" placeholder="Detalle adicional (casa, apto, referencia)">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="checkout.closeAddressModal()">Cancelar</button>
-                <button class="btn-accept" onclick="checkout.acceptAddress()">Aceptar</button>
+            <div id="address-suggestions" class="address-suggestions"></div>
+            
+            <div class="address-detail-wrapper">
+                <i class="fa-solid fa-location-crosshairs"></i>
+                <input type="text" id="address-detail-input" placeholder="Detalle adicional (casa, apto, referencia)" inputmode="text">
             </div>
         </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="checkout.closeAddressModal()">Cancelar</button>
+            <button class="btn-accept" onclick="checkout.acceptAddress()">Aceptar</button>
+        </div>
     </div>
+</div>
 
     <script src="js/checkout.js"></script>
 </body>

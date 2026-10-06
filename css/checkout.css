@@ -890,3 +890,216 @@ input[type="datetime-local"]:focus {
     color: #999;
     font-size: 1.2rem;
 }
+/* MODAL DE DIRECCIÓN - FIX PARA MÓVIL */
+#address-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 10vh;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+#address-modal.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#address-modal:not(.active) {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.address-modal-content {
+    width: 90%;
+    max-width: 500px;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+#address-modal.active .address-modal-content {
+    transform: translateY(0);
+}
+
+.address-modal-content .modal-header {
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.address-modal-content .modal-header h3 {
+    color: #1a1a1a;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.address-modal-content .modal-header .modal-close {
+    background: none;
+    border: none;
+    color: #1a1a1a;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.address-modal-content .modal-body {
+    padding: 20px;
+    background: white;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.address-modal-content .modal-footer {
+    padding: 16px 20px;
+    background: white;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.address-input-wrapper,
+.address-detail-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f5f5f5;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    transition: border-color 0.2s;
+}
+
+.address-input-wrapper:focus-within,
+.address-detail-wrapper:focus-within {
+    border-color: #C41E3A;
+    background: white;
+}
+
+.address-input-wrapper i,
+.address-detail-wrapper i {
+    color: #999;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.address-input-wrapper input,
+.address-detail-wrapper input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    color: #1a1a1a;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.address-input-wrapper input::placeholder,
+.address-detail-wrapper input::placeholder {
+    color: #999;
+}
+
+.address-suggestions {
+    margin-top: 12px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    display: none;
+}
+
+.address-suggestions.active {
+    display: block;
+}
+
+.address-suggestion {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    transition: background 0.2s;
+}
+
+.address-suggestion:hover {
+    background: #f5f5f5;
+}
+
+.address-suggestion:last-child {
+    border-bottom: none;
+}
+
+.address-suggestion i {
+    color: #C41E3A;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.address-suggestion-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.address-suggestion-main {
+    font-weight: 700;
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    word-wrap: break-word;
+}
+
+.address-suggestion-sub {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 2px;
+    word-wrap: break-word;
+}
+
+.btn-cancel,
+.btn-accept {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-cancel {
+    background: #f5f5f5;
+    color: #1a1a1a;
+    border: 2px solid #e0e0e0;
+}
+
+.btn-accept {
+    background: #1a1a1a;
+    color: white;
+}
+
+.btn-accept:active {
+    background: #C41E3A;
+}
