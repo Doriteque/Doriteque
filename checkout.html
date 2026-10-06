@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/checkout.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script type="module" src="js/firebase.js"></script>
     <script type="module" src="js/db.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <header class="checkout-header">
@@ -63,7 +63,7 @@
                 <label>Nro. de WhatsApp <span class="required">*</span></label>
                 <div class="phone-input-wrapper">
                     <div class="country-flag">
-                        <span class="flag-emoji">🇻🇪</span>
+                        <span class="flag-emoji">🇻</span>
                         <select id="client-country">
                             <option value="58">+58</option>
                             <option value="57">+57</option>
@@ -78,7 +78,21 @@
 
             <div class="form-group">
                 <label>Dirección <span class="required">*</span></label>
-                <textarea id="client-address" rows="3" placeholder="Escribe tu dirección (Calle o Avenida y luego referencia)"></textarea>
+                <div class="address-selector" onclick="checkout.openAddressModal()">
+                    <div class="address-display" id="address-display">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span>Seleccionar ubicación</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+                <input type="hidden" id="client-address">
+                <input type="hidden" id="client-address-detail">
+            </div>
+
+            <div class="form-group">
+                <label>Fecha y hora <span class="required">*</span></label>
+                <input type="datetime-local" id="client-datetime">
+                <small class="form-hint">Selecciona una fecha y una hora</small>
             </div>
 
             <div class="form-group">
@@ -87,11 +101,43 @@
             </div>
         </section>
 
-        <!-- BOTÓN GENERAR MENSAJE -->
-        <button class="btn-send-order" onclick="checkout.previewMessage()">
-    <i class="fa-brands fa-whatsapp"></i> Enviar pedido por WhatsApp
-</button>
+        <!-- BOTÓN ENVIAR -->
+        <button class="btn-send-order" onclick="checkout.sendOrder()">
+            <i class="fa-brands fa-whatsapp"></i> Enviar pedido por WhatsApp
+        </button>
+
+        <p class="checkout-disclaimer">
+            <i class="fa-solid fa-circle-info"></i> Se abrirá WhatsApp para enviar el mensaje al negocio.
+        </p>
     </main>
+
+    <!-- MODAL DE DIRECCIÓN -->
+    <div id="address-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content address-modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-location-dot" style="color: #C41E3A;"></i> Dirección</h3>
+                <button class="modal-close" onclick="checkout.closeAddressModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="address-input-wrapper">
+                    <i class="fa-solid fa-map"></i>
+                    <input type="text" id="address-search" placeholder="Escribe tu dirección..." autocomplete="off">
+                </div>
+                <div id="address-suggestions" class="address-suggestions"></div>
+                
+                <div class="address-detail-wrapper" style="margin-top: 16px;">
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                    <input type="text" id="address-detail-input" placeholder="Detalle adicional de la dirección">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="checkout.closeAddressModal()">Cancelar</button>
+                <button class="btn-accept" onclick="checkout.acceptAddress()">Aceptar</button>
+            </div>
+        </div>
+    </div>
 
     <script src="js/checkout.js"></script>
 </body>
