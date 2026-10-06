@@ -97,6 +97,30 @@ const admin = {
             console.error(error);
         }
     },
+    downloadBackup() {
+    try {
+        const backup = {
+            fecha: new Date().toISOString(),
+            config: this.config,
+            menu: this.menu
+        };
+        
+        const dataStr = JSON.stringify(backup, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `doriteque-backup-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        
+        URL.revokeObjectURL(url);
+        alert('✅ Backup descargado correctamente.');
+    } catch (error) {
+        console.error('Error al descargar backup:', error);
+        alert('Error al descargar: ' + error.message);
+    }
+},
 
     async loadDashboard() {
         try {

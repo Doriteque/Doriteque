@@ -452,32 +452,37 @@ const app = {
     },
 
     setupScrollSpy() {
-        const secciones = document.querySelectorAll('.seccion-categoria');
-        if (secciones.length === 0) return;
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const id = entry.target.id.replace('seccion-', '');
-                    this.categoriaActiva = id;
-                    
-                    const container = document.getElementById('categorias-tabs');
-                    container.querySelectorAll('.categoria-tab').forEach(tab => {
-                        tab.classList.remove('active');
-                        if (tab.dataset.id === id) {
-                            tab.classList.add('active');
+    const secciones = document.querySelectorAll('.seccion-categoria');
+    if (secciones.length === 0) return;
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.id.replace('seccion-', '');
+                this.categoriaActiva = id;
+                
+                const container = document.getElementById('categorias-tabs');
+                container.querySelectorAll('.categoria-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                    if (tab.dataset.id === id) {
+                        tab.classList.add('active');
+                        // Scroll horizontal suave SOLO si la tab no está visible
+                        const tabRect = tab.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
                             tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                         }
-                    });
-                }
-            });
-        }, {
-            rootMargin: '-100px 0px -70% 0px',
-            threshold: 0.1
+                    }
+                });
+            }
         });
-
-        secciones.forEach(seccion => observer.observe(seccion));
-    },
+    }, {
+        rootMargin: '-120px 0px -60% 0px',
+        threshold: 0
+    });
+    
+    secciones.forEach(seccion => observer.observe(seccion));
+},
 
     setupEventListeners() {
         const inputBuscar = document.getElementById('input-buscar');
