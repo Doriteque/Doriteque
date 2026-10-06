@@ -6,14 +6,22 @@ const checkout = {
   
   async init() {
     try {
-      const [configRes, menuRes] = await Promise.all([
-        fetch('config.json?t=' + Date.now()),
-        fetch('menu.json?t=' + Date.now())
-      ]);
-      this.config = await configRes.json();
-      this.menu = await menuRes.json();
+      // Esperar a que Firebase esté listo
+      if (!window.loadConfig || !window.loadMenu) {
+        setTimeout(() => this.init(), 500);
+        return;
+      }
       
-      if (!this.menu.modificadores) this.menu.modificadores = [];
+      window.loadConfig((config) => {
+        this.config = config;
+        this.renderPaymentMethods();
+      });
+      
+      window.loadMenu((menu) => {
+        this.menu = menu;
+        if (!this.menu.modificadores) this.menu.modificadores = [];
+        this.renderItems();
+      });
       
       this.cart = JSON.parse(localStorage.getItem('doriteque_cart')) || [];
       
@@ -22,9 +30,6 @@ const checkout = {
         window.location.href = 'index.html';
         return;
       }
-      
-      this.renderItems();
-      this.renderPaymentMethods();
     } catch (error) {
       console.error(error);
       alert('Error al cargar los datos.');
@@ -33,6 +38,8 @@ const checkout = {
   
   renderItems() {
     const container = document.getElementById('checkout-items');
+    if (!container) return;
+    
     let html = '';
     let totalUSD = 0;
     let totalItems = 0;
@@ -73,16 +80,25 @@ const checkout = {
     });
     
     container.innerHTML = html;
-    document.getElementById('edit-cart-count').textContent = totalItems;
-    document.getElementById('checkout-subtotal').textContent = 'USD$ ' + totalUSD.toFixed(2);
-    document.getElementById('checkout-total-usd').textContent = 'USD$ ' + totalUSD.toFixed(2);
+    
+    const editCount = document.getElementById('edit-cart-count');
+    if (editCount) editCount.textContent = totalItems;
+    
+    const subtotalEl = document.getElementById('checkout-subtotal');
+    if (subtotalEl) subtotalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
+    
+    const totalEl = document.getElementById('checkout-total-usd');
+    if (totalEl) totalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
   },
   
   renderPaymentMethods() {
     const container = document.getElementById('payment-methods');
-    let html = '';
+    if (!container) return;
     
-    this.config.metodosPago.forEach((method, index) => {
+    let html = '';
+    const metodos = this.config.metodosPago || ['Efectivo'];
+    
+    metodos.forEach((method, index) => {
       html += '<div class="payment-option" onclick="checkout.selectPayment(\'' + method + '\', this)">';
       html += '<input type="radio" name="payment" value="' + method + '" id="payment-' + index + '">';
       html += '<label for="payment-' + index + '">' + method + '</label>';
@@ -99,17 +115,12 @@ const checkout = {
     element.querySelector('input').checked = true;
   },
   
-  sendOrder() {
+  buildMessage() {
     const name = document.getElementById('client-name').value.trim();
     const country = document.getElementById('client-country').value;
     const phone = document.getElementById('client-phone').value.trim();
     const address = document.getElementById('client-address').value.trim();
     const note = document.getElementById('client-note').value.trim();
-    
-    if (!name) { alert('Ingresa tu nombre completo.'); return; }
-    if (!phone) { alert('Ingresa tu número de WhatsApp.'); return; }
-    if (!address) { alert('Ingresa tu dirección de entrega.'); return; }
-    if (!this.selectedPayment) { alert('Selecciona un método de pago.'); return; }
     
     let totalUSD = 0;
     let detalle = '';
@@ -143,9 +154,9 @@ const checkout = {
     const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
     const fullPhone = country + phone;
     
-    let mensaje = '🍔 *NUEVO PEDIDO - ' + this.config.nombre.toUpperCase() + '* 🍔\n\n';
+    let mensaje = '🍔 *NUEVO PEDIDO - ' + (this.config.nombre || 'DORITEQUE').toUpperCase() + '* 🍔\n\n';
     mensaje += '👤 *Cliente:* ' + name + '\n';
-    mensaje += '📱 *WhatsApp:* +' + fullPhone + '\n';
+    mensaje += ' *WhatsApp:* +' + fullPhone + '\n';
     mensaje += '📍 *Dirección:* ' + address + '\n';
     mensaje += '💳 *Pago:* ' + this.selectedPayment + '\n';
     if (note) mensaje += '📝 *Nota:* ' + note + '\n';
@@ -153,6 +164,33 @@ const checkout = {
     mensaje += '---------------------------\n';
     mensaje += '💵 *TOTAL:* $' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
     mensaje += 'Quedo atento a la confirmación. ¡Gracias!';
+    
+    return mensaje;
+  },
+  
+  previewMessage() {
+    const name = document.getElementById('client-name').value.trim();
+    const phone = document.getElementById('client-phone').value.trim();
+    const address = document.getElementById('client-address').value.trim();
+    
+    if (!name) { alert('Ingresa tu nombre completo.'); return; }
+    if (!phone) { alert('Ingresa tu número de WhatsApp.'); return; }
+    if (!address) { alert('Ingresa tu dirección de entrega.'); return; }
+    if (!this.selectedPayment) { alert('Selecciona un método de pago.'); return; }
+    
+    const mensaje = this.buildMessage();
+    document.getElementById('whatsapp-message').value = mensaje;
+    document.getElementById('message-editor').style.display = 'block';
+    document.getElementById('message-editor').scrollIntoView({ behavior: 'smooth' });
+  },
+  
+  sendOrder() {
+    const mensaje = document.getElementById('whatsapp-message').value;
+    
+    if (!mensaje || mensaje.trim() === '') {
+      alert('El mensaje está vacío.');
+      return;
+    }
     
     const url = 'https://wa.me/' + this.config.whatsapp + '?text=' + encodeURIComponent(mensaje);
     window.open(url, '_blank');

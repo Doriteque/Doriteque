@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Finalizar Pedido - Doriteque</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/checkout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/db.js"></script>
 </head>
 <body>
     <header class="checkout-header">
@@ -78,18 +80,31 @@
             </div>
 
             <div class="form-group">
-                <label>Alguna observación adicional (Ejemplo: Alergias) <span class="required">*</span></label>
+                <label>Alguna observación adicional (Ejemplo: Alergias)</label>
                 <textarea id="client-note" rows="2" placeholder="Ej: Sin cebolla, salsa aparte..."></textarea>
             </div>
         </section>
 
-        <!-- BOTÓN ENVIAR -->
-        <button class="btn-send-order" onclick="checkout.sendOrder()">
-            Enviar datos
+        <!-- BOTÓN GENERAR MENSAJE -->
+        <button class="btn-send-order" onclick="checkout.previewMessage()">
+            <i class="fa-solid fa-pen-to-square"></i> Generar y revisar mensaje
         </button>
 
+        <!-- EDITOR DE MENSAJE (oculto al inicio) -->
+        <section id="message-editor" class="checkout-card" style="display: none; margin-top: 16px;">
+            <h2 class="card-title"><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> Mensaje para WhatsApp</h2>
+            <p style="color: #b0b0b0; font-size: 0.85rem; margin-bottom: 12px;">
+                Puedes editar este mensaje antes de enviarlo.
+            </p>
+            <textarea id="whatsapp-message" rows="12" style="width: 100%; padding: 12px; background: #f5f5f5; border: 2px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 0.9rem; color: #1a1a1a; resize: vertical;"></textarea>
+            
+            <button class="btn-send-order" style="margin-top: 16px; background: #25D366;" onclick="checkout.sendOrder()">
+                <i class="fa-brands fa-whatsapp"></i> Enviar por WhatsApp
+            </button>
+        </section>
+
         <p class="checkout-disclaimer">
-            <i class="fa-brands fa-whatsapp"></i> Se requerirá de WhatsApp móvil o web para enviar el mensaje
+            <i class="fa-solid fa-circle-info"></i> Se abrirá WhatsApp para enviar el mensaje al negocio.
         </p>
     </main>
 

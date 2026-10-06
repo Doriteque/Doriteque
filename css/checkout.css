@@ -314,3 +314,40 @@ body {
         padding: 16px;
     }
 }
+/* EDITOR DE MENSAJE */
+#message-editor textarea {
+    font-family: 'Courier New', monospace;
+    line-height: 1.5;
+}
+
+#message-editor textarea:focus {
+    outline: none;
+    border-color: #25D366;
+}
+
+.btn-send-order {
+    width: 100%;
+    padding: 18px;
+    background: #1a1a1a;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 1.15rem;
+    font-weight: 900;
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-send-order:active {
+    transform: scale(0.98);
+}
+
+.btn-send-order[style*="25D366"] {
+    background: #25D366 !important;
+}
