@@ -32,8 +32,8 @@ const checkout = {
                 return;
             }
 
-            this.setupAddressAutocomplete();
             this.setupDateTime();
+            this.setupAddressSearch();
         } catch (error) {
             console.error(error);
             alert('Error al cargar los datos.');
@@ -41,23 +41,35 @@ const checkout = {
     },
 
     setupDateTime() {
-        const datetimeInput = document.getElementById('client-datetime');
-        if (datetimeInput) {
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            datetimeInput.value = now.toISOString().slice(0, 16);
-            datetimeInput.min = now.toISOString().slice(0, 16);
-        }
+        // Fecha y hora automática: 30 minutos desde ahora
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 30);
+        
+        // Formatear para mostrar
+        const options = { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit', 
+            minute: '2-digit' 
+        };
+        const formatted = now.toLocaleString('es-VE', options);
+        
+        document.getElementById('datetime-text').textContent = formatted;
+        
+        // Guardar en formato ISO para el mensaje
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('client-datetime').value = now.toISOString().slice(0, 16);
     },
 
-    setupAddressAutocomplete() {
-        const addressInput = document.getElementById('client-address');
+    setupAddressSearch() {
+        const searchInput = document.getElementById('address-search');
         const suggestionsContainer = document.getElementById('address-suggestions');
         let debounceTimer;
 
-        if (!addressInput) return;
+        if (!searchInput) return;
 
-        addressInput.addEventListener('input', (e) => {
+        searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
             
             clearTimeout(debounceTimer);
@@ -73,8 +85,10 @@ const checkout = {
         });
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#client-address') && !e.target.closest('#address-suggestions')) {
-                suggestionsContainer.classList.remove('active');
+            if (!e.target.closest('#address-search') && !e.target.closest('#address-suggestions')) {
+                setTimeout(() => {
+                    suggestionsContainer.classList.remove('active');
+                }, 200);
             }
         });
     },
@@ -95,7 +109,19 @@ const checkout = {
             results.forEach(result => {
                 const div = document.createElement('div');
                 div.className = 'address-suggestion';
-                div.textContent = result.display_name;
+                
+                const parts = result.display_name.split(',');
+                const main = parts[0].trim();
+                const sub = parts.slice(1).join(', ').trim();
+                
+                div.innerHTML = `
+                    <i class="fa-solid fa-location-dot"></i>
+                    <div class="address-suggestion-text">
+                        <div class="address-suggestion-main">${main}</div>
+                        <div class="address-suggestion-sub">${sub}</div>
+                    </div>
+                `;
+                
                 div.onclick = () => this.selectAddress(result);
                 suggestionsContainer.appendChild(div);
             });
@@ -107,14 +133,62 @@ const checkout = {
     },
 
     selectAddress(result) {
-        document.getElementById('client-address').value = result.display_name;
-        document.getElementById('address-suggestions').classList.remove('active');
-        
         this.selectedAddress = result.display_name;
         this.selectedCoords = {
             lat: parseFloat(result.lat),
             lon: parseFloat(result.lon)
         };
+        
+        document.getElementById('address-search').value = '';
+        document.getElementById('address-suggestions').classList.remove('active');
+        this.updateAddressDisplay();
+    },
+
+    updateAddressDisplay() {
+        const display = document.getElementById('address-display');
+        if (this.selectedAddress) {
+            display.classList.add('has-value');
+            display.innerHTML = `
+                <i class="fa-solid fa-location-dot"></i>
+                <span>${this.selectedAddress.split(',')[0]}</span>
+            `;
+        } else {
+            display.classList.remove('has-value');
+            display.innerHTML = `
+                <i class="fa-solid fa-location-dot"></i>
+                <span>Seleccionar ubicación</span>
+            `;
+        }
+    },
+
+    openAddressModal() {
+        const modal = document.getElementById('address-modal');
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            document.getElementById('address-search').focus();
+        }, 100);
+    },
+
+    closeAddressModal() {
+        const modal = document.getElementById('address-modal');
+        modal.style.display = 'none';
+        document.getElementById('address-suggestions').classList.remove('active');
+    },
+
+    acceptAddress() {
+        const detailInput = document.getElementById('address-detail-input');
+        const detail = detailInput.value.trim();
+        
+        if (!this.selectedAddress) {
+            alert('Por favor selecciona una dirección de la lista');
+            return;
+        }
+        
+        document.getElementById('client-address').value = this.selectedAddress;
+        document.getElementById('client-address-detail').value = detail;
+        
+        this.closeAddressModal();
+        detailInput.value = '';
     },
 
     renderItems() {
@@ -201,7 +275,7 @@ const checkout = {
         const country = document.getElementById('client-country').value;
         const phone = document.getElementById('client-phone').value.trim();
         const address = document.getElementById('client-address').value.trim();
-        const reference = document.getElementById('client-reference').value.trim();
+        const addressDetail = document.getElementById('client-address-detail').value.trim();
         const datetime = document.getElementById('client-datetime').value;
         const note = document.getElementById('client-note').value.trim();
 
@@ -231,7 +305,7 @@ const checkout = {
             
             const sub = precioUnitario * item.qty;
             totalUSD += sub;
-            detalle += '• ' + item.qty + 'x ' + prod.nombre + opcionesTexto + ' - $' + sub.toFixed(2) + '\n';
+            detalle += '• ' + item.qty + 'x ' + prod.nombre + opcionesTexto + ' | precio ' + precioUnitario.toFixed(0) + ' | total ' + sub.toFixed(0) + '\n';
         });
 
         const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
@@ -257,42 +331,38 @@ const checkout = {
 
         const header = this.config.msgHeader || '🍔 *NUEVO PEDIDO*';
         const greeting = this.config.msgGreeting || '';
-        const beforeDetail = this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:';
-        const afterTotal = this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar. ¡Gracias por elegirnos!';
-
+        
         let mensaje = header + ' - ' + negocio + '\n\n';
         if (greeting) mensaje += greeting + '\n\n';
-        mensaje += '👤 *Nombre completo:* ' + name + '\n';
-        mensaje += '📱 *Nro. de WhatsApp:* +' + fullPhone + '\n';
-        if (fechaHora) mensaje += ' *Fecha y hora:* ' + fechaHora + '\n';
-        if (note) mensaje += '⚠️ *Observación adicional:* ' + note + '\n';
+        mensaje += '👤 *Nombre completo*\n' + name + '\n\n';
+        mensaje += '📱 *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
+        if (fechaHora) mensaje += '📅 *Fecha y hora*\n' + fechaHora + '\n\n';
+        if (note) mensaje += '⚠️ *Alguna observación adicional (Ejemplo Alergias)*\n' + note + '\n\n';
+        
         if (address) {
-            mensaje += '📍 *Mapa de ubicación:* ' + address + '\n';
+            mensaje += '📍 *Mapa de ubicación*\n' + address;
+            if (addressDetail) mensaje += '. ' + addressDetail;
+            mensaje += '\n';
             if (mapaLink) mensaje += mapaLink + '\n';
         }
-        if (reference) mensaje += '📝 *Referencia:* ' + reference + '\n';
-        mensaje += '\n' + beforeDetail + '\n' + detalle;
-        mensaje += '---------------------------\n';
+        
+        mensaje += '\n *Detalle*\n' + detalle;
+        mensaje += '---------------------------\n\n';
         mensaje += '💵 *Sub-total:* USD$ ' + totalUSD.toFixed(2) + '\n';
         mensaje += '💵 *TOTAL DE LA ORDEN:* USD$ ' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
-        mensaje += '💳 *TIPO DE PAGO:* ' + this.selectedPayment + '\n\n';
-        mensaje += afterTotal;
+        mensaje += '💳 *TIPO DE PAGO:* ' + this.selectedPayment;
 
         return mensaje;
     },
 
-    previewMessage() {
+    sendOrder() {
         const name = document.getElementById('client-name').value.trim();
         const phone = document.getElementById('client-phone').value.trim();
         const address = document.getElementById('client-address').value.trim();
-        const reference = document.getElementById('client-reference').value.trim();
-        const datetime = document.getElementById('client-datetime').value;
 
         if (!name) { alert('Ingresa tu nombre completo.'); return; }
         if (!phone) { alert('Ingresa tu número de WhatsApp.'); return; }
         if (!address) { alert('Selecciona tu dirección de entrega.'); return; }
-        if (!reference) { alert('Agrega una referencia para ubicarte mejor.'); return; }
-        if (!datetime) { alert('Selecciona la fecha y hora de entrega.'); return; }
         if (!this.selectedPayment) { alert('Selecciona un método de pago.'); return; }
 
         const mensaje = this.buildMessage();
@@ -304,10 +374,6 @@ const checkout = {
         setTimeout(() => {
             window.location.href = 'index.html';
         }, 1000);
-    },
-
-    sendOrder() {
-        this.previewMessage();
     }
 };
 

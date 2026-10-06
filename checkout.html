@@ -7,10 +7,8 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/checkout.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script type="module" src="js/firebase.js"></script>
     <script type="module" src="js/db.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <header class="checkout-header">
@@ -56,14 +54,13 @@
             <div class="form-group">
                 <label>Nombre completo <span class="required">*</span></label>
                 <input type="text" id="client-name" placeholder="Escribe tu nombre completo">
-                <small class="form-hint">Escribe tu nombre completo</small>
             </div>
 
             <div class="form-group">
                 <label>Nro. de WhatsApp <span class="required">*</span></label>
                 <div class="phone-input-wrapper">
-                    <div class="country-flag">
-                        <span class="flag-emoji">🇻</span>
+                    <div class="country-selector">
+                        <span class="flag-emoji">🇻🇪</span>
                         <select id="client-country">
                             <option value="58">+58</option>
                             <option value="57">+57</option>
@@ -73,7 +70,6 @@
                     </div>
                     <input type="tel" id="client-phone" placeholder="Escribe tu número">
                 </div>
-                <small class="form-hint">Escribe tu número de WhatsApp o Teléfono</small>
             </div>
 
             <div class="form-group">
@@ -90,9 +86,12 @@
             </div>
 
             <div class="form-group">
-                <label>Fecha y hora <span class="required">*</span></label>
-                <input type="datetime-local" id="client-datetime">
-                <small class="form-hint">Selecciona una fecha y una hora</small>
+                <label>Fecha y hora de entrega</label>
+                <div class="datetime-display" id="datetime-display">
+                    <i class="fa-solid fa-clock"></i>
+                    <span id="datetime-text">Calculando...</span>
+                </div>
+                <input type="hidden" id="client-datetime">
             </div>
 
             <div class="form-group">
@@ -127,9 +126,9 @@
                 </div>
                 <div id="address-suggestions" class="address-suggestions"></div>
                 
-                <div class="address-detail-wrapper" style="margin-top: 16px;">
+                <div class="address-detail-wrapper">
                     <i class="fa-solid fa-location-crosshairs"></i>
-                    <input type="text" id="address-detail-input" placeholder="Detalle adicional de la dirección">
+                    <input type="text" id="address-detail-input" placeholder="Detalle adicional (casa, apto, referencia)">
                 </div>
             </div>
             <div class="modal-footer">

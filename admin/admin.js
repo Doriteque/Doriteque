@@ -1,25 +1,31 @@
 const admin = {
     config: {},
     menu: { categorias: [], productos: [], modificadores: [] },
-    credentials: { user: 'admin', pass: 'doriteque2026' },
     unsubConfig: null,
     unsubMenu: null,
 
     async init() {
-        const savedCreds = localStorage.getItem('doriteque_admin_creds');
-        if (savedCreds) this.credentials = JSON.parse(savedCreds);
-
-        if (sessionStorage.getItem('doriteque_admin_logged') === 'true') {
-            await this.loadDashboard();
-        }
-
-        document.getElementById('login-pass').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') this.login();
+        // 1. Escuchar estado de autenticación en tiempo real
+        window.onAuthStateChanged(window.auth, (user) => {
+            if (user) {
+                // Usuario logueado: mostrar panel
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                this.loadDashboard();
+            } else {
+                // Usuario no logueado: mostrar login
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('admin-panel').style.display = 'none';
+            }
         });
-        document.getElementById('login-user').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') document.getElementById('login-pass').focus();
+
+        // 2. Manejar el submit del formulario de login
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.login();
         });
 
+        // 3. Listeners para las tablas (delegación de eventos)
         document.getElementById('productos-list').addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-icon');
             if (!btn) return;
@@ -66,31 +72,34 @@ const admin = {
         }
     },
 
-    login() {
-        const user = document.getElementById('login-user').value.trim().toLowerCase();
+    async login() {
+        const email = document.getElementById('login-email').value.trim();
         const pass = document.getElementById('login-pass').value;
-        const storedUser = this.credentials.user.trim().toLowerCase();
+        const errorEl = document.getElementById('login-error');
 
-        if (user === storedUser && pass === this.credentials.pass) {
-            sessionStorage.setItem('doriteque_admin_logged', 'true');
-            this.loadDashboard();
-        } else {
-            const errorEl = document.getElementById('login-error');
+        try {
+            await window.signInWithEmailAndPassword(window.auth, email, pass);
+            // onAuthStateChanged se encargará de cambiar la pantalla automáticamente
+        } catch (error) {
+            console.error(error);
+            errorEl.textContent = 'Correo o contraseña incorrectos.';
             errorEl.style.display = 'block';
             setTimeout(() => { errorEl.style.display = 'none'; }, 3000);
         }
     },
 
-    logout() {
-        sessionStorage.removeItem('doriteque_admin_logged');
-        if (this.unsubConfig) this.unsubConfig();
-        if (this.unsubMenu) this.unsubMenu();
-        location.reload();
+    async logout() {
+        try {
+            await window.signOut(window.auth);
+            if (this.unsubConfig) this.unsubConfig();
+            if (this.unsubMenu) this.unsubMenu();
+        } catch (error) {
+            console.error(error);
+        }
     },
 
     async loadDashboard() {
         try {
-            // Escuchar cambios en tiempo real desde Firebase
             this.unsubConfig = window.onSnapshot(window.doc(window.db, 'config', 'main'), (docSnap) => {
                 if (docSnap.exists()) {
                     this.config = docSnap.data();
@@ -110,9 +119,6 @@ const admin = {
                     this.renderModifiers();
                 }
             });
-
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('admin-panel').style.display = 'block';
         } catch (error) {
             console.error(error);
             alert('Error al conectar con Firebase: ' + error.message);
@@ -136,52 +142,36 @@ const admin = {
         document.getElementById('cfg-tasa').value = this.config.tasaBs || 36.50;
         document.getElementById('cfg-metodos').value = (this.config.metodosPago || []).join(', ');
         document.getElementById('cfg-logo').value = this.config.logo || '';
-        document.getElementById('cfg-mensaje').value = this.config.mensajeWhatsApp || '';
         document.getElementById('msg-header').value = this.config.msgHeader || '🍔 *NUEVO PEDIDO*';
-document.getElementById('msg-greeting').value = this.config.msgGreeting || '¡Gracias por tu pedido!';
-document.getElementById('msg-before-detail').value = this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:';
-document.getElementById('msg-after-total').value = this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar. ¡Gracias por elegirnos!';
-document.getElementById('msg-business-phone').value = this.config.whatsapp || '';
+        document.getElementById('msg-greeting').value = this.config.msgGreeting || '¡Gracias por tu pedido!';
+        document.getElementById('msg-before-detail').value = this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:';
+        document.getElementById('msg-after-total').value = this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar. ¡Gracias por elegirnos!';
     },
 
     async saveConfig() {
-    try {
-        const newConfig = {
-            nombre: document.getElementById('cfg-nombre').value.trim(),
-            whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
-            email: document.getElementById('cfg-email').value.trim(),
-            instagram: document.getElementById('cfg-instagram').value.trim(),
-            tiktok: document.getElementById('cfg-tiktok').value.trim(),
-            horario: document.getElementById('cfg-horario').value.trim(),
-            tasaBs: parseFloat(document.getElementById('cfg-tasa').value) || 36.50,
-            metodosPago: document.getElementById('cfg-metodos').value.split(',').map(s => s.trim()).filter(s => s),
-            logo: document.getElementById('cfg-logo').value.trim(),
-            msgHeader: document.getElementById('msg-header').value.trim(),
-            msgGreeting: document.getElementById('msg-greeting').value.trim(),
-            msgBeforeDetail: document.getElementById('msg-before-detail').value.trim(),
-            msgAfterTotal: document.getElementById('msg-after-total').value.trim()
-        };
-        
-        await window.setDoc(window.doc(window.db, 'config', 'main'), newConfig);
-        alert('✅ Configuración guardada en la nube. Los cambios se ven al instante en la tienda.');
-    } catch (error) {
-        console.error(error);
-        alert('Error al guardar: ' + error.message);
-    }
-},
+        try {
+            const newConfig = {
+                nombre: document.getElementById('cfg-nombre').value.trim(),
+                whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
+                email: document.getElementById('cfg-email').value.trim(),
+                instagram: document.getElementById('cfg-instagram').value.trim(),
+                tiktok: document.getElementById('cfg-tiktok').value.trim(),
+                horario: document.getElementById('cfg-horario').value.trim(),
+                tasaBs: parseFloat(document.getElementById('cfg-tasa').value) || 36.50,
+                metodosPago: document.getElementById('cfg-metodos').value.split(',').map(s => s.trim()).filter(s => s),
+                logo: document.getElementById('cfg-logo').value.trim(),
+                msgHeader: document.getElementById('msg-header').value.trim(),
+                msgGreeting: document.getElementById('msg-greeting').value.trim(),
+                msgBeforeDetail: document.getElementById('msg-before-detail').value.trim(),
+                msgAfterTotal: document.getElementById('msg-after-total').value.trim()
+            };
 
-    fillCredentialsForm() {
-        document.getElementById('acc-user').value = this.credentials.user;
-        document.getElementById('acc-pass').value = this.credentials.pass;
-    },
-
-    saveCredentials() {
-        const newUser = document.getElementById('acc-user').value.trim();
-        const newPass = document.getElementById('acc-pass').value.trim();
-        if (!newUser || !newPass) { alert('Usuario y contraseña no pueden estar vacíos.'); return; }
-        this.credentials = { user: newUser, pass: newPass };
-        localStorage.setItem('doriteque_admin_creds', JSON.stringify(this.credentials));
-        alert('Credenciales actualizadas.');
+            await window.setDoc(window.doc(window.db, 'config', 'main'), newConfig);
+            alert('✅ Configuración guardada en la nube.');
+        } catch (error) {
+            console.error(error);
+            alert('Error al guardar: ' + error.message);
+        }
     },
 
     renderProducts() {
@@ -201,7 +191,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
             html += '<div class="admin-item">';
             html += '<img src="' + img + '" class="admin-item-img" alt="' + p.nombre + '">';
             html += '<div class="admin-item-info">';
-            html += '<div class="admin-item-nombre">' + p.nombre + badge + modsBadge + '</div>';
+            html += '<div class="admin-item-nombre">' + p.nombre + ' ' + badge + ' ' + modsBadge + '</div>';
             html += '<div class="admin-item-desc">' + (cat ? cat.nombre : 'Sin categoría') + '</div>';
             html += '<div class="admin-item-precio">$' + Number(p.precio).toFixed(2) + '</div>';
             html += '</div>';
@@ -262,9 +252,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
         container.innerHTML = html;
     },
 
-    editProduct(id) {
-        this.openProductModal(String(id));
-    },
+    editProduct(id) { this.openProductModal(String(id)); },
 
     openProductModal(productId = null) {
         const modal = document.getElementById('product-modal');
@@ -285,9 +273,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
                     let isChecked = false;
                     if (productId) {
                         const p = this.menu.productos.find(x => String(x.id) === String(productId));
-                        if (p && p.modificadoresIds && p.modificadoresIds.includes(m.id)) {
-                            isChecked = true;
-                        }
+                        if (p && p.modificadoresIds && p.modificadoresIds.includes(m.id)) isChecked = true;
                     }
                     const chip = document.createElement('div');
                     chip.className = 'mod-chip' + (isChecked ? ' selected' : '');
@@ -296,11 +282,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
                     chip.onclick = function() {
                         this.classList.toggle('selected');
                         const icon = this.querySelector('i');
-                        if (this.classList.contains('selected')) {
-                            icon.className = 'fa-solid fa-check';
-                        } else {
-                            icon.className = 'fa-solid fa-plus';
-                        }
+                        icon.className = this.classList.contains('selected') ? 'fa-solid fa-check' : 'fa-solid fa-plus';
                     };
                     modsSection.appendChild(chip);
                 });
@@ -309,10 +291,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
 
         if (productId && productId !== 'null' && productId !== '') {
             const p = this.menu.productos.find(x => String(x.id) === String(productId));
-            if (!p) {
-                alert('Error: No se encontró el producto con ID: ' + productId);
-                return;
-            }
+            if (!p) { alert('Error: No se encontró el producto.'); return; }
             title.textContent = 'Editar producto';
             document.getElementById('prod-id').value = p.id;
             document.getElementById('prod-nombre').value = p.nombre;
@@ -343,9 +322,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
         modal.style.display = 'flex';
     },
 
-    closeProductModal() {
-        document.getElementById('product-modal').style.display = 'none';
-    },
+    closeProductModal() { document.getElementById('product-modal').style.display = 'none'; },
 
     handleImageUpload(event) {
         const file = event.target.files[0];
@@ -392,25 +369,14 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
         const disponible = document.getElementById('prod-disponible').checked;
 
         const modificadoresIds = [];
-        document.querySelectorAll('.mod-chip.selected').forEach(chip => {
-            modificadoresIds.push(chip.dataset.modId);
-        });
+        document.querySelectorAll('.mod-chip.selected').forEach(chip => modificadoresIds.push(chip.dataset.modId));
 
         if (!nombre || !descripcion || isNaN(precio) || !categoriaId) {
             alert('Completa nombre, descripción, precio y categoría.');
             return;
         }
 
-        const productoData = {
-            id: id || 'p' + Date.now(),
-            nombre,
-            descripcion,
-            precio,
-            categoriaId,
-            imagen,
-            disponible,
-            modificadoresIds: modificadoresIds
-        };
+        const productoData = { id: id || 'p' + Date.now(), nombre, descripcion, precio, categoriaId, imagen, disponible, modificadoresIds };
 
         try {
             const newProductos = [...(this.menu.productos || [])];
@@ -420,16 +386,13 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
             } else {
                 newProductos.push(productoData);
             }
-
-            const newMenu = {
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), {
                 categorias: this.menu.categorias || [],
                 productos: newProductos,
                 modificadores: this.menu.modificadores || []
-            };
-
-            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            });
             this.closeProductModal();
-            alert('✅ Producto guardado en la nube. Los cambios se ven al instante en la tienda.');
+            alert('✅ Producto guardado.');
         } catch (error) {
             console.error(error);
             alert('Error al guardar: ' + error.message);
@@ -440,12 +403,11 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
         if (!confirm('¿Eliminar este producto?')) return;
         try {
             const newProductos = this.menu.productos.filter(p => String(p.id) !== String(id));
-            const newMenu = {
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), {
                 categorias: this.menu.categorias || [],
                 productos: newProductos,
                 modificadores: this.menu.modificadores || []
-            };
-            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            });
             alert('✅ Producto eliminado.');
         } catch (error) {
             console.error(error);
@@ -456,26 +418,21 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
     async toggleProduct(id) {
         try {
             const newProductos = this.menu.productos.map(p => {
-                if (String(p.id) === String(id)) {
-                    return { ...p, disponible: !p.disponible };
-                }
+                if (String(p.id) === String(id)) return { ...p, disponible: !p.disponible };
                 return p;
             });
-            const newMenu = {
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), {
                 categorias: this.menu.categorias || [],
                 productos: newProductos,
                 modificadores: this.menu.modificadores || []
-            };
-            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            });
         } catch (error) {
             console.error(error);
             alert('Error: ' + error.message);
         }
     },
 
-    editCategory(id) {
-        this.openCategoryModal(String(id));
-    },
+    editCategory(id) { this.openCategoryModal(String(id)); },
 
     openCategoryModal(catId = null) {
         const modal = document.getElementById('category-modal');
@@ -496,9 +453,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
         modal.style.display = 'flex';
     },
 
-    closeCategoryModal() {
-        document.getElementById('category-modal').style.display = 'none';
-    },
+    closeCategoryModal() { document.getElementById('category-modal').style.display = 'none'; },
 
     async saveCategory() {
         const id = document.getElementById('cat-id').value;
@@ -515,12 +470,11 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
             } else {
                 newCategorias.push(catData);
             }
-            const newMenu = {
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), {
                 categorias: newCategorias,
                 productos: this.menu.productos || [],
                 modificadores: this.menu.modificadores || []
-            };
-            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            });
             this.closeCategoryModal();
             alert('✅ Categoría guardada.');
         } catch (error) {
@@ -535,12 +489,11 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
         if (!confirm('¿Eliminar esta categoría?')) return;
         try {
             const newCategorias = this.menu.categorias.filter(c => String(c.id) !== String(id));
-            const newMenu = {
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), {
                 categorias: newCategorias,
                 productos: this.menu.productos || [],
                 modificadores: this.menu.modificadores || []
-            };
-            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            });
             alert('✅ Categoría eliminada.');
         } catch (error) {
             console.error(error);
@@ -562,9 +515,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
             document.getElementById('mod-nombre').value = m.nombre;
             document.getElementById('mod-tipo').value = m.tipo;
             document.getElementById('mod-obligatorio').checked = m.obligatorio;
-            m.opciones.forEach(op => {
-                this.addOpcion(op.nombre, op.precio, op.id);
-            });
+            m.opciones.forEach(op => this.addOpcion(op.nombre, op.precio, op.id));
         } else {
             title.textContent = 'Nuevo modificador';
             document.getElementById('mod-id').value = '';
@@ -576,9 +527,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
         modal.style.display = 'flex';
     },
 
-    closeModifierModal() {
-        document.getElementById('modifier-modal').style.display = 'none';
-    },
+    closeModifierModal() { document.getElementById('modifier-modal').style.display = 'none'; },
 
     addOpcion(nombre = '', precio = 0, id = null) {
         const container = document.getElementById('opciones-container');
@@ -595,10 +544,7 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
         const tipo = document.getElementById('mod-tipo').value;
         const obligatorio = document.getElementById('mod-obligatorio').checked;
 
-        if (!nombre) {
-            alert('El nombre del modificador es obligatorio.');
-            return;
-        }
+        if (!nombre) { alert('El nombre del modificador es obligatorio.'); return; }
 
         const opcionesRows = document.querySelectorAll('.opcion-row');
         const opciones = [];
@@ -606,15 +552,10 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
             const optNombre = row.querySelector('.opcion-nombre').value.trim();
             const optPrecio = parseFloat(row.querySelector('.opcion-precio').value) || 0;
             const optId = row.querySelector('.opcion-id').value;
-            if (optNombre) {
-                opciones.push({ id: optId, nombre: optNombre, precio: optPrecio });
-            }
+            if (optNombre) opciones.push({ id: optId, nombre: optNombre, precio: optPrecio });
         });
 
-        if (opciones.length === 0) {
-            alert('Debes agregar al menos una opción.');
-            return;
-        }
+        if (opciones.length === 0) { alert('Debes agregar al menos una opción.'); return; }
 
         const modData = { id: id || 'mod' + Date.now(), nombre, tipo, obligatorio, opciones };
 
@@ -626,12 +567,11 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
             } else {
                 newMods.push(modData);
             }
-            const newMenu = {
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), {
                 categorias: this.menu.categorias || [],
                 productos: this.menu.productos || [],
                 modificadores: newMods
-            };
-            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            });
             this.closeModifierModal();
             alert('✅ Modificador guardado.');
         } catch (error) {
@@ -640,67 +580,28 @@ document.getElementById('msg-business-phone').value = this.config.whatsapp || ''
         }
     },
 
-    editModifier(id) {
-        this.openModifierModal(String(id));
-    },
+    editModifier(id) { this.openModifierModal(String(id)); },
 
     async deleteModifier(id) {
         const productosUsando = this.menu.productos.filter(p => p.modificadoresIds && p.modificadoresIds.includes(id)).length;
         if (productosUsando > 0) {
-            alert('No puedes eliminar este modificador porque está asignado a ' + productosUsando + ' producto(s).');
+            alert('No puedes eliminar este modificador porque está asignado a ' + productosUsando + ' producto(s). Primero quítalo de esos productos.');
             return;
         }
         if (!confirm('¿Eliminar este modificador?')) return;
         try {
             const newMods = this.menu.modificadores.filter(m => String(m.id) !== String(id));
-            const newMenu = {
+            await window.setDoc(window.doc(window.db, 'menu', 'main'), {
                 categorias: this.menu.categorias || [],
                 productos: this.menu.productos || [],
                 modificadores: newMods
-            };
-            await window.setDoc(window.doc(window.db, 'menu', 'main'), newMenu);
+            });
             alert('✅ Modificador eliminado.');
         } catch (error) {
             console.error(error);
             alert('Error: ' + error.message);
         }
-    },
-
-    previewMessage() {
-    const header = document.getElementById('msg-header').value || '🍔 *NUEVO PEDIDO*';
-    const greeting = document.getElementById('msg-greeting').value || '';
-    const beforeDetail = document.getElementById('msg-before-detail').value || '';
-    const afterTotal = document.getElementById('msg-after-total').value || '';
-    const negocio = (this.config.nombre || 'DORITEQUE').toUpperCase();
-    
-    // Datos de ejemplo para la vista previa
-    const ejemplo = {
-        cliente: 'Juan Pérez',
-        whatsapp: '584241234567',
-        direccion: 'Av. Principal, Casa #123',
-        pago: 'Pago Móvil',
-        nota: 'Sin cebolla por favor',
-        detalle: '• 2x HAMBURGUESA NORMAL (Proteína: Carne) - $11.00\n• 1x COCA-COLA 1LT - $1.50\n',
-        total_usd: '12.50',
-        total_bs: '456.25'
-    };
-    
-    let mensaje = header + ' - ' + negocio + '\n\n';
-    if (greeting) mensaje += greeting + '\n\n';
-    mensaje += '👤 *Cliente:* ' + ejemplo.cliente + '\n';
-    mensaje += '📱 *WhatsApp:* +' + ejemplo.whatsapp + '\n';
-    mensaje += '📍 *Dirección:* ' + ejemplo.direccion + '\n';
-    mensaje += ' *Pago:* ' + ejemplo.pago + '\n';
-    if (ejemplo.nota) mensaje += '📝 *Nota:* ' + ejemplo.nota + '\n';
-    mensaje += '\n' + beforeDetail + '\n' + ejemplo.detalle;
-    mensaje += '---------------------------\n';
-    mensaje += '💵 *TOTAL:* $' + ejemplo.total_usd + ' (Bs ' + ejemplo.total_bs + ')\n\n';
-    mensaje += afterTotal;
-    
-    document.getElementById('message-preview-content').textContent = mensaje;
-    document.getElementById('message-preview').style.display = 'block';
-    document.getElementById('message-preview').scrollIntoView({ behavior: 'smooth' });
-},
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => admin.init());
