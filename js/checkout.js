@@ -8,6 +8,41 @@ const checkout = {
 
     async init() {
         try {
+            // 1. Limpiar campos del formulario al entrar (pero NO el carrito)
+            setTimeout(() => {
+                const nameInput = document.getElementById('client-name');
+                if (nameInput) nameInput.value = '';
+                
+                const phoneInput = document.getElementById('client-phone');
+                if (phoneInput) phoneInput.value = '';
+                
+                const addressInput = document.getElementById('client-address');
+                if (addressInput) addressInput.value = '';
+                
+                const addressSearch = document.getElementById('address-search');
+                if (addressSearch) addressSearch.value = '';
+                
+                const addressDetail = document.getElementById('address-detail-input');
+                if (addressDetail) addressDetail.value = '';
+                
+                const noteInput = document.getElementById('client-note');
+                if (noteInput) noteInput.value = '';
+                
+                const dtText = document.getElementById('datetime-text');
+                if (dtText) dtText.textContent = 'Calculando...';
+                
+                document.querySelectorAll('.payment-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    const radio = opt.querySelector('input');
+                    if (radio) radio.checked = false;
+                });
+                
+                this.selectedAddress = null;
+                this.selectedCoords = null;
+                this.selectedPayment = '';
+            }, 100);
+
+            // 2. Cargar carrito
             const savedCart = localStorage.getItem('doriteque_cart');
             this.cart = savedCart ? JSON.parse(savedCart) : [];
 
@@ -27,6 +62,7 @@ const checkout = {
                 this.renderItems();
             });
 
+            // 3. Si el carrito está vacío, redirigir al inicio
             if (this.cart.length === 0) {
                 alert('Tu carrito está vacío.');
                 window.location.href = 'index.html';
@@ -52,10 +88,12 @@ const checkout = {
             hour: '2-digit', 
             minute: '2-digit' 
         };
-        document.getElementById('datetime-text').textContent = now.toLocaleString('es-VE', options);
+        const dtText = document.getElementById('datetime-text');
+        if (dtText) dtText.textContent = now.toLocaleString('es-VE', options);
         
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('client-datetime').value = now.toISOString().slice(0, 16);
+        const dtInput = document.getElementById('client-datetime');
+        if (dtInput) dtInput.value = now.toISOString().slice(0, 16);
     },
 
     setupAddressSearch() {
@@ -88,40 +126,74 @@ const checkout = {
 
     async searchAddress(query) {
         try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ve&limit=5`);
-            const results = await response.json();
             const suggestionsContainer = document.getElementById('address-suggestions');
             suggestionsContainer.innerHTML = '';
-
-            if (results.length === 0) {
+            
+            const cleanQuery = query.trim().replace(/\s+/g, ' ');
+            if (cleanQuery.length < 3) {
                 suggestionsContainer.classList.remove('active');
                 return;
             }
 
-            results.forEach(result => {
-                const div = document.createElement('div');
-                div.className = 'address-suggestion';
+            // Búsqueda priorizada en Venezuela
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=ve&viewbox=-73.3,12.5,-59.8,0.9&bounded=0&limit=10&addressdetails=1&accept-language=es`;
+            
+            const response = await fetch(url);
+            const results = await response.json();
+            
+            if (results.length === 0) {
+                // Fallback: búsqueda global
+                const urlFallback = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&limit=10&addressdetails=1&accept-language=es`;
+                const responseFallback = await fetch(urlFallback);
+                const resultsFallback = await responseFallback.json();
                 
-                const parts = result.display_name.split(',');
-                const main = parts[0].trim();
-                const sub = parts.slice(1).join(', ').trim();
+                if (resultsFallback.length === 0) {
+                    suggestionsContainer.classList.remove('active');
+                    return;
+                }
                 
-                div.innerHTML = `
-                    <i class="fa-solid fa-location-dot"></i>
-                    <div class="address-suggestion-text">
-                        <div class="address-suggestion-main">${main}</div>
-                        <div class="address-suggestion-sub">${sub}</div>
-                    </div>
-                `;
-                
-                div.onclick = () => this.selectAddress(result);
-                suggestionsContainer.appendChild(div);
-            });
+                this.renderSuggestions(resultsFallback, suggestionsContainer);
+                return;
+            }
 
-            suggestionsContainer.classList.add('active');
+            this.renderSuggestions(results, suggestionsContainer);
         } catch (error) {
             console.error('Error buscando dirección:', error);
         }
+    },
+
+    renderSuggestions(results, container) {
+        const uniqueResults = [];
+        const seen = new Set();
+        
+        for (const result of results) {
+            if (!seen.has(result.display_name)) {
+                seen.add(result.display_name);
+                uniqueResults.push(result);
+            }
+        }
+
+        uniqueResults.slice(0, 8).forEach(result => {
+            const div = document.createElement('div');
+            div.className = 'address-suggestion';
+            
+            const parts = result.display_name.split(',');
+            const main = parts[0].trim();
+            const sub = parts.slice(1, 4).join(', ').trim();
+            
+            div.innerHTML = `
+                <i class="fa-solid fa-location-dot"></i>
+                <div class="address-suggestion-text">
+                    <div class="address-suggestion-main">${main}</div>
+                    <div class="address-suggestion-sub">${sub}</div>
+                </div>
+            `;
+            
+            div.onclick = () => this.selectAddress(result);
+            container.appendChild(div);
+        });
+
+        container.classList.add('active');
     },
 
     selectAddress(result) {
@@ -131,9 +203,96 @@ const checkout = {
             lon: parseFloat(result.lon)
         };
         
-        document.getElementById('client-address').value = result.display_name;
-        document.getElementById('address-search').value = result.display_name;
-        document.getElementById('address-suggestions').classList.remove('active');
+        const clientAddress = document.getElementById('client-address');
+        if (clientAddress) clientAddress.value = result.display_name;
+        
+        const addressSearch = document.getElementById('address-search');
+        if (addressSearch) addressSearch.value = result.display_name;
+        
+        const suggestionsContainer = document.getElementById('address-suggestions');
+        if (suggestionsContainer) suggestionsContainer.classList.remove('active');
+    },
+
+    getCurrentLocation() {
+        const btn = document.querySelector('.btn-geolocation');
+        
+        if (!navigator.geolocation) {
+            alert('Tu navegador no soporta geolocalización. Por favor escribe tu dirección manualmente.');
+            return;
+        }
+
+        btn.classList.add('loading');
+        btn.innerHTML = '<i class="fa-solid fa-spinner"></i><span>Obteniendo ubicación...</span>';
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                try {
+                    await this.reverseGeocode(lat, lon);
+                    
+                    btn.classList.remove('loading');
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i><span>¡Ubicación encontrada!</span>';
+                    setTimeout(() => {
+                        btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error en reverse geocoding:', error);
+                    alert('No se pudo obtener la dirección. Por favor escríbela manualmente.');
+                    btn.classList.remove('loading');
+                    btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
+                }
+            },
+            (error) => {
+                console.error('Error de geolocalización:', error);
+                btn.classList.remove('loading');
+                btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
+                
+                let errorMsg = 'No se pudo obtener tu ubicación. ';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMsg += 'Por favor permite el acceso a la ubicación en tu navegador.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMsg += 'La información de ubicación no está disponible.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMsg += 'La solicitud de ubicación tardó demasiado.';
+                        break;
+                    default:
+                        errorMsg += 'Error desconocido.';
+                }
+                alert(errorMsg);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    },
+
+    async reverseGeocode(lat, lon) {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=es&addressdetails=1`);
+            const data = await response.json();
+            
+            if (data && data.display_name) {
+                const result = {
+                    display_name: data.display_name,
+                    lat: lat,
+                    lon: lon
+                };
+                
+                this.selectAddress(result);
+            } else {
+                throw new Error('No se pudo obtener la dirección');
+            }
+        } catch (error) {
+            console.error('Error en reverse geocoding:', error);
+            throw error;
+        }
     },
 
     renderItems() {
@@ -182,9 +341,15 @@ const checkout = {
         });
 
         container.innerHTML = html;
-        document.getElementById('edit-cart-count').textContent = totalItems;
-        document.getElementById('checkout-subtotal').textContent = 'USD$ ' + totalUSD.toFixed(2);
-        document.getElementById('checkout-total-usd').textContent = 'USD$ ' + totalUSD.toFixed(2);
+        
+        const editCount = document.getElementById('edit-cart-count');
+        if (editCount) editCount.textContent = totalItems;
+        
+        const subtotalEl = document.getElementById('checkout-subtotal');
+        if (subtotalEl) subtotalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
+        
+        const totalEl = document.getElementById('checkout-total-usd');
+        if (totalEl) totalEl.textContent = 'USD$ ' + totalUSD.toFixed(2);
     },
 
     renderPaymentMethods() {
@@ -271,7 +436,7 @@ const checkout = {
         let mensaje = header + ' - ' + negocio + '\n\n';
         if (greeting) mensaje += greeting + '\n\n';
         mensaje += '👤 *Nombre completo*\n' + name + '\n\n';
-        mensaje += '📱 *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
+        mensaje += ' *Nro. de WhatsApp*\n+' + fullPhone + '\n\n';
         if (fechaHora) mensaje += '📅 *Fecha y hora*\n' + fechaHora + '\n\n';
         if (note) mensaje += '⚠️ *Observación adicional*\n' + note + '\n\n';
         
@@ -286,7 +451,7 @@ const checkout = {
         mensaje += '---------------------------\n\n';
         mensaje += '💵 *Sub-total:* USD$ ' + totalUSD.toFixed(2) + '\n';
         mensaje += '💵 *TOTAL DE LA ORDEN:* USD$ ' + totalUSD.toFixed(2) + ' (Bs ' + totalBs + ')\n\n';
-        mensaje += '💳 *TIPO DE PAGO:* ' + this.selectedPayment;
+        mensaje += ' *TIPO DE PAGO:* ' + this.selectedPayment;
 
         return mensaje;
     },
@@ -305,8 +470,16 @@ const checkout = {
         const url = 'https://wa.me/' + this.config.whatsapp + '?text=' + encodeURIComponent(mensaje);
         window.open(url, '_blank');
 
+        // LIMPIAR TODO DESPUÉS DE ENVIAR
         localStorage.removeItem('doriteque_cart');
-        setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+        this.cart = [];
+        this.selectedAddress = null;
+        this.selectedCoords = null;
+        this.selectedPayment = '';
+        
+        setTimeout(() => { 
+            window.location.href = 'index.html'; 
+        }, 1000);
     }
 };
 

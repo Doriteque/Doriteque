@@ -7,6 +7,21 @@ const app = {
     productoSeleccionado: null,
 
     async init() {
+        // Verificar si viene del checkout y limpiar
+        const referrer = document.referrer;
+        if (referrer.includes('checkout.html')) {
+            localStorage.removeItem('doriteque_cart');
+            this.cart = [];
+        } else {
+            // Cargar carrito normalmente
+            try {
+                const savedCart = localStorage.getItem('doriteque_cart');
+                this.cart = savedCart ? JSON.parse(savedCart) : [];
+            } catch (e) {
+                this.cart = [];
+            }
+        }
+        // ... el resto del código sigue igual
         // Cargar carrito desde localStorage
         try {
             const savedCart = localStorage.getItem('doriteque_cart');

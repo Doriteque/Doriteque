@@ -1,5 +1,5 @@
 /* ============================================
-   CHECKOUT - DORITEQUE (Versión Limpia)
+   CHECKOUT - DORITEQUE (Versión Final)
    ============================================ */
 
 .checkout-header {
@@ -248,7 +248,7 @@
 
 .phone-input-wrapper input[type="tel"]:focus { border: none; }
 
-/* --- AUTOCOMPLETADO INLINE DE DIRECCIÓN --- */
+/* AUTOCOMPLETADO DE DIRECCIÓN */
 .address-input-wrapper,
 .address-detail-wrapper {
     display: flex;
@@ -291,6 +291,53 @@
     color: #999;
 }
 
+/* BOTÓN DE GEOLOCALIZACIÓN */
+.btn-geolocation {
+    width: 100%;
+    padding: 14px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background 0.2s, transform 0.15s;
+    margin: 8px 0;
+}
+
+.btn-geolocation:hover {
+    background: #1d4ed8;
+}
+
+.btn-geolocation:active {
+    transform: scale(0.98);
+    background: #1e40af;
+}
+
+.btn-geolocation i {
+    font-size: 1.1rem;
+}
+
+.btn-geolocation.loading {
+    background: #93c5fd;
+    cursor: not-allowed;
+}
+
+.btn-geolocation.loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* SUGERENCIAS DE DIRECCIÓN */
 .address-suggestions {
     background: white;
     border: 1px solid #e0e0e0;
@@ -356,7 +403,7 @@
 
 .datetime-display i { color: #C41E3A; font-size: 1.1rem; }
 
-/* BOTÓN DE ENVIAR (ROJO) */
+/* BOTÓN DE ENVIAR */
 .btn-send-order {
     width: 100%;
     padding: 18px;

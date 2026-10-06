@@ -69,19 +69,26 @@
             </div>
 
             <div class="form-group">
-    <label>Dirección <span class="required">*</span></label>
-    <div class="address-input-wrapper" style="margin-bottom: 8px;">
-        <i class="fa-solid fa-map"></i>
-        <input type="text" id="address-search" placeholder="Escribe tu dirección..." autocomplete="off" autocapitalize="off">
-    </div>
-    <div id="address-suggestions" class="address-suggestions"></div>
-    <div class="address-detail-wrapper" style="margin-top: 8px;">
-        <i class="fa-solid fa-location-crosshairs"></i>
-        <input type="text" id="address-detail-input" placeholder="Detalle (casa, apto, referencia)" autocapitalize="off">
-    </div>
-    <input type="hidden" id="client-address">
-    <input type="hidden" id="client-address-detail">
-</div>
+                <label>Dirección <span class="required">*</span></label>
+                <div class="address-input-wrapper">
+                    <i class="fa-solid fa-map"></i>
+                    <input type="text" id="address-search" placeholder="Escribe tu dirección..." autocomplete="off" autocapitalize="off">
+                </div>
+                
+                <button type="button" class="btn-geolocation" onclick="checkout.getCurrentLocation()">
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                    <span>Usar mi ubicación actual</span>
+                </button>
+                
+                <div id="address-suggestions" class="address-suggestions"></div>
+                
+                <div class="address-detail-wrapper">
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                    <input type="text" id="address-detail-input" placeholder="Detalle (casa, apto, referencia)" autocapitalize="off">
+                </div>
+                <input type="hidden" id="client-address">
+                <input type="hidden" id="client-address-detail">
+            </div>
 
             <div class="form-group">
                 <label>Fecha y hora de entrega</label>
@@ -94,7 +101,7 @@
 
             <div class="form-group">
                 <label>Observación adicional</label>
-                <textarea id="client-note" rows="2" placeholder="Escribe aquí..."></textarea>
+                <textarea id="client-note" rows="2" placeholder="Ej: Sin cebolla, salsa aparte..."></textarea>
             </div>
         </section>
 
