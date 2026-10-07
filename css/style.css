@@ -146,9 +146,6 @@ body {
     background: #1a1a1a;
     overflow-x: auto;
     border-bottom: 1px solid #333;
-    position: sticky;
-    top: 0;
-    z-index: 99;
 }
 
 .categorias-tabs::-webkit-scrollbar {

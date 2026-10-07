@@ -7,7 +7,6 @@ const app = {
     productoSeleccionado: null,
 
     async init() {
-        // LIMPIAR CARRITO AL ENTRAR
         localStorage.removeItem('doriteque_cart');
         this.cart = [];
 
@@ -32,7 +31,7 @@ const app = {
                 this.renderProductos();
                 this.updateCartUI();
                 
-                setTimeout(() => this.setupScrollSpy(), 300);
+                setTimeout(() => this.setupScrollSpy(), 500);
             });
 
             this.setupEventListeners();
@@ -53,31 +52,31 @@ const app = {
     },
 
     renderCategorias() {
-    const container = document.getElementById('categorias-tabs');
-    let html = '<button class="categoria-tab active" data-id="todas">Todos</button>';
-    this.menu.categorias.forEach(cat => {
-        html += '<button class="categoria-tab" data-id="' + cat.id + '">' + cat.nombre + '</button>';
-    });
-    container.innerHTML = html;
-    
-    container.querySelectorAll('.categoria-tab').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            container.querySelectorAll('.categoria-tab').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            this.categoriaActiva = e.target.dataset.id;
-            
-            if (this.categoriaActiva === 'todas') {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                const seccion = document.getElementById('seccion-' + this.categoriaActiva);
-                if (seccion) {
-                    const top = seccion.getBoundingClientRect().top + window.pageYOffset - 140;
-                    window.scrollTo({ top: top, behavior: 'smooth' });
-                }
-            }
+        const container = document.getElementById('categorias-tabs');
+        let html = '<button class="categoria-tab active" data-id="todas">Todos</button>';
+        this.menu.categorias.forEach(cat => {
+            html += '<button class="categoria-tab" data-id="' + cat.id + '">' + cat.nombre + '</button>';
         });
-    });
-},
+        container.innerHTML = html;
+
+        container.querySelectorAll('.categoria-tab').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                container.querySelectorAll('.categoria-tab').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.categoriaActiva = e.target.dataset.id;
+                
+                if (this.categoriaActiva === 'todas') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    const seccion = document.getElementById('seccion-' + this.categoriaActiva);
+                    if (seccion) {
+                        const top = seccion.getBoundingClientRect().top + window.pageYOffset - 100;
+                        window.scrollTo({ top: top, behavior: 'smooth' });
+                    }
+                }
+            });
+        });
+    },
 
     renderProductos() {
         const container = document.getElementById('productos-grid');
@@ -448,31 +447,31 @@ const app = {
     },
 
     setupScrollSpy() {
-    const secciones = document.querySelectorAll('.seccion-categoria');
-    if (secciones.length === 0) return;
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const id = entry.target.id.replace('seccion-', '');
-                this.categoriaActiva = id;
-                
-                const container = document.getElementById('categorias-tabs');
-                container.querySelectorAll('.categoria-tab').forEach(tab => {
-                    tab.classList.remove('active');
-                    if (tab.dataset.id === id) {
-                        tab.classList.add('active');
-                    }
-                });
-            }
+        const secciones = document.querySelectorAll('.seccion-categoria');
+        if (secciones.length === 0) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.id.replace('seccion-', '');
+                    this.categoriaActiva = id;
+                    
+                    const container = document.getElementById('categorias-tabs');
+                    container.querySelectorAll('.categoria-tab').forEach(tab => {
+                        tab.classList.remove('active');
+                        if (tab.dataset.id === id) {
+                            tab.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }, {
+            rootMargin: '-100px 0px -70% 0px',
+            threshold: 0.1
         });
-    }, {
-        rootMargin: '-120px 0px -60% 0px',
-        threshold: 0
-    });
-    
-    secciones.forEach(seccion => observer.observe(seccion));
-},
+
+        secciones.forEach(seccion => observer.observe(seccion));
+    },
 
     setupEventListeners() {
         const inputBuscar = document.getElementById('input-buscar');
