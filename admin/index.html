@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- PWA META TAGS -->
     <meta name="theme-color" content="#C41E3A">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -21,19 +20,17 @@
 </head>
 <body>
 
-    <!-- PANTALLA DE LOGIN -->
-    <div id="login-screen" class="login-screen">
+    <!-- LOGIN -->
+    <div id="login-screen" class="login-screen" style="display:none;">
         <div class="login-box">
             <img src="../assets/logo.png" alt="Logo" class="login-logo" onerror="this.style.display='none'">
             <h1>Doriteque Admin</h1>
             <p class="login-subtitle">Panel de administración</p>
-            
             <form id="login-form">
                 <div class="form-group">
                     <label>Correo electrónico</label>
                     <input type="email" id="login-email" placeholder="admin@doriteque.com" required>
                 </div>
-                
                 <div class="form-group">
                     <label>Contraseña</label>
                     <div class="password-input-container">
@@ -43,145 +40,78 @@
                         </button>
                     </div>
                 </div>
-                
                 <button type="submit" class="btn-login">Ingresar</button>
-                <p id="login-error" class="login-error" style="display:none;color:#FF1744;margin-top:10px;">Correo o contraseña incorrectos</p>
+                <p id="login-error" class="login-error" style="display:none;">Correo o contraseña incorrectos</p>
             </form>
         </div>
     </div>
 
-    <!-- PANEL DE ADMIN -->
+    <!-- PANEL -->
     <div id="admin-panel" class="admin-panel" style="display:none;">
         <header class="admin-header">
             <h1><i class="fa-solid fa-gear"></i> Panel Admin</h1>
             <div class="admin-header-actions">
-                <button class="btn-header" onclick="admin.generateQR()" title="Generar QR">
-                    <i class="fa-solid fa-qrcode"></i>
-                </button>
-                <button class="btn-header btn-logout" onclick="admin.logout()" title="Cerrar sesión">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </button>
+                <button class="btn-header" onclick="admin.generateQR()" title="Generar QR"><i class="fa-solid fa-qrcode"></i></button>
+                <button class="btn-header btn-logout" onclick="admin.logout()" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
         </header>
 
         <nav class="admin-tabs">
-            <button class="admin-tab active" data-tab="config" onclick="admin.switchTab('config')">
-                <i class="fa-solid fa-sliders"></i> Configuración
-            </button>
-            <button class="admin-tab" data-tab="productos" onclick="admin.switchTab('productos')">
-                <i class="fa-solid fa-utensils"></i> Productos
-            </button>
-            <button class="admin-tab" data-tab="categorias" onclick="admin.switchTab('categorias')">
-                <i class="fa-solid fa-folder"></i> Categorías
-            </button>
-            <button class="admin-tab" data-tab="modificadores" onclick="admin.switchTab('modificadores')">
-                <i class="fa-solid fa-list-check"></i> Modificadores
-            </button>
+            <button class="admin-tab active" data-tab="config" onclick="admin.switchTab('config')"><i class="fa-solid fa-sliders"></i> Configuración</button>
+            <button class="admin-tab" data-tab="productos" onclick="admin.switchTab('productos')"><i class="fa-solid fa-utensils"></i> Productos</button>
+            <button class="admin-tab" data-tab="categorias" onclick="admin.switchTab('categorias')"><i class="fa-solid fa-folder"></i> Categorías</button>
+            <button class="admin-tab" data-tab="modificadores" onclick="admin.switchTab('modificadores')"><i class="fa-solid fa-list-check"></i> Modificadores</button>
         </nav>
 
-        <!-- TAB CONFIG -->
         <section id="tab-config" class="admin-tab-content active">
             <div class="admin-card">
                 <h2><i class="fa-solid fa-store"></i> Datos del negocio</h2>
-                <div class="form-group">
-                    <label>Nombre del negocio</label>
-                    <input type="text" id="cfg-nombre" placeholder="Ej: Doriteque">
-                </div>
-                <div class="form-group">
-                    <label>WhatsApp (con código de país)</label>
-                    <input type="text" id="cfg-whatsapp" placeholder="Ej: 584141234567">
-                </div>
-                <div class="form-group">
-                    <label>Correo</label>
-                    <input type="email" id="cfg-email" placeholder="contacto@doriteque.com">
-                </div>
-                <div class="form-group">
-                    <label>Instagram (sin @)</label>
-                    <input type="text" id="cfg-instagram" placeholder="doriteque">
-                </div>
-                <div class="form-group">
-                    <label>TikTok (sin @)</label>
-                    <input type="text" id="cfg-tiktok" placeholder="doriteque">
-                </div>
-                <div class="form-group">
-                    <label>Horario</label>
-                    <input type="text" id="cfg-horario" placeholder="Lun-Dom 10:00 AM - 10:00 PM">
-                </div>
-                <div class="form-group">
-                    <label>Tasa del día (Bs por USD)</label>
-                    <input type="number" step="0.01" id="cfg-tasa" placeholder="36.50">
-                </div>
-                <div class="form-group">
-                    <label>Métodos de pago (separados por coma)</label>
-                    <input type="text" id="cfg-metodos" placeholder="Efectivo, Pago Móvil, Zelle">
-                </div>
-                <div class="form-group">
-                    <label>URL del logo</label>
-                    <input type="text" id="cfg-logo" placeholder="https://...">
-                </div>
-                <button class="btn-save" onclick="admin.saveConfig()">
-                    <i class="fa-solid fa-floppy-disk"></i> Guardar configuración
-                </button>
+                <div class="form-group"><label>Nombre del negocio</label><input type="text" id="cfg-nombre"></div>
+                <div class="form-group"><label>WhatsApp (con código de país)</label><input type="text" id="cfg-whatsapp"></div>
+                <div class="form-group"><label>Correo</label><input type="email" id="cfg-email"></div>
+                <div class="form-group"><label>Instagram (sin @)</label><input type="text" id="cfg-instagram"></div>
+                <div class="form-group"><label>TikTok (sin @)</label><input type="text" id="cfg-tiktok"></div>
+                <div class="form-group"><label>Horario</label><input type="text" id="cfg-horario"></div>
+                <div class="form-group"><label>Tasa del día (Bs por USD)</label><input type="number" step="0.01" id="cfg-tasa"></div>
+                <div class="form-group"><label>Métodos de pago (separados por coma)</label><input type="text" id="cfg-metodos"></div>
+                <div class="form-group"><label>URL del logo</label><input type="text" id="cfg-logo"></div>
+                <button class="btn-save" onclick="admin.saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Guardar configuración</button>
             </div>
-
             <div class="admin-card">
                 <h2><i class="fa-solid fa-message"></i> Mensaje de WhatsApp</h2>
-                <div class="form-group">
-                    <label>Encabezado</label>
-                    <input type="text" id="msg-header" placeholder="🍔 *NUEVO PEDIDO*">
-                </div>
-                <div class="form-group">
-                    <label>Saludo</label>
-                    <input type="text" id="msg-greeting" placeholder="¡Gracias por tu pedido!">
-                </div>
-                <div class="form-group">
-                    <label>Texto antes del detalle</label>
-                    <input type="text" id="msg-before-detail" placeholder="Aquí tienes el detalle:">
-                </div>
-                <div class="form-group">
-                    <label>Texto después del total</label>
-                    <input type="text" id="msg-after-total" placeholder="Te contactaremos pronto.">
-                </div>
-                <button class="btn-save" onclick="admin.saveConfig()">
-                    <i class="fa-solid fa-floppy-disk"></i> Guardar mensaje
-                </button>
+                <div class="form-group"><label>Encabezado</label><input type="text" id="msg-header"></div>
+                <div class="form-group"><label>Saludo</label><input type="text" id="msg-greeting"></div>
+                <div class="form-group"><label>Texto antes del detalle</label><input type="text" id="msg-before-detail"></div>
+                <div class="form-group"><label>Texto después del total</label><input type="text" id="msg-after-total"></div>
+                <button class="btn-save" onclick="admin.saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Guardar mensaje</button>
             </div>
         </section>
 
-        <!-- TAB PRODUCTOS -->
         <section id="tab-productos" class="admin-tab-content">
             <div class="admin-card">
                 <div class="admin-card-header">
                     <h2><i class="fa-solid fa-utensils"></i> Productos</h2>
-                    <button class="btn-add" onclick="admin.openProductModal()">
-                        <i class="fa-solid fa-plus"></i> Nuevo
-                    </button>
+                    <button class="btn-add" onclick="admin.openProductModal()"><i class="fa-solid fa-plus"></i> Nuevo</button>
                 </div>
                 <div id="productos-list" class="admin-list"></div>
             </div>
         </section>
 
-        <!-- TAB CATEGORÍAS -->
         <section id="tab-categorias" class="admin-tab-content">
             <div class="admin-card">
                 <div class="admin-card-header">
                     <h2><i class="fa-solid fa-folder"></i> Categorías</h2>
-                    <button class="btn-add" onclick="admin.openCategoryModal()">
-                        <i class="fa-solid fa-plus"></i> Nueva
-                    </button>
+                    <button class="btn-add" onclick="admin.openCategoryModal()"><i class="fa-solid fa-plus"></i> Nueva</button>
                 </div>
                 <div id="categorias-list" class="admin-list"></div>
             </div>
         </section>
 
-        <!-- TAB MODIFICADORES -->
         <section id="tab-modificadores" class="admin-tab-content">
             <div class="admin-card">
                 <div class="admin-card-header">
                     <h2><i class="fa-solid fa-list-check"></i> Modificadores</h2>
-                    <button class="btn-add" onclick="admin.openModifierModal()">
-                        <i class="fa-solid fa-plus"></i> Nuevo
-                    </button>
+                    <button class="btn-add" onclick="admin.openModifierModal()"><i class="fa-solid fa-plus"></i> Nuevo</button>
                 </div>
                 <div id="modificadores-list" class="admin-list"></div>
             </div>
@@ -189,44 +119,29 @@
     </div>
 
     <!-- MODAL PRODUCTO -->
-    <div id="product-modal" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
+    <div id="product-modal" class="admin-modal">
+        <div class="admin-modal-content">
             <div class="modal-header">
                 <h3 id="product-modal-title">Nuevo producto</h3>
                 <button class="modal-close" onclick="admin.closeProductModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="prod-id">
+                <div class="form-group"><label>Nombre</label><input type="text" id="prod-nombre"></div>
+                <div class="form-group"><label>Descripción</label><textarea id="prod-descripcion" rows="3"></textarea></div>
+                <div class="form-group"><label>Precio (USD)</label><input type="number" step="0.01" id="prod-precio"></div>
+                <div class="form-group"><label>Categoría</label><select id="prod-categoria"></select></div>
                 <div class="form-group">
-                    <label>Nombre</label>
-                    <input type="text" id="prod-nombre" required>
-                </div>
-                <div class="form-group">
-                    <label>Descripción</label>
-                    <textarea id="prod-descripcion" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Precio (USD)</label>
-                    <input type="number" step="0.01" id="prod-precio" required>
-                </div>
-                <div class="form-group">
-                    <label>Categoría</label>
-                    <select id="prod-categoria" required></select>
-                </div>
-                <div class="form-group">
-                    <label>Imagen (URL o subir archivo)</label>
+                    <label>Imagen (URL o archivo)</label>
                     <input type="text" id="prod-imagen" placeholder="URL de la imagen">
-                    <input type="file" id="prod-imagen-file" accept="image/*" onchange="admin.handleImageUpload(event)" style="margin-top:8px;">
+                    <input type="file" id="prod-imagen-file" accept="image/*" onchange="admin.handleImageUpload(event)" style="margin-top:8px;color:#b0b0b0;">
                     <div id="image-preview-container" style="display:none;margin-top:10px;">
                         <img id="image-preview" style="max-width:200px;max-height:150px;border-radius:8px;">
-                        <button type="button" onclick="admin.removeImagePreview()" style="margin-top:8px;">Quitar imagen</button>
+                        <button type="button" class="btn-secondary" onclick="admin.removeImagePreview()" style="margin-top:8px;">Quitar imagen</button>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="prod-disponible" checked>
-                        Disponible
-                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="prod-disponible" checked style="width:auto;"> Disponible</label>
                 </div>
                 <div class="form-group">
                     <label>Modificadores asociados</label>
@@ -241,22 +156,16 @@
     </div>
 
     <!-- MODAL CATEGORÍA -->
-    <div id="category-modal" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
+    <div id="category-modal" class="admin-modal">
+        <div class="admin-modal-content">
             <div class="modal-header">
                 <h3 id="category-modal-title">Nueva categoría</h3>
                 <button class="modal-close" onclick="admin.closeCategoryModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="cat-id">
-                <div class="form-group">
-                    <label>Nombre</label>
-                    <input type="text" id="cat-nombre" required>
-                </div>
-                <div class="form-group">
-                    <label>Orden</label>
-                    <input type="number" id="cat-orden" value="1">
-                </div>
+                <div class="form-group"><label>Nombre</label><input type="text" id="cat-nombre"></div>
+                <div class="form-group"><label>Orden</label><input type="number" id="cat-orden" value="1"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="admin.closeCategoryModal()">Cancelar</button>
@@ -266,18 +175,15 @@
     </div>
 
     <!-- MODAL MODIFICADOR -->
-    <div id="modifier-modal" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
+    <div id="modifier-modal" class="admin-modal">
+        <div class="admin-modal-content">
             <div class="modal-header">
                 <h3 id="modifier-modal-title">Nuevo modificador</h3>
                 <button class="modal-close" onclick="admin.closeModifierModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="mod-id">
-                <div class="form-group">
-                    <label>Nombre</label>
-                    <input type="text" id="mod-nombre" required>
-                </div>
+                <div class="form-group"><label>Nombre</label><input type="text" id="mod-nombre"></div>
                 <div class="form-group">
                     <label>Tipo</label>
                     <select id="mod-tipo">
@@ -286,17 +192,12 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="mod-obligatorio">
-                        Obligatorio
-                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mod-obligatorio" style="width:auto;"> Obligatorio</label>
                 </div>
                 <div class="form-group">
                     <label>Opciones</label>
                     <div id="opciones-container"></div>
-                    <button type="button" onclick="admin.addOpcion()" style="margin-top:8px;">
-                        <i class="fa-solid fa-plus"></i> Agregar opción
-                    </button>
+                    <button type="button" class="btn-secondary" onclick="admin.addOpcion()" style="margin-top:8px;"><i class="fa-solid fa-plus"></i> Agregar opción</button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -307,23 +208,21 @@
     </div>
 
     <!-- MODAL QR -->
-    <div id="qr-modal" class="modal-overlay" style="display:none;" onclick="if(event.target.id==='qr-modal')admin.closeQRModal()">
-        <div class="modal-content" style="text-align:center;">
+    <div id="qr-modal" class="admin-modal" onclick="if(event.target.id==='qr-modal')admin.closeQRModal()">
+        <div class="admin-modal-content" style="text-align:center;">
             <div class="modal-header">
                 <h3>QR del menú</h3>
                 <button class="modal-close" onclick="admin.closeQRModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
-                <p>Escanea este QR para ver el menú:</p>
+                <p style="color:#b0b0b0;">Escanea este QR para ver el menú:</p>
                 <div id="qr-container" style="margin:20px 0;"></div>
-                <p style="color:#b0b0b0;font-size:0.9rem;">https://doriteque.github.io/Doriteque/</p>
+                <p style="color:#b0b0b0;font-size:0.85rem;">https://doriteque.github.io/Doriteque/</p>
             </div>
         </div>
     </div>
 
     <script src="admin.js"></script>
-    
-    <!-- SERVICE WORKER PARA PWA -->
     <script>
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('service-worker.js');
