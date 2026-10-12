@@ -5,27 +5,32 @@ const admin = {
     unsubMenu: null,
 
     async init() {
-        // 1. Escuchar estado de autenticación en tiempo real
+        // 1. FORZAR LOGOUT SIEMPRE al cargar (antes de todo)
+        try {
+            await window.signOut(window.auth);
+        } catch (e) {
+            // Ignorar si no había sesión
+        }
+
+        // 2. Registrar listener DESPUÉS del signOut (esto es clave)
         window.onAuthStateChanged(window.auth, (user) => {
             if (user) {
-                // Usuario logueado: mostrar panel
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
                 this.loadDashboard();
             } else {
-                // Usuario no logueado: mostrar login
                 document.getElementById('login-screen').style.display = 'flex';
                 document.getElementById('admin-panel').style.display = 'none';
             }
         });
 
-        // 2. Manejar el submit del formulario de login
+        // 3. Listener del formulario de login
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.login();
         });
 
-        // 3. Listeners para las tablas (delegación de eventos)
+        // 4. Listeners de las tablas (productos, categorías, modificadores)
         document.getElementById('productos-list').addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-icon');
             if (!btn) return;
@@ -79,9 +84,8 @@ const admin = {
 
         try {
             await window.signInWithEmailAndPassword(window.auth, email, pass);
-            // onAuthStateChanged se encargará de cambiar la pantalla automáticamente
         } catch (error) {
-            console.error(error);
+            console.error('Error de login:', error);
             errorEl.textContent = 'Correo o contraseña incorrectos.';
             errorEl.style.display = 'block';
             setTimeout(() => { errorEl.style.display = 'none'; }, 3000);
@@ -94,36 +98,30 @@ const admin = {
             if (this.unsubConfig) this.unsubConfig();
             if (this.unsubMenu) this.unsubMenu();
         } catch (error) {
-            console.error(error);
+            console.error('Error al cerrar sesión:', error);
         }
     },
-    downloadBackup() {
-    try {
-        const backup = {
-            fecha: new Date().toISOString(),
-            config: this.config,
-            menu: this.menu
-        };
-        
-        const dataStr = JSON.stringify(backup, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `doriteque-backup-${new Date().toISOString().split('T')[0]}.json`;
-        link.click();
-        
-        URL.revokeObjectURL(url);
-        alert('✅ Backup descargado correctamente.');
-    } catch (error) {
-        console.error('Error al descargar backup:', error);
-        alert('Error al descargar: ' + error.message);
-    }
-},
+
+    generateQR() {
+        const url = 'https://doriteque.github.io/Doriteque/';
+        const qrContainer = document.getElementById('qr-container');
+        if (qrContainer) {
+            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}" alt="QR Code" style="max-width: 100%; height: auto; border-radius: 8px;">`;
+        }
+        const modal = document.getElementById('qr-modal');
+        if (modal) modal.style.display = 'flex';
+    },
+
+    closeQRModal() {
+        const modal = document.getElementById('qr-modal');
+        if (modal) modal.style.display = 'none';
+    },
 
     async loadDashboard() {
         try {
+            if (this.unsubConfig) this.unsubConfig();
+            if (this.unsubMenu) this.unsubMenu();
+
             this.unsubConfig = window.onSnapshot(window.doc(window.db, 'config', 'main'), (docSnap) => {
                 if (docSnap.exists()) {
                     this.config = docSnap.data();
@@ -157,41 +155,42 @@ const admin = {
     },
 
     fillConfigForm() {
-        document.getElementById('cfg-nombre').value = this.config.nombre || '';
-        document.getElementById('cfg-whatsapp').value = this.config.whatsapp || '';
-        document.getElementById('cfg-email').value = this.config.email || '';
-        document.getElementById('cfg-instagram').value = this.config.instagram || '';
-        document.getElementById('cfg-tiktok').value = this.config.tiktok || '';
-        document.getElementById('cfg-horario').value = this.config.horario || '';
-        document.getElementById('cfg-tasa').value = this.config.tasaBs || 36.50;
-        document.getElementById('cfg-metodos').value = (this.config.metodosPago || []).join(', ');
-        document.getElementById('cfg-logo').value = this.config.logo || '';
-        document.getElementById('msg-header').value = this.config.msgHeader || '🍔 *NUEVO PEDIDO*';
-        document.getElementById('msg-greeting').value = this.config.msgGreeting || '¡Gracias por tu pedido!';
-        document.getElementById('msg-before-detail').value = this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:';
-        document.getElementById('msg-after-total').value = this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar. ¡Gracias por elegirnos!';
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+        setVal('cfg-nombre', this.config.nombre);
+        setVal('cfg-whatsapp', this.config.whatsapp);
+        setVal('cfg-email', this.config.email);
+        setVal('cfg-instagram', this.config.instagram);
+        setVal('cfg-tiktok', this.config.tiktok);
+        setVal('cfg-horario', this.config.horario);
+        setVal('cfg-tasa', this.config.tasaBs || 36.50);
+        setVal('cfg-metodos', (this.config.metodosPago || []).join(', '));
+        setVal('cfg-logo', this.config.logo);
+        setVal('msg-header', this.config.msgHeader || '🍔 *NUEVO PEDIDO*');
+        setVal('msg-greeting', this.config.msgGreeting || '¡Gracias por tu pedido!');
+        setVal('msg-before-detail', this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:');
+        setVal('msg-after-total', this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar.');
     },
 
     async saveConfig() {
         try {
+            const getVal = (id) => document.getElementById(id).value.trim();
             const newConfig = {
-                nombre: document.getElementById('cfg-nombre').value.trim(),
-                whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
-                email: document.getElementById('cfg-email').value.trim(),
-                instagram: document.getElementById('cfg-instagram').value.trim(),
-                tiktok: document.getElementById('cfg-tiktok').value.trim(),
-                horario: document.getElementById('cfg-horario').value.trim(),
-                tasaBs: parseFloat(document.getElementById('cfg-tasa').value) || 36.50,
-                metodosPago: document.getElementById('cfg-metodos').value.split(',').map(s => s.trim()).filter(s => s),
-                logo: document.getElementById('cfg-logo').value.trim(),
-                msgHeader: document.getElementById('msg-header').value.trim(),
-                msgGreeting: document.getElementById('msg-greeting').value.trim(),
-                msgBeforeDetail: document.getElementById('msg-before-detail').value.trim(),
-                msgAfterTotal: document.getElementById('msg-after-total').value.trim()
+                nombre: getVal('cfg-nombre'),
+                whatsapp: getVal('cfg-whatsapp'),
+                email: getVal('cfg-email'),
+                instagram: getVal('cfg-instagram'),
+                tiktok: getVal('cfg-tiktok'),
+                horario: getVal('cfg-horario'),
+                tasaBs: parseFloat(getVal('cfg-tasa')) || 36.50,
+                metodosPago: getVal('cfg-metodos').split(',').map(s => s.trim()).filter(s => s),
+                logo: getVal('cfg-logo'),
+                msgHeader: getVal('msg-header'),
+                msgGreeting: getVal('msg-greeting'),
+                msgBeforeDetail: getVal('msg-before-detail'),
+                msgAfterTotal: getVal('msg-after-total')
             };
-
             await window.setDoc(window.doc(window.db, 'config', 'main'), newConfig);
-            alert('✅ Configuración guardada en la nube.');
+            alert('✅ Configuración guardada.');
         } catch (error) {
             console.error(error);
             alert('Error al guardar: ' + error.message);
@@ -201,7 +200,7 @@ const admin = {
     renderProducts() {
         const container = document.getElementById('productos-list');
         if (!this.menu.productos || this.menu.productos.length === 0) {
-            container.innerHTML = '<p style="color: #b0b0b0; text-align: center; padding: 20px;">No hay productos. Crea el primero.</p>';
+            container.innerHTML = '<p style="color:#b0b0b0;text-align:center;padding:20px;">No hay productos.</p>';
             return;
         }
         let html = '';
@@ -210,20 +209,21 @@ const admin = {
             const img = p.imagen || 'https://via.placeholder.com/60/1a1a1a/C41E3A?text=D';
             const badge = p.disponible ? '<span class="badge badge-active">Disponible</span>' : '<span class="badge badge-inactive">No disponible</span>';
             const modsCount = p.modificadoresIds ? p.modificadoresIds.length : 0;
-            const modsBadge = modsCount > 0 ? '<span class="badge" style="background: #FF9800; color: white; margin-left: 6px;">' + modsCount + ' mods</span>' : '';
+            const modsBadge = modsCount > 0 ? `<span class="badge" style="background:#FF9800;color:white;margin-left:6px;">${modsCount} mods</span>` : '';
             const idStr = String(p.id);
-            html += '<div class="admin-item">';
-            html += '<img src="' + img + '" class="admin-item-img" alt="' + p.nombre + '">';
-            html += '<div class="admin-item-info">';
-            html += '<div class="admin-item-nombre">' + p.nombre + ' ' + badge + ' ' + modsBadge + '</div>';
-            html += '<div class="admin-item-desc">' + (cat ? cat.nombre : 'Sin categoría') + '</div>';
-            html += '<div class="admin-item-precio">$' + Number(p.precio).toFixed(2) + '</div>';
-            html += '</div>';
-            html += '<div class="admin-item-actions">';
-            html += '<button class="btn-icon btn-toggle ' + (p.disponible ? '' : 'disabled') + '" data-action="toggle" data-id="' + idStr + '" title="Cambiar disponibilidad"><i class="fa-solid fa-' + (p.disponible ? 'eye' : 'eye-slash') + '"></i></button>';
-            html += '<button class="btn-icon btn-edit" data-action="edit" data-id="' + idStr + '" title="Editar"><i class="fa-solid fa-pen"></i></button>';
-            html += '<button class="btn-icon btn-delete" data-action="delete" data-id="' + idStr + '" title="Eliminar"><i class="fa-solid fa-trash"></i></button>';
-            html += '</div></div>';
+            html += `<div class="admin-item">
+                <img src="${img}" class="admin-item-img" alt="${p.nombre}">
+                <div class="admin-item-info">
+                    <div class="admin-item-nombre">${p.nombre} ${badge} ${modsBadge}</div>
+                    <div class="admin-item-desc">${cat ? cat.nombre : 'Sin categoría'}</div>
+                    <div class="admin-item-precio">$${Number(p.precio).toFixed(2)}</div>
+                </div>
+                <div class="admin-item-actions">
+                    <button class="btn-icon btn-toggle" data-action="toggle" data-id="${idStr}"><i class="fa-solid fa-${p.disponible ? 'eye' : 'eye-slash'}"></i></button>
+                    <button class="btn-icon btn-edit" data-action="edit" data-id="${idStr}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-icon btn-delete" data-action="delete" data-id="${idStr}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>`;
         });
         container.innerHTML = html;
     },
@@ -231,22 +231,22 @@ const admin = {
     renderCategories() {
         const container = document.getElementById('categorias-list');
         if (!this.menu.categorias || this.menu.categorias.length === 0) {
-            container.innerHTML = '<p style="color: #b0b0b0; text-align: center; padding: 20px;">No hay categorías.</p>';
+            container.innerHTML = '<p style="color:#b0b0b0;text-align:center;padding:20px;">No hay categorías.</p>';
             return;
         }
         let html = '';
         this.menu.categorias.forEach(c => {
             const count = this.menu.productos.filter(p => String(p.categoriaId) === String(c.id)).length;
-            const idStr = String(c.id);
-            html += '<div class="admin-item">';
-            html += '<div class="admin-item-info">';
-            html += '<div class="admin-item-nombre">' + c.nombre + '</div>';
-            html += '<div class="admin-item-desc">Orden: ' + c.orden + ' | ' + count + ' productos</div>';
-            html += '</div>';
-            html += '<div class="admin-item-actions">';
-            html += '<button class="btn-icon btn-edit" data-action="edit" data-id="' + idStr + '" title="Editar"><i class="fa-solid fa-pen"></i></button>';
-            html += '<button class="btn-icon btn-delete" data-action="delete" data-id="' + idStr + '" title="Eliminar"><i class="fa-solid fa-trash"></i></button>';
-            html += '</div></div>';
+            html += `<div class="admin-item">
+                <div class="admin-item-info">
+                    <div class="admin-item-nombre">${c.nombre}</div>
+                    <div class="admin-item-desc">Orden: ${c.orden} | ${count} productos</div>
+                </div>
+                <div class="admin-item-actions">
+                    <button class="btn-icon btn-edit" data-action="edit" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-icon btn-delete" data-action="delete" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>`;
         });
         container.innerHTML = html;
     },
@@ -255,23 +255,23 @@ const admin = {
         const container = document.getElementById('modificadores-list');
         if (!container) return;
         if (!this.menu.modificadores || this.menu.modificadores.length === 0) {
-            container.innerHTML = '<p style="color: #b0b0b0; text-align: center; padding: 20px;">No hay modificadores. Crea el primero.</p>';
+            container.innerHTML = '<p style="color:#b0b0b0;text-align:center;padding:20px;">No hay modificadores.</p>';
             return;
         }
         let html = '';
         this.menu.modificadores.forEach(m => {
             const tipoTexto = m.tipo === 'unico' ? 'Único' : 'Múltiple';
             const obligatorioTexto = m.obligatorio ? 'Obligatorio' : 'Opcional';
-            const idStr = String(m.id);
-            html += '<div class="admin-item">';
-            html += '<div class="admin-item-info">';
-            html += '<div class="admin-item-nombre">' + m.nombre + '</div>';
-            html += '<div class="admin-item-desc">' + tipoTexto + ' | ' + obligatorioTexto + ' | ' + m.opciones.length + ' opciones</div>';
-            html += '</div>';
-            html += '<div class="admin-item-actions">';
-            html += '<button class="btn-icon btn-edit" data-action="edit-mod" data-id="' + idStr + '" title="Editar"><i class="fa-solid fa-pen"></i></button>';
-            html += '<button class="btn-icon btn-delete" data-action="delete-mod" data-id="' + idStr + '" title="Eliminar"><i class="fa-solid fa-trash"></i></button>';
-            html += '</div></div>';
+            html += `<div class="admin-item">
+                <div class="admin-item-info">
+                    <div class="admin-item-nombre">${m.nombre}</div>
+                    <div class="admin-item-desc">${tipoTexto} | ${obligatorioTexto} | ${m.opciones.length} opciones</div>
+                </div>
+                <div class="admin-item-actions">
+                    <button class="btn-icon btn-edit" data-action="edit-mod" data-id="${m.id}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-icon btn-delete" data-action="delete-mod" data-id="${m.id}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>`;
         });
         container.innerHTML = html;
     },
@@ -282,16 +282,17 @@ const admin = {
         const modal = document.getElementById('product-modal');
         const title = document.getElementById('product-modal-title');
         const select = document.getElementById('prod-categoria');
+        
         select.innerHTML = '<option value="">Selecciona una categoría</option>';
         (this.menu.categorias || []).forEach(c => {
-            select.innerHTML += '<option value="' + c.id + '">' + c.nombre + '</option>';
+            select.innerHTML += `<option value="${c.id}">${c.nombre}</option>`;
         });
-
+        
         const modsSection = document.getElementById('modificadores-chips-container');
         if (modsSection) {
             modsSection.innerHTML = '';
             if (!this.menu.modificadores || this.menu.modificadores.length === 0) {
-                modsSection.innerHTML = '<p style="color: #b0b0b0; font-size: 0.85rem;">No hay modificadores creados.</p>';
+                modsSection.innerHTML = '<p style="color:#b0b0b0;font-size:0.85rem;">No hay modificadores.</p>';
             } else {
                 this.menu.modificadores.forEach(m => {
                     let isChecked = false;
@@ -302,7 +303,7 @@ const admin = {
                     const chip = document.createElement('div');
                     chip.className = 'mod-chip' + (isChecked ? ' selected' : '');
                     chip.dataset.modId = m.id;
-                    chip.innerHTML = '<i class="fa-solid fa-' + (isChecked ? 'check' : 'plus') + '"></i> ' + m.nombre + ' <span class="mod-type">(' + (m.tipo === 'unico' ? '1 opción' : 'varias') + ')</span>';
+                    chip.innerHTML = `<i class="fa-solid fa-${isChecked ? 'check' : 'plus'}"></i> ${m.nombre}`;
                     chip.onclick = function() {
                         this.classList.toggle('selected');
                         const icon = this.querySelector('i');
@@ -312,10 +313,10 @@ const admin = {
                 });
             }
         }
-
-        if (productId && productId !== 'null' && productId !== '') {
+        
+        if (productId) {
             const p = this.menu.productos.find(x => String(x.id) === String(productId));
-            if (!p) { alert('Error: No se encontró el producto.'); return; }
+            if (!p) { alert('Producto no encontrado.'); return; }
             title.textContent = 'Editar producto';
             document.getElementById('prod-id').value = p.id;
             document.getElementById('prod-nombre').value = p.nombre;
@@ -340,8 +341,6 @@ const admin = {
             document.getElementById('prod-imagen').value = '';
             document.getElementById('prod-disponible').checked = true;
             document.getElementById('image-preview-container').style.display = 'none';
-            const fileInput = document.getElementById('prod-imagen-file');
-            if (fileInput) fileInput.value = '';
         }
         modal.style.display = 'flex';
     },
@@ -351,16 +350,15 @@ const admin = {
     handleImageUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
-        if (!file.type.startsWith('image/')) { alert('Solo se permiten imágenes.'); return; }
-        if (file.size > 5 * 1024 * 1024) { alert('La imagen es muy grande. Máximo 5MB.'); return; }
+        if (!file.type.startsWith('image/')) { alert('Solo imágenes.'); return; }
+        if (file.size > 5 * 1024 * 1024) { alert('Máximo 5MB.'); return; }
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 const maxSize = 800;
-                let width = img.width;
-                let height = img.height;
+                let width = img.width, height = img.height;
                 if (width > height && width > maxSize) { height = (height * maxSize) / width; width = maxSize; }
                 else if (height > maxSize) { width = (width * maxSize) / height; height = maxSize; }
                 canvas.width = width; canvas.height = height;
@@ -380,7 +378,6 @@ const admin = {
         const fileInput = document.getElementById('prod-imagen-file');
         if (fileInput) fileInput.value = '';
         document.getElementById('image-preview-container').style.display = 'none';
-        document.getElementById('image-preview').src = '';
     },
 
     async saveProduct() {
@@ -391,12 +388,11 @@ const admin = {
         const categoriaId = document.getElementById('prod-categoria').value;
         const imagen = document.getElementById('prod-imagen').value.trim();
         const disponible = document.getElementById('prod-disponible').checked;
-
         const modificadoresIds = [];
         document.querySelectorAll('.mod-chip.selected').forEach(chip => modificadoresIds.push(chip.dataset.modId));
 
         if (!nombre || !descripcion || isNaN(precio) || !categoriaId) {
-            alert('Completa nombre, descripción, precio y categoría.');
+            alert('Completa todos los campos obligatorios.');
             return;
         }
 
@@ -419,12 +415,12 @@ const admin = {
             alert('✅ Producto guardado.');
         } catch (error) {
             console.error(error);
-            alert('Error al guardar: ' + error.message);
+            alert('Error: ' + error.message);
         }
     },
 
     async deleteProduct(id) {
-        if (!confirm('¿Eliminar este producto?')) return;
+        if (!confirm('¿Eliminar producto?')) return;
         try {
             const newProductos = this.menu.productos.filter(p => String(p.id) !== String(id));
             await window.setDoc(window.doc(window.db, 'menu', 'main'), {
@@ -432,11 +428,7 @@ const admin = {
                 productos: newProductos,
                 modificadores: this.menu.modificadores || []
             });
-            alert('✅ Producto eliminado.');
-        } catch (error) {
-            console.error(error);
-            alert('Error al eliminar: ' + error.message);
-        }
+        } catch (error) { alert('Error: ' + error.message); }
     },
 
     async toggleProduct(id) {
@@ -450,10 +442,7 @@ const admin = {
                 productos: newProductos,
                 modificadores: this.menu.modificadores || []
             });
-        } catch (error) {
-            console.error(error);
-            alert('Error: ' + error.message);
-        }
+        } catch (error) { alert('Error: ' + error.message); }
     },
 
     editCategory(id) { this.openCategoryModal(String(id)); },
@@ -461,7 +450,7 @@ const admin = {
     openCategoryModal(catId = null) {
         const modal = document.getElementById('category-modal');
         const title = document.getElementById('category-modal-title');
-        if (catId && catId !== 'null' && catId !== '') {
+        if (catId) {
             const c = this.menu.categorias.find(x => String(x.id) === String(catId));
             if (!c) return;
             title.textContent = 'Editar categoría';
@@ -483,9 +472,8 @@ const admin = {
         const id = document.getElementById('cat-id').value;
         const nombre = document.getElementById('cat-nombre').value.trim();
         const orden = parseInt(document.getElementById('cat-orden').value) || 1;
-        if (!nombre) { alert('El nombre es obligatorio.'); return; }
+        if (!nombre) { alert('Nombre obligatorio.'); return; }
         const catData = { id: id || 'cat' + Date.now(), nombre, orden };
-
         try {
             const newCategorias = [...(this.menu.categorias || [])];
             if (id) {
@@ -501,16 +489,13 @@ const admin = {
             });
             this.closeCategoryModal();
             alert('✅ Categoría guardada.');
-        } catch (error) {
-            console.error(error);
-            alert('Error: ' + error.message);
-        }
+        } catch (error) { alert('Error: ' + error.message); }
     },
 
     async deleteCategory(id) {
         const count = this.menu.productos.filter(p => String(p.categoriaId) === String(id)).length;
-        if (count > 0) { alert('No puedes eliminar esta categoría porque tiene ' + count + ' producto(s).'); return; }
-        if (!confirm('¿Eliminar esta categoría?')) return;
+        if (count > 0) { alert('No se puede eliminar: tiene ' + count + ' producto(s).'); return; }
+        if (!confirm('¿Eliminar categoría?')) return;
         try {
             const newCategorias = this.menu.categorias.filter(c => String(c.id) !== String(id));
             await window.setDoc(window.doc(window.db, 'menu', 'main'), {
@@ -518,20 +503,17 @@ const admin = {
                 productos: this.menu.productos || [],
                 modificadores: this.menu.modificadores || []
             });
-            alert('✅ Categoría eliminada.');
-        } catch (error) {
-            console.error(error);
-            alert('Error: ' + error.message);
-        }
+        } catch (error) { alert('Error: ' + error.message); }
     },
+
+    editModifier(id) { this.openModifierModal(String(id)); },
 
     openModifierModal(modId = null) {
         const modal = document.getElementById('modifier-modal');
         const title = document.getElementById('modifier-modal-title');
         const container = document.getElementById('opciones-container');
         container.innerHTML = '';
-
-        if (modId && modId !== 'null' && modId !== '') {
+        if (modId) {
             const m = this.menu.modificadores.find(x => String(x.id) === String(modId));
             if (!m) return;
             title.textContent = 'Editar modificador';
@@ -558,7 +540,7 @@ const admin = {
         const opcionId = id || 'opt' + Date.now() + Math.random().toString(36).substr(2, 5);
         const div = document.createElement('div');
         div.className = 'opcion-row';
-        div.innerHTML = '<input type="text" placeholder="Nombre de la opción" value="' + nombre + '" class="opcion-nombre" style="flex: 2;"><input type="number" step="0.01" placeholder="Precio extra" value="' + precio + '" class="opcion-precio" style="flex: 1;"><button type="button" class="btn-icon btn-delete" onclick="this.parentElement.remove()" title="Eliminar opción"><i class="fa-solid fa-trash"></i></button><input type="hidden" value="' + opcionId + '" class="opcion-id">';
+        div.innerHTML = `<input type="text" placeholder="Nombre" value="${nombre}" class="opcion-nombre" style="flex:2;"><input type="number" step="0.01" placeholder="Precio extra" value="${precio}" class="opcion-precio" style="flex:1;"><button type="button" class="btn-icon btn-delete" onclick="this.parentElement.remove()"><i class="fa-solid fa-trash"></i></button><input type="hidden" value="${opcionId}" class="opcion-id">`;
         container.appendChild(div);
     },
 
@@ -567,22 +549,17 @@ const admin = {
         const nombre = document.getElementById('mod-nombre').value.trim();
         const tipo = document.getElementById('mod-tipo').value;
         const obligatorio = document.getElementById('mod-obligatorio').checked;
-
-        if (!nombre) { alert('El nombre del modificador es obligatorio.'); return; }
-
+        if (!nombre) { alert('Nombre obligatorio.'); return; }
         const opcionesRows = document.querySelectorAll('.opcion-row');
         const opciones = [];
         opcionesRows.forEach(row => {
-            const optNombre = row.querySelector('.opcion-nombre').value.trim();
-            const optPrecio = parseFloat(row.querySelector('.opcion-precio').value) || 0;
-            const optId = row.querySelector('.opcion-id').value;
-            if (optNombre) opciones.push({ id: optId, nombre: optNombre, precio: optPrecio });
+            const n = row.querySelector('.opcion-nombre').value.trim();
+            const p = parseFloat(row.querySelector('.opcion-precio').value) || 0;
+            const oid = row.querySelector('.opcion-id').value;
+            if (n) opciones.push({ id: oid, nombre: n, precio: p });
         });
-
-        if (opciones.length === 0) { alert('Debes agregar al menos una opción.'); return; }
-
+        if (opciones.length === 0) { alert('Agrega al menos una opción.'); return; }
         const modData = { id: id || 'mod' + Date.now(), nombre, tipo, obligatorio, opciones };
-
         try {
             const newMods = [...(this.menu.modificadores || [])];
             if (id) {
@@ -598,21 +575,13 @@ const admin = {
             });
             this.closeModifierModal();
             alert('✅ Modificador guardado.');
-        } catch (error) {
-            console.error(error);
-            alert('Error: ' + error.message);
-        }
+        } catch (error) { alert('Error: ' + error.message); }
     },
-
-    editModifier(id) { this.openModifierModal(String(id)); },
 
     async deleteModifier(id) {
         const productosUsando = this.menu.productos.filter(p => p.modificadoresIds && p.modificadoresIds.includes(id)).length;
-        if (productosUsando > 0) {
-            alert('No puedes eliminar este modificador porque está asignado a ' + productosUsando + ' producto(s). Primero quítalo de esos productos.');
-            return;
-        }
-        if (!confirm('¿Eliminar este modificador?')) return;
+        if (productosUsando > 0) { alert('Está asignado a ' + productosUsando + ' producto(s).'); return; }
+        if (!confirm('¿Eliminar modificador?')) return;
         try {
             const newMods = this.menu.modificadores.filter(m => String(m.id) !== String(id));
             await window.setDoc(window.doc(window.db, 'menu', 'main'), {
@@ -620,11 +589,7 @@ const admin = {
                 productos: this.menu.productos || [],
                 modificadores: newMods
             });
-            alert('✅ Modificador eliminado.');
-        } catch (error) {
-            console.error(error);
-            alert('Error: ' + error.message);
-        }
+        } catch (error) { alert('Error: ' + error.message); }
     }
 };
 

@@ -4,296 +4,233 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Doriteque</title>
-    <!-- PWA META TAGS -->
-<meta name="theme-color" content="#C41E3A">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Doriteque Admin">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="../assets/logo.png">
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA META TAGS -->
+    <meta name="theme-color" content="#C41E3A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Doriteque Admin">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="../assets/logo.png">
+    
     <script type="module" src="../js/firebase.js"></script>
+    <script type="module" src="../js/db.js"></script>
 </head>
 <body>
-    <!-- PANTALLA DE LOGIN -->
-<div id="login-screen" class="login-screen">
-    <div class="login-box">
-        <img src="../assets/logo.png" alt="Logo" class="login-logo" onerror="this.style.display='none'">
-        <h1>Doriteque Admin</h1>
-        <p class="login-subtitle">Panel de administración seguro</p>
-        
-        <form id="login-form">
-            <div class="form-group">
-                <label>Correo electrónico</label>
-                <input type="email" id="login-email" placeholder="" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Contraseña</label>
-                <div class="password-input-container">
-                    <input type="password" id="login-pass" placeholder="Ingresa tu contraseña" required>
-                    <button type="button" class="btn-toggle-password" onclick="admin.togglePassword()">
-                        <i class="fa-solid fa-eye" id="toggle-password-icon"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <button type="submit" class="btn-login">Ingresar</button>
-            <p id="login-error" class="login-error" style="display: none; color: #FF1744; margin-top: 10px;">Correo o contraseña incorrectos</p>
-        </form>
-    </div>
-</div>
 
-    <!-- PANEL PRINCIPAL -->
-    <div id="admin-panel" style="display: none;">
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-box">
+            <img src="../assets/logo.png" alt="Logo" class="login-logo" onerror="this.style.display='none'">
+            <h1>Doriteque Admin</h1>
+            <p class="login-subtitle">Panel de administración</p>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Correo electrónico</label>
+                    <input type="email" id="login-email" placeholder="admin@doriteque.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <div class="password-input-container">
+                        <input type="password" id="login-pass" placeholder="Contraseña" required>
+                        <button type="button" class="btn-toggle-password" onclick="admin.togglePassword()">
+                            <i class="fa-solid fa-eye" id="toggle-password-icon"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-login">Ingresar</button>
+                <p id="login-error" class="login-error" style="display:none;color:#FF1744;margin-top:10px;">Correo o contraseña incorrectos</p>
+            </form>
+        </div>
+    </div>
+
+    <!-- PANEL DE ADMIN -->
+    <div id="admin-panel" class="admin-panel" style="display:none;">
         <header class="admin-header">
-            <div class="admin-header-left">
-                <img src="../assets/logo.png" alt="Logo" class="admin-logo" onerror="this.style.display='none'">
-                <h1>Panel Admin</h1>
-            </div>
-            <div class="admin-header-right">
-                <a href="../index.html" class="btn-ver-tienda" target="_blank">
-                    <i class="fa-solid fa-eye"></i> Ver tienda
-                </a>
-                <button class="btn-logout" onclick="admin.logout()">
-                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+            <h1><i class="fa-solid fa-gear"></i> Panel Admin</h1>
+            <div class="admin-header-actions">
+                <button class="btn-header" onclick="admin.generateQR()" title="Generar QR">
+                    <i class="fa-solid fa-qrcode"></i>
+                </button>
+                <button class="btn-header btn-logout" onclick="admin.logout()" title="Cerrar sesión">
+                    <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
         </header>
 
         <nav class="admin-tabs">
-            <button class="admin-tab active" data-tab="productos" onclick="admin.switchTab('productos')">
-                <i class="fa-solid fa-burger"></i> Productos
+            <button class="admin-tab active" data-tab="config" onclick="admin.switchTab('config')">
+                <i class="fa-solid fa-sliders"></i> Configuración
+            </button>
+            <button class="admin-tab" data-tab="productos" onclick="admin.switchTab('productos')">
+                <i class="fa-solid fa-utensils"></i> Productos
             </button>
             <button class="admin-tab" data-tab="categorias" onclick="admin.switchTab('categorias')">
-                <i class="fa-solid fa-list"></i> Categorías
+                <i class="fa-solid fa-folder"></i> Categorías
             </button>
             <button class="admin-tab" data-tab="modificadores" onclick="admin.switchTab('modificadores')">
-                <i class="fa-solid fa-sliders"></i> Modificadores
-            </button>
-            <button class="admin-tab" data-tab="config" onclick="admin.switchTab('config')">
-                <i class="fa-solid fa-gear"></i> Configuración
-            </button>
-            <button class="admin-tab" data-tab="cuenta" onclick="admin.switchTab('cuenta')">
-                <i class="fa-solid fa-user-shield"></i> Cuenta
+                <i class="fa-solid fa-list-check"></i> Modificadores
             </button>
         </nav>
 
-        <main class="admin-content">
-            
-            <!-- TAB PRODUCTOS -->
-            <section id="tab-productos" class="admin-tab-content active">
-                <div class="tab-header">
-                    <h2>Gestión de Productos</h2>
-                    <button class="btn-primary" onclick="admin.openProductModal()">
-                        <i class="fa-solid fa-plus"></i> Nuevo producto
+        <!-- TAB CONFIG -->
+        <section id="tab-config" class="admin-tab-content active">
+            <div class="admin-card">
+                <h2><i class="fa-solid fa-store"></i> Datos del negocio</h2>
+                <div class="form-group">
+                    <label>Nombre del negocio</label>
+                    <input type="text" id="cfg-nombre" placeholder="Ej: Doriteque">
+                </div>
+                <div class="form-group">
+                    <label>WhatsApp (con código de país)</label>
+                    <input type="text" id="cfg-whatsapp" placeholder="Ej: 584141234567">
+                </div>
+                <div class="form-group">
+                    <label>Correo</label>
+                    <input type="email" id="cfg-email" placeholder="contacto@doriteque.com">
+                </div>
+                <div class="form-group">
+                    <label>Instagram (sin @)</label>
+                    <input type="text" id="cfg-instagram" placeholder="doriteque">
+                </div>
+                <div class="form-group">
+                    <label>TikTok (sin @)</label>
+                    <input type="text" id="cfg-tiktok" placeholder="doriteque">
+                </div>
+                <div class="form-group">
+                    <label>Horario</label>
+                    <input type="text" id="cfg-horario" placeholder="Lun-Dom 10:00 AM - 10:00 PM">
+                </div>
+                <div class="form-group">
+                    <label>Tasa del día (Bs por USD)</label>
+                    <input type="number" step="0.01" id="cfg-tasa" placeholder="36.50">
+                </div>
+                <div class="form-group">
+                    <label>Métodos de pago (separados por coma)</label>
+                    <input type="text" id="cfg-metodos" placeholder="Efectivo, Pago Móvil, Zelle">
+                </div>
+                <div class="form-group">
+                    <label>URL del logo</label>
+                    <input type="text" id="cfg-logo" placeholder="https://...">
+                </div>
+                <button class="btn-save" onclick="admin.saveConfig()">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar configuración
+                </button>
+            </div>
+
+            <div class="admin-card">
+                <h2><i class="fa-solid fa-message"></i> Mensaje de WhatsApp</h2>
+                <div class="form-group">
+                    <label>Encabezado</label>
+                    <input type="text" id="msg-header" placeholder="🍔 *NUEVO PEDIDO*">
+                </div>
+                <div class="form-group">
+                    <label>Saludo</label>
+                    <input type="text" id="msg-greeting" placeholder="¡Gracias por tu pedido!">
+                </div>
+                <div class="form-group">
+                    <label>Texto antes del detalle</label>
+                    <input type="text" id="msg-before-detail" placeholder="Aquí tienes el detalle:">
+                </div>
+                <div class="form-group">
+                    <label>Texto después del total</label>
+                    <input type="text" id="msg-after-total" placeholder="Te contactaremos pronto.">
+                </div>
+                <button class="btn-save" onclick="admin.saveConfig()">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar mensaje
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB PRODUCTOS -->
+        <section id="tab-productos" class="admin-tab-content">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h2><i class="fa-solid fa-utensils"></i> Productos</h2>
+                    <button class="btn-add" onclick="admin.openProductModal()">
+                        <i class="fa-solid fa-plus"></i> Nuevo
                     </button>
                 </div>
                 <div id="productos-list" class="admin-list"></div>
-            </section>
+            </div>
+        </section>
 
-            <!-- TAB CATEGORÍAS -->
-            <section id="tab-categorias" class="admin-tab-content">
-                <div class="tab-header">
-                    <h2>Gestión de Categorías</h2>
-                    <button class="btn-primary" onclick="admin.openCategoryModal()">
-                        <i class="fa-solid fa-plus"></i> Nueva categoría
+        <!-- TAB CATEGORÍAS -->
+        <section id="tab-categorias" class="admin-tab-content">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h2><i class="fa-solid fa-folder"></i> Categorías</h2>
+                    <button class="btn-add" onclick="admin.openCategoryModal()">
+                        <i class="fa-solid fa-plus"></i> Nueva
                     </button>
                 </div>
                 <div id="categorias-list" class="admin-list"></div>
-            </section>
+            </div>
+        </section>
 
-            <!-- TAB MODIFICADORES -->
-            <section id="tab-modificadores" class="admin-tab-content">
-                <div class="tab-header">
-                    <h2>Gestión de Modificadores</h2>
-                    <button class="btn-primary" onclick="admin.openModifierModal()">
-                        <i class="fa-solid fa-plus"></i> Nuevo modificador
+        <!-- TAB MODIFICADORES -->
+        <section id="tab-modificadores" class="admin-tab-content">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h2><i class="fa-solid fa-list-check"></i> Modificadores</h2>
+                    <button class="btn-add" onclick="admin.openModifierModal()">
+                        <i class="fa-solid fa-plus"></i> Nuevo
                     </button>
-                </div>
-                <div class="instructions-box">
-                    <h3><i class="fa-solid fa-lightbulb"></i> ¿Cómo funcionan los modificadores?</h3>
-                    <ol>
-                        <li><strong>Crea un modificador:</strong> Ej: "Proteína" con opciones [Carne, Pollo, Chorizo]</li>
-                        <li><strong>Asígna-lo a un producto:</strong> Ve a Productos → Editar → Toca el chip "Proteína"</li>
-                        <li><strong>El cliente verá la pregunta:</strong> Cuando agregue ese producto al carrito, se le preguntará qué opción elegir</li>
-                    </ol>
                 </div>
                 <div id="modificadores-list" class="admin-list"></div>
-            </section>
-
-            <!-- TAB CONFIGURACIÓN -->
-            <section id="tab-config" class="admin-tab-content">
-                <h2>Configuración General</h2>
-                <div class="config-form">
-                    <div class="form-group">
-                        <label>Nombre del negocio</label>
-                        <input type="text" id="cfg-nombre">
-                    </div>
-                    <div class="form-group">
-                        <label>Número de WhatsApp (con código país, sin +)</label>
-                        <input type="text" id="cfg-whatsapp" placeholder="584245566545">
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="cfg-email">
-                    </div>
-                    <div class="form-group">
-                        <label>Usuario de Instagram (sin @)</label>
-                        <input type="text" id="cfg-instagram">
-                    </div>
-                    <div class="form-group">
-                        <label>Usuario de TikTok (sin @)</label>
-                        <input type="text" id="cfg-tiktok">
-                    </div>
-                    <div class="form-group">
-                        <label>Horario</label>
-                        <input type="text" id="cfg-horario">
-                    </div>
-                    <div class="form-group">
-                        <label>Tasa del dólar (Bs)</label>
-                        <input type="number" step="0.01" id="cfg-tasa">
-                    </div>
-                    <div class="form-group">
-                        <label>Métodos de pago</label>
-                        <input type="text" id="cfg-metodos" placeholder="Pago Móvil, Efectivo Bs, Efectivo Divisa">
-                    </div>
-                    <div class="form-group">
-    <label><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> Mensaje que recibes en WhatsApp</label>
-    <p style="color: #b0b0b0; font-size: 0.8rem; margin-bottom: 12px;">
-        Edita las partes del mensaje. Los datos del cliente (nombre, dirección, etc.) se llenan automáticamente.
-    </p>
-    
-    <div class="message-editor">
-        <div class="editor-section">
-            <label> Encabezado</label>
-            <input type="text" id="msg-header" value="🍔 *NUEVO PEDIDO*" placeholder="Ej: 🍔 Nuevo pedido">
-        </div>
-        
-        <div class="editor-section">
-            <label> Saludo al cliente</label>
-            <input type="text" id="msg-greeting" value="¡Gracias por tu pedido!" placeholder="Ej: ¡Hola! Gracias por tu pedido">
-        </div>
-        
-        <div class="editor-section">
-            <label>📝 Texto antes del detalle</label>
-            <textarea id="msg-before-detail" rows="2" placeholder="Ej: Aquí tienes el detalle de tu pedido:">Aquí tienes el detalle de tu pedido:</textarea>
-        </div>
-        
-        <div class="editor-section">
-            <label>✅ Texto después del total</label>
-            <textarea id="msg-after-total" rows="2" placeholder="Ej: Te contactaremos pronto para confirmar.">Te contactaremos pronto para confirmar. ¡Gracias por elegirnos!</textarea>
-        </div>
-        
-        <div class="editor-section">
-            <label>📱 Número de WhatsApp del negocio</label>
-            <input type="text" id="msg-business-phone" value="" placeholder="Se usa el número de configuración" readonly style="background: #1a1a1a; color: #b0b0b0;">
-            <small style="color: #b0b0b0; font-size: 0.75rem;">Este número se toma de la configuración de arriba</small>
-        </div>
-    </div>
-    
-    <button type="button" class="btn-secondary" style="margin-top: 12px; font-size: 0.85rem;" onclick="admin.previewMessage()">
-        <i class="fa-solid fa-eye"></i> Ver vista previa del mensaje
-    </button>
-</div>
-
-<!-- Vista previa del mensaje -->
-<div id="message-preview" class="message-preview" style="display: none;">
-    <h4 style="color: white; margin-bottom: 10px;"><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> Así se verá el mensaje:</h4>
-    <div id="message-preview-content" style="background: #f5f5f5; color: #1a1a1a; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; max-height: 300px; overflow-y: auto;"></div>
-</div>
-                    <div class="form-group">
-                        <label>URL del logo</label>
-                        <input type="text" id="cfg-logo" placeholder="assets/logo.png">
-                    </div>
-                    <button class="btn-primary" onclick="admin.saveConfig()">
-                        <i class="fa-solid fa-save"></i> Guardar configuración
-                    </button>
-                </div>
-            </section>
-
-            <!-- TAB CUENTA -->
-            <section id="tab-cuenta" class="admin-tab-content">
-                <h2>Cambiar credenciales de acceso</h2>
-                <div class="config-form">
-                    <div class="form-group">
-                        <label>Nuevo usuario</label>
-                        <input type="text" id="acc-user">
-                    </div>
-                    <div class="form-group">
-                        <label>Nueva contraseña</label>
-                        <input type="password" id="acc-pass">
-                    </div>
-                    <button class="btn-primary" onclick="admin.saveCredentials()">
-                        <i class="fa-solid fa-save"></i> Actualizar credenciales
-                    </button>
-                </div>
-            </section>
-        </main>
-
-        <button class="btn-qr" onclick="window.open('../qr.html', '_blank')" style="position: fixed; bottom: 90px; right: 20px; background: #FF6B00; color: white; border: none; padding: 14px 20px; border-radius: 50px; font-weight: 900; font-size: 0.95rem; cursor: pointer; box-shadow: 0 8px 30px rgba(255, 107, 0, 0.4); display: flex; align-items: center; gap: 8px; z-index: 100;">
-    <i class="fa-solid fa-qrcode"></i> Generar QR
-</button>
-<button class="btn-download" onclick="admin.downloadBackup()" style="position: fixed; bottom: 150px; right: 20px; background: #10b981; color: white; border: none; padding: 14px 20px; border-radius: 50px; font-weight: 900; font-size: 0.95rem; cursor: pointer; box-shadow: 0 8px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 8px; z-index: 100;">
-    <i class="fa-solid fa-download"></i> Descargar backup
-</button>
+            </div>
+        </section>
     </div>
 
     <!-- MODAL PRODUCTO -->
-    <div id="product-modal" class="modal-overlay" style="display: none;">
+    <div id="product-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="product-modal-title">Nuevo producto</h3>
-                <button class="modal-close" onclick="admin.closeProductModal()">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <button class="modal-close" onclick="admin.closeProductModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="prod-id">
                 <div class="form-group">
-                    <label>Nombre del producto *</label>
-                    <input type="text" id="prod-nombre">
+                    <label>Nombre</label>
+                    <input type="text" id="prod-nombre" required>
                 </div>
                 <div class="form-group">
-                    <label>Descripción *</label>
+                    <label>Descripción</label>
                     <textarea id="prod-descripcion" rows="3"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Precio (USD) *</label>
-                    <input type="number" step="0.01" id="prod-precio">
+                    <label>Precio (USD)</label>
+                    <input type="number" step="0.01" id="prod-precio" required>
                 </div>
                 <div class="form-group">
-                    <label>Categoría *</label>
-                    <select id="prod-categoria"></select>
+                    <label>Categoría</label>
+                    <select id="prod-categoria" required></select>
                 </div>
                 <div class="form-group">
-                    <label>URL de imagen (opcional)</label>
-                    <input type="text" id="prod-imagen" placeholder="https://...">
-                </div>
-                <div class="form-group">
-                    <label>O subir imagen desde tu dispositivo</label>
-                    <input type="file" id="prod-imagen-file" accept="image/*" onchange="admin.handleImageUpload(event)">
-                    <div id="image-preview-container" style="margin-top: 8px; display: none;">
-                        <img id="image-preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #333;">
-                        <button type="button" class="btn-secondary" style="margin-top: 8px; font-size: 0.8rem; padding: 6px 12px;" onclick="admin.removeImagePreview()">Quitar imagen</button>
+                    <label>Imagen (URL o subir archivo)</label>
+                    <input type="text" id="prod-imagen" placeholder="URL de la imagen">
+                    <input type="file" id="prod-imagen-file" accept="image/*" onchange="admin.handleImageUpload(event)" style="margin-top:8px;">
+                    <div id="image-preview-container" style="display:none;margin-top:10px;">
+                        <img id="image-preview" style="max-width:200px;max-height:150px;border-radius:8px;">
+                        <button type="button" onclick="admin.removeImagePreview()" style="margin-top:8px;">Quitar imagen</button>
                     </div>
                 </div>
-                <div class="form-group" id="prod-modificadores-section">
-                    <label style="display: block; color: white; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">
-                        <i class="fa-solid fa-sliders" style="color: #FF1744;"></i> Modificadores del producto
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="prod-disponible" checked>
+                        Disponible
                     </label>
-                    <p style="color: #b0b0b0; font-size: 0.8rem; margin-bottom: 12px; line-height: 1.4;">
-                        Toca los que aplican a este producto.
-                    </p>
-                    <div class="modificadores-chips" id="modificadores-chips-container"></div>
                 </div>
                 <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="prod-disponible" checked>
-                        Producto disponible
-                    </label>
+                    <label>Modificadores asociados</label>
+                    <div id="modificadores-chips-container" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -304,22 +241,20 @@
     </div>
 
     <!-- MODAL CATEGORÍA -->
-    <div id="category-modal" class="modal-overlay" style="display: none;">
+    <div id="category-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="category-modal-title">Nueva categoría</h3>
-                <button class="modal-close" onclick="admin.closeCategoryModal()">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <button class="modal-close" onclick="admin.closeCategoryModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="cat-id">
                 <div class="form-group">
-                    <label>Nombre de la categoría</label>
-                    <input type="text" id="cat-nombre">
+                    <label>Nombre</label>
+                    <input type="text" id="cat-nombre" required>
                 </div>
                 <div class="form-group">
-                    <label>Orden (número)</label>
+                    <label>Orden</label>
                     <input type="number" id="cat-orden" value="1">
                 </div>
             </div>
@@ -331,38 +266,35 @@
     </div>
 
     <!-- MODAL MODIFICADOR -->
-    <div id="modifier-modal" class="modal-overlay" style="display: none;">
+    <div id="modifier-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modifier-modal-title">Nuevo modificador</h3>
-                <button class="modal-close" onclick="admin.closeModifierModal()">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <button class="modal-close" onclick="admin.closeModifierModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="mod-id">
                 <div class="form-group">
-                    <label>Nombre del modificador *</label>
-                    <input type="text" id="mod-nombre" placeholder="Ej: Proteína, Queso extra, Salsas">
+                    <label>Nombre</label>
+                    <input type="text" id="mod-nombre" required>
                 </div>
                 <div class="form-group">
-                    <label>Tipo *</label>
+                    <label>Tipo</label>
                     <select id="mod-tipo">
-                        <option value="unico">Único (solo puede elegir 1)</option>
-                        <option value="multiple">Múltiple (puede elegir varios)</option>
+                        <option value="unico">Selección única</option>
+                        <option value="multiple">Selección múltiple</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="checkbox-label">
+                    <label>
                         <input type="checkbox" id="mod-obligatorio">
-                        Es obligatorio elegir una opción
+                        Obligatorio
                     </label>
                 </div>
-                
                 <div class="form-group">
-                    <label>Opciones *</label>
+                    <label>Opciones</label>
                     <div id="opciones-container"></div>
-                    <button type="button" class="btn-secondary" style="margin-top: 10px; font-size: 0.85rem;" onclick="admin.addOpcion()">
+                    <button type="button" onclick="admin.addOpcion()" style="margin-top:8px;">
                         <i class="fa-solid fa-plus"></i> Agregar opción
                     </button>
                 </div>
@@ -374,20 +306,28 @@
         </div>
     </div>
 
+    <!-- MODAL QR -->
+    <div id="qr-modal" class="modal-overlay" style="display:none;" onclick="if(event.target.id==='qr-modal')admin.closeQRModal()">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-header">
+                <h3>QR del menú</h3>
+                <button class="modal-close" onclick="admin.closeQRModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>Escanea este QR para ver el menú:</p>
+                <div id="qr-container" style="margin:20px 0;"></div>
+                <p style="color:#b0b0b0;font-size:0.9rem;">https://doriteque.github.io/Doriteque/</p>
+            </div>
+        </div>
+    </div>
+
     <script src="admin.js"></script>
-    <!-- REGISTRAR SERVICE WORKER -->
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js')
-        .then(registration => {
-            console.log('Service Worker registrado:', registration);
-        })
-        .catch(error => {
-            console.log('Error al registrar Service Worker:', error);
-        });
-}
-</script>
-</body>
-</html>
+    
+    <!-- SERVICE WORKER PARA PWA -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js');
+    }
+    </script>
 </body>
 </html>
