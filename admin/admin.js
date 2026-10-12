@@ -3,16 +3,17 @@ const admin = {
     menu: { categorias: [], productos: [], modificadores: [] },
     unsubConfig: null,
     unsubMenu: null,
+    flyerDataUrl: null,
 
     async init() {
-        // 1. FORZAR LOGOUT SIEMPRE al cargar (antes de todo)
+        // 1. FORZAR LOGOUT SIEMPRE al cargar
         try {
             await window.signOut(window.auth);
         } catch (e) {
-            // Ignorar si no había sesión
+            // No había sesión activa
         }
 
-        // 2. Registrar listener DESPUÉS del signOut (esto es clave)
+        // 2. Listener de autenticación de Firebase
         window.onAuthStateChanged(window.auth, (user) => {
             if (user) {
                 document.getElementById('login-screen').style.display = 'none';
@@ -24,13 +25,13 @@ const admin = {
             }
         });
 
-        // 3. Listener del formulario de login
+        // 3. Formulario de login
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.login();
         });
 
-        // 4. Listeners de las tablas (productos, categorías, modificadores)
+        // 4. Listeners de tablas
         document.getElementById('productos-list').addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-icon');
             if (!btn) return;
@@ -102,20 +103,202 @@ const admin = {
         }
     },
 
-    generateQR() {
-        const url = 'https://doriteque.github.io/Doriteque/';
-        const qrContainer = document.getElementById('qr-container');
-        if (qrContainer) {
-            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}" alt="QR Code" style="max-width: 100%; height: auto; border-radius: 8px;">`;
-        }
+    /* ============================================
+       FLYER CON QR (GENERAR Y DESCARGAR)
+       ============================================ */
+
+    async generateQR() {
         const modal = document.getElementById('qr-modal');
-        if (modal) modal.style.display = 'flex';
+        const container = document.getElementById('qr-container');
+        const url = 'https://doriteque.github.io/Doriteque/';
+        container.innerHTML = '<p style="color:#b0b0b0;">Generando publicación...</p>';
+        modal.style.display = 'flex';
+        try {
+            const dataUrl = await this.createFlyer(url);
+            this.flyerDataUrl = dataUrl;
+            container.innerHTML = '<img src="' + dataUrl + '" style="max-width:100%;border-radius:12px;">';
+        } catch (e) {
+            console.error('Error generando flyer:', e);
+            this.flyerDataUrl = null;
+            container.innerHTML = '<p style="color:#FF1744;font-weight:700;">No se pudo generar el flyer.</p>' +
+                '<p style="color:#b0b0b0;font-size:0.85rem;">Motivo: ' + e.message + '</p>' +
+                '<p style="color:#b0b0b0;font-size:0.85rem;">Revisa tu conexión y pulsa el botón QR de nuevo.</p>';
+        }
     },
 
     closeQRModal() {
         const modal = document.getElementById('qr-modal');
         if (modal) modal.style.display = 'none';
     },
+
+    loadImage(src, useCors) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            if (useCors) img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error('No se pudo cargar una imagen del flyer'));
+            img.src = src;
+        });
+    },
+
+    async loadQRImage(url) {
+        // Estrategia 1: descargar como blob (origen local => canvas limpio)
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const blob = await res.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const img = await this.loadImage(objectUrl, false);
+            URL.revokeObjectURL(objectUrl);
+            return img;
+        } catch (e1) {
+            // Estrategia 2: imagen con CORS
+            try {
+                return await this.loadImage(url, true);
+            } catch (e2) {
+                throw new Error('No se pudo descargar el QR (revisa tu conexión)');
+            }
+        }
+    },
+
+    roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    },
+
+    async createFlyer(url) {
+        const W = 1080, H = 1560;
+        const canvas = document.createElement('canvas');
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        // Marco naranja degradado
+        const grad = ctx.createLinearGradient(0, 0, W, H);
+        grad.addColorStop(0, '#FF9500');
+        grad.addColorStop(1, '#FF6A00');
+        this.roundRect(ctx, 0, 0, W, H, 60);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Borde punteado blanco
+        ctx.save();
+        this.roundRect(ctx, 26, 26, W - 52, H - 52, 44);
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 6;
+        ctx.setLineDash([22, 16]);
+        ctx.stroke();
+        ctx.restore();
+
+        // Fondo interior crema
+        this.roundRect(ctx, 52, 52, W - 104, H - 104, 34);
+        ctx.fillStyle = '#FDF4EE';
+        ctx.fill();
+        ctx.strokeStyle = '#F3D9CF';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Logo circular (opcional, no rompe si falla)
+        ctx.textAlign = 'center';
+        const logoUrl = (this.config && this.config.logo) ? this.config.logo : '../assets/logo.png';
+        try {
+            const logo = await this.loadImage(logoUrl, true);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(W / 2, 250, 110, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(logo, W / 2 - 110, 140, 220, 220);
+            ctx.restore();
+            ctx.beginPath();
+            ctx.arc(W / 2, 250, 110, 0, Math.PI * 2);
+            ctx.strokeStyle = '#C41E3A';
+            ctx.lineWidth = 10;
+            ctx.stroke();
+        } catch (e) { /* sin logo, continúa */ }
+
+        // Nombre del negocio
+        const nombre = ((this.config && this.config.nombre) || 'DORITEQUE').toUpperCase();
+        ctx.fillStyle = '#C41E3A';
+        ctx.font = '900 84px Arial, sans-serif';
+        ctx.fillText(nombre, W / 2, 470);
+
+        ctx.fillStyle = '#8a8a8a';
+        ctx.font = '600 46px Arial, sans-serif';
+        ctx.fillText('Menú Digital', W / 2, 540);
+
+        // Tarjeta blanca del QR
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.12)';
+        ctx.shadowBlur = 30;
+        ctx.shadowOffsetY = 10;
+        this.roundRect(ctx, 150, 600, W - 300, 660, 30);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.restore();
+        this.roundRect(ctx, 150, 600, W - 300, 660, 30);
+        ctx.strokeStyle = '#F3D9CF';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // QR en rojo de la marca (doble estrategia de descarga)
+        const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=540x540&color=C41E3A&bgcolor=FFFFFF&data=' + encodeURIComponent(url);
+        const qr = await this.loadQRImage(qrUrl);
+        ctx.drawImage(qr, (W - 540) / 2, 660, 540, 540);
+
+        // Texto CTA
+        ctx.fillStyle = '#C41E3A';
+        ctx.font = '900 58px Arial, sans-serif';
+        ctx.fillText('¡ESCANEA Y PIDE AHORA!', W / 2, 1360);
+
+        // Círculos de redes
+        const redes = [
+            { t: 'IG', v: (this.config && this.config.instagram) || '' },
+            { t: 'WA', v: 'WhatsApp' },
+            { t: 'TK', v: (this.config && this.config.tiktok) || '' }
+        ];
+        const xs = [W / 2 - 160, W / 2, W / 2 + 160];
+        redes.forEach((r, i) => {
+            ctx.beginPath();
+            ctx.arc(xs[i], 1440, 44, 0, Math.PI * 2);
+            ctx.fillStyle = '#C41E3A';
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '800 30px Arial, sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(r.t, xs[i], 1442);
+            ctx.textBaseline = 'alphabetic';
+        });
+
+        // Handles de redes
+        const handles = redes.map(r => r.v).filter(Boolean).join('  •  ');
+        if (handles) {
+            ctx.fillStyle = '#8a8a8a';
+            ctx.font = '600 30px Arial, sans-serif';
+            ctx.fillText(handles, W / 2, 1522);
+        }
+
+        return canvas.toDataURL('image/png');
+    },
+
+    downloadFlyer() {
+        if (!this.flyerDataUrl) {
+            alert('La imagen aún no está lista. Genera el flyer de nuevo y espera 2 segundos.');
+            return;
+        }
+        const a = document.createElement('a');
+        a.href = this.flyerDataUrl;
+        a.download = 'doriteque-flyer-qr.png';
+        a.click();
+    },
+
+    /* ============================================
+       DASHBOARD Y CONFIGURACIÓN
+       ============================================ */
 
     async loadDashboard() {
         try {
@@ -135,7 +318,6 @@ const admin = {
                     if (!this.menu.modificadores) this.menu.modificadores = [];
                     if (!this.menu.categorias) this.menu.categorias = [];
                     if (!this.menu.productos) this.menu.productos = [];
-                    
                     this.renderProducts();
                     this.renderCategories();
                     this.renderModifiers();
@@ -197,6 +379,10 @@ const admin = {
         }
     },
 
+    /* ============================================
+       PRODUCTOS
+       ============================================ */
+
     renderProducts() {
         const container = document.getElementById('productos-list');
         if (!this.menu.productos || this.menu.productos.length === 0) {
@@ -228,66 +414,18 @@ const admin = {
         container.innerHTML = html;
     },
 
-    renderCategories() {
-        const container = document.getElementById('categorias-list');
-        if (!this.menu.categorias || this.menu.categorias.length === 0) {
-            container.innerHTML = '<p style="color:#b0b0b0;text-align:center;padding:20px;">No hay categorías.</p>';
-            return;
-        }
-        let html = '';
-        this.menu.categorias.forEach(c => {
-            const count = this.menu.productos.filter(p => String(p.categoriaId) === String(c.id)).length;
-            html += `<div class="admin-item">
-                <div class="admin-item-info">
-                    <div class="admin-item-nombre">${c.nombre}</div>
-                    <div class="admin-item-desc">Orden: ${c.orden} | ${count} productos</div>
-                </div>
-                <div class="admin-item-actions">
-                    <button class="btn-icon btn-edit" data-action="edit" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-icon btn-delete" data-action="delete" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </div>`;
-        });
-        container.innerHTML = html;
-    },
-
-    renderModifiers() {
-        const container = document.getElementById('modificadores-list');
-        if (!container) return;
-        if (!this.menu.modificadores || this.menu.modificadores.length === 0) {
-            container.innerHTML = '<p style="color:#b0b0b0;text-align:center;padding:20px;">No hay modificadores.</p>';
-            return;
-        }
-        let html = '';
-        this.menu.modificadores.forEach(m => {
-            const tipoTexto = m.tipo === 'unico' ? 'Único' : 'Múltiple';
-            const obligatorioTexto = m.obligatorio ? 'Obligatorio' : 'Opcional';
-            html += `<div class="admin-item">
-                <div class="admin-item-info">
-                    <div class="admin-item-nombre">${m.nombre}</div>
-                    <div class="admin-item-desc">${tipoTexto} | ${obligatorioTexto} | ${m.opciones.length} opciones</div>
-                </div>
-                <div class="admin-item-actions">
-                    <button class="btn-icon btn-edit" data-action="edit-mod" data-id="${m.id}"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-icon btn-delete" data-action="delete-mod" data-id="${m.id}"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </div>`;
-        });
-        container.innerHTML = html;
-    },
-
     editProduct(id) { this.openProductModal(String(id)); },
 
     openProductModal(productId = null) {
         const modal = document.getElementById('product-modal');
         const title = document.getElementById('product-modal-title');
         const select = document.getElementById('prod-categoria');
-        
+
         select.innerHTML = '<option value="">Selecciona una categoría</option>';
         (this.menu.categorias || []).forEach(c => {
             select.innerHTML += `<option value="${c.id}">${c.nombre}</option>`;
         });
-        
+
         const modsSection = document.getElementById('modificadores-chips-container');
         if (modsSection) {
             modsSection.innerHTML = '';
@@ -313,7 +451,7 @@ const admin = {
                 });
             }
         }
-        
+
         if (productId) {
             const p = this.menu.productos.find(x => String(x.id) === String(productId));
             if (!p) { alert('Producto no encontrado.'); return; }
@@ -415,7 +553,7 @@ const admin = {
             alert('✅ Producto guardado.');
         } catch (error) {
             console.error(error);
-            alert('Error: ' + error.message);
+            alert('Error al guardar: ' + error.message);
         }
     },
 
@@ -443,6 +581,33 @@ const admin = {
                 modificadores: this.menu.modificadores || []
             });
         } catch (error) { alert('Error: ' + error.message); }
+    },
+
+    /* ============================================
+       CATEGORÍAS
+       ============================================ */
+
+    renderCategories() {
+        const container = document.getElementById('categorias-list');
+        if (!this.menu.categorias || this.menu.categorias.length === 0) {
+            container.innerHTML = '<p style="color:#b0b0b0;text-align:center;padding:20px;">No hay categorías.</p>';
+            return;
+        }
+        let html = '';
+        this.menu.categorias.forEach(c => {
+            const count = this.menu.productos.filter(p => String(p.categoriaId) === String(c.id)).length;
+            html += `<div class="admin-item">
+                <div class="admin-item-info">
+                    <div class="admin-item-nombre">${c.nombre}</div>
+                    <div class="admin-item-desc">Orden: ${c.orden} | ${count} productos</div>
+                </div>
+                <div class="admin-item-actions">
+                    <button class="btn-icon btn-edit" data-action="edit" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-icon btn-delete" data-action="delete" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
     },
 
     editCategory(id) { this.openCategoryModal(String(id)); },
@@ -506,6 +671,35 @@ const admin = {
         } catch (error) { alert('Error: ' + error.message); }
     },
 
+    /* ============================================
+       MODIFICADORES
+       ============================================ */
+
+    renderModifiers() {
+        const container = document.getElementById('modificadores-list');
+        if (!container) return;
+        if (!this.menu.modificadores || this.menu.modificadores.length === 0) {
+            container.innerHTML = '<p style="color:#b0b0b0;text-align:center;padding:20px;">No hay modificadores.</p>';
+            return;
+        }
+        let html = '';
+        this.menu.modificadores.forEach(m => {
+            const tipoTexto = m.tipo === 'unico' ? 'Único' : 'Múltiple';
+            const obligatorioTexto = m.obligatorio ? 'Obligatorio' : 'Opcional';
+            html += `<div class="admin-item">
+                <div class="admin-item-info">
+                    <div class="admin-item-nombre">${m.nombre}</div>
+                    <div class="admin-item-desc">${tipoTexto} | ${obligatorioTexto} | ${m.opciones.length} opciones</div>
+                </div>
+                <div class="admin-item-actions">
+                    <button class="btn-icon btn-edit" data-action="edit-mod" data-id="${m.id}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-icon btn-delete" data-action="delete-mod" data-id="${m.id}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    },
+
     editModifier(id) { this.openModifierModal(String(id)); },
 
     openModifierModal(modId = null) {
@@ -540,7 +734,7 @@ const admin = {
         const opcionId = id || 'opt' + Date.now() + Math.random().toString(36).substr(2, 5);
         const div = document.createElement('div');
         div.className = 'opcion-row';
-        div.innerHTML = `<input type="text" placeholder="Nombre" value="${nombre}" class="opcion-nombre" style="flex:2;"><input type="number" step="0.01" placeholder="Precio extra" value="${precio}" class="opcion-precio" style="flex:1;"><button type="button" class="btn-icon btn-delete" onclick="this.parentElement.remove()"><i class="fa-solid fa-trash"></i></button><input type="hidden" value="${opcionId}" class="opcion-id">`;
+        div.innerHTML = `<input type="text" placeholder="Nombre" value="${nombre}" class="opcion-nombre"><input type="number" step="0.01" placeholder="Precio" value="${precio}" class="opcion-precio"><button type="button" class="btn-icon btn-delete" onclick="this.parentElement.remove()"><i class="fa-solid fa-trash"></i></button><input type="hidden" value="${opcionId}" class="opcion-id">`;
         container.appendChild(div);
     },
 
