@@ -4,17 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Doriteque</title>
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="admin.css?v=2">
+    <link rel="stylesheet" href="./admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <meta name="theme-color" content="#C41E3A">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Doriteque Admin">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="../assets/logo.png">
-    
+
     <script type="module" src="../js/firebase.js"></script>
     <script type="module" src="../js/db.js"></script>
 </head>
@@ -134,14 +133,14 @@
                 <div class="form-group">
                     <label>Imagen (URL o archivo)</label>
                     <input type="text" id="prod-imagen" placeholder="URL de la imagen">
-                    <input type="file" id="prod-imagen-file" accept="image/*" onchange="admin.handleImageUpload(event)" style="margin-top:8px;color:#b0b0b0;">
+                    <input type="file" id="prod-imagen-file" accept="image/*" onchange="admin.handleImageUpload(event)">
                     <div id="image-preview-container" style="display:none;margin-top:10px;">
                         <img id="image-preview" style="max-width:200px;max-height:150px;border-radius:8px;">
                         <button type="button" class="btn-secondary" onclick="admin.removeImagePreview()" style="margin-top:8px;">Quitar imagen</button>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="prod-disponible" checked style="width:auto;"> Disponible</label>
+                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="prod-disponible" checked> Disponible</label>
                 </div>
                 <div class="form-group">
                     <label>Modificadores asociados</label>
@@ -192,7 +191,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mod-obligatorio" style="width:auto;"> Obligatorio</label>
+                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mod-obligatorio"> Obligatorio</label>
                 </div>
                 <div class="form-group">
                     <label>Opciones</label>
@@ -208,21 +207,21 @@
     </div>
 
     <!-- MODAL QR / FLYER -->
-<div id="qr-modal" class="admin-modal" onclick="if(event.target.id==='qr-modal')admin.closeQRModal()">
-    <div class="admin-modal-content" style="text-align:center;">
-        <div class="modal-header">
-            <h3>Publicación con QR</h3>
-            <button class="modal-close" onclick="admin.closeQRModal()"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="modal-body">
-            <div id="qr-container" style="margin:0 0 16px 0;"></div>
-            <p style="color:#b0b0b0;font-size:0.85rem;">Lista para imprimir o publicar en redes</p>
-        </div>
-        <div class="modal-footer" style="justify-content:center;">
-            <button class="btn-primary" onclick="admin.downloadFlyer()"><i class="fa-solid fa-download"></i> Descargar imagen</button>
+    <div id="qr-modal" class="admin-modal" onclick="if(event.target.id==='qr-modal')admin.closeQRModal()">
+        <div class="admin-modal-content" style="text-align:center;">
+            <div class="modal-header">
+                <h3>Publicación con QR</h3>
+                <button class="modal-close" onclick="admin.closeQRModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="qr-container" style="margin:0 0 16px 0;"></div>
+                <p style="color:#b0b0b0;font-size:0.85rem;">Lista para imprimir o publicar en redes</p>
+            </div>
+            <div class="modal-footer" style="justify-content:center;">
+                <button class="btn-primary" onclick="admin.downloadFlyer()"><i class="fa-solid fa-download"></i> Descargar imagen</button>
+            </div>
         </div>
     </div>
-</div>
 
     <script src="admin.js"></script>
     <script>
