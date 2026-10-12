@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Doriteque</title>
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="admin.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <meta name="theme-color" content="#C41E3A">
@@ -207,20 +207,22 @@
         </div>
     </div>
 
-    <!-- MODAL QR -->
-    <div id="qr-modal" class="admin-modal" onclick="if(event.target.id==='qr-modal')admin.closeQRModal()">
-        <div class="admin-modal-content" style="text-align:center;">
-            <div class="modal-header">
-                <h3>QR del menú</h3>
-                <button class="modal-close" onclick="admin.closeQRModal()"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="modal-body">
-                <p style="color:#b0b0b0;">Escanea este QR para ver el menú:</p>
-                <div id="qr-container" style="margin:20px 0;"></div>
-                <p style="color:#b0b0b0;font-size:0.85rem;">https://doriteque.github.io/Doriteque/</p>
-            </div>
+    <!-- MODAL QR / FLYER -->
+<div id="qr-modal" class="admin-modal" onclick="if(event.target.id==='qr-modal')admin.closeQRModal()">
+    <div class="admin-modal-content" style="text-align:center;">
+        <div class="modal-header">
+            <h3>Publicación con QR</h3>
+            <button class="modal-close" onclick="admin.closeQRModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div id="qr-container" style="margin:0 0 16px 0;"></div>
+            <p style="color:#b0b0b0;font-size:0.85rem;">Lista para imprimir o publicar en redes</p>
+        </div>
+        <div class="modal-footer" style="justify-content:center;">
+            <button class="btn-primary" onclick="admin.downloadFlyer()"><i class="fa-solid fa-download"></i> Descargar imagen</button>
         </div>
     </div>
+</div>
 
     <script src="admin.js"></script>
     <script>
