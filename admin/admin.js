@@ -4,16 +4,13 @@ const admin = {
     unsubConfig: null,
     unsubMenu: null,
     flyerDataUrl: null,
+    flyerTimer: null,
 
     async init() {
-        // 1. FORZAR LOGOUT SIEMPRE al cargar
         try {
             await window.signOut(window.auth);
-        } catch (e) {
-            // No había sesión activa
-        }
+        } catch (e) { }
 
-        // 2. Listener de autenticación de Firebase
         window.onAuthStateChanged(window.auth, (user) => {
             if (user) {
                 document.getElementById('login-screen').style.display = 'none';
@@ -25,13 +22,11 @@ const admin = {
             }
         });
 
-        // 3. Formulario de login
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.login();
         });
 
-        // 4. Listeners de tablas
         document.getElementById('productos-list').addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-icon');
             if (!btn) return;
@@ -82,7 +77,6 @@ const admin = {
         const email = document.getElementById('login-email').value.trim();
         const pass = document.getElementById('login-pass').value;
         const errorEl = document.getElementById('login-error');
-
         try {
             await window.signInWithEmailAndPassword(window.auth, email, pass);
         } catch (error) {
@@ -104,31 +98,80 @@ const admin = {
     },
 
     /* ============================================
-       FLYER CON QR (GENERAR Y DESCARGAR)
+       MÓDULO FLYER QR (EDITOR + DESCARGA)
        ============================================ */
 
-    async generateQR() {
-        const modal = document.getElementById('qr-modal');
-        const container = document.getElementById('qr-container');
-        const url = 'https://doriteque.github.io/Doriteque/';
-        container.innerHTML = '<p style="color:#b0b0b0;">Generando publicación...</p>';
-        modal.style.display = 'flex';
+    getFlyer() {
+        const f = (this.config && this.config.flyer) || {};
+        return {
+            titulo: f.titulo || '',
+            subtitulo: (f.subtitulo !== undefined && f.subtitulo !== '') ? f.subtitulo : 'Menú Digital',
+            promo: f.promo || '',
+            cta: (f.cta !== undefined && f.cta !== '') ? f.cta : '¡ESCANEA Y PIDE AHORA!',
+            pie: f.pie || '',
+            colorPrimario: f.colorPrimario || '#C41E3A',
+            colorMarco: f.colorMarco || '#FF7A00',
+            colorFondo: f.colorFondo || '#FDF4EE',
+            mostrarLogo: f.mostrarLogo !== false
+        };
+    },
+
+    openFlyerEditor() {
+        this.switchTab('flyer');
+        this.fillFlyerForm();
+        this.renderFlyerPreview();
+    },
+
+    fillFlyerForm() {
+        const f = this.getFlyer();
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        set('fly-titulo', f.titulo);
+        set('fly-subtitulo', f.subtitulo);
+        set('fly-promo', f.promo);
+        set('fly-cta', f.cta);
+        set('fly-pie', f.pie);
+        set('fly-color-primario', f.colorPrimario);
+        set('fly-color-marco', f.colorMarco);
+        set('fly-color-fondo', f.colorFondo);
+        const logo = document.getElementById('fly-logo');
+        if (logo) logo.checked = f.mostrarLogo;
+    },
+
+    previewFlyerDebounced() {
+        clearTimeout(this.flyerTimer);
+        this.flyerTimer = setTimeout(() => this.renderFlyerPreview(), 400);
+    },
+
+    async renderFlyerPreview() {
+        const img = document.getElementById('flyer-preview');
+        if (!img) return;
         try {
-            const dataUrl = await this.createFlyer(url);
+            const dataUrl = await this.createFlyer('https://doriteque.github.io/Doriteque/');
             this.flyerDataUrl = dataUrl;
-            container.innerHTML = '<img src="' + dataUrl + '" style="max-width:100%;border-radius:12px;">';
+            img.src = dataUrl;
+            img.style.display = 'block';
+            const err = document.getElementById('flyer-error');
+            if (err) err.style.display = 'none';
         } catch (e) {
             console.error('Error generando flyer:', e);
-            this.flyerDataUrl = null;
-            container.innerHTML = '<p style="color:#FF1744;font-weight:700;">No se pudo generar el flyer.</p>' +
-                '<p style="color:#b0b0b0;font-size:0.85rem;">Motivo: ' + e.message + '</p>' +
-                '<p style="color:#b0b0b0;font-size:0.85rem;">Revisa tu conexión y pulsa el botón QR de nuevo.</p>';
+            img.style.display = 'none';
+            const err = document.getElementById('flyer-error');
+            if (err) {
+                err.style.display = 'block';
+                err.textContent = 'No se pudo generar la vista previa: ' + e.message;
+            }
         }
     },
 
-    closeQRModal() {
-        const modal = document.getElementById('qr-modal');
-        if (modal) modal.style.display = 'none';
+    downloadFlyer() {
+        if (!this.flyerDataUrl) {
+            alert('Genera la vista previa primero.');
+            return;
+        }
+        const a = document.createElement('a');
+        a.href = this.flyerDataUrl;
+        a.download = 'doriteque-flyer-qr.png';
+        a.click();
     },
 
     loadImage(src, useCors) {
@@ -136,13 +179,12 @@ const admin = {
             const img = new Image();
             if (useCors) img.crossOrigin = 'anonymous';
             img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error('No se pudo cargar una imagen del flyer'));
+            img.onerror = () => reject(new Error('No se pudo cargar una imagen'));
             img.src = src;
         });
     },
 
     async loadQRImage(url) {
-        // Estrategia 1: descargar como blob (origen local => canvas limpio)
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -152,12 +194,7 @@ const admin = {
             URL.revokeObjectURL(objectUrl);
             return img;
         } catch (e1) {
-            // Estrategia 2: imagen con CORS
-            try {
-                return await this.loadImage(url, true);
-            } catch (e2) {
-                throw new Error('No se pudo descargar el QR (revisa tu conexión)');
-            }
+            return await this.loadImage(url, true);
         }
     },
 
@@ -171,129 +208,156 @@ const admin = {
         ctx.closePath();
     },
 
+    shade(hex, percent) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        let r = Math.max(0, Math.min(255, (num >> 16) + amt));
+        let g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
+        let b = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+    },
+
     async createFlyer(url) {
-        const W = 1080, H = 1560;
+        const f = this.getFlyer();
+        const W = 1080, H = 1720;
         const canvas = document.createElement('canvas');
         canvas.width = W;
         canvas.height = H;
         const ctx = canvas.getContext('2d');
 
-        // Marco naranja degradado
+        // Marco con degradado del color elegido
         const grad = ctx.createLinearGradient(0, 0, W, H);
-        grad.addColorStop(0, '#FF9500');
-        grad.addColorStop(1, '#FF6A00');
-        this.roundRect(ctx, 0, 0, W, H, 60);
+        grad.addColorStop(0, f.colorMarco);
+        grad.addColorStop(1, this.shade(f.colorMarco, -18));
+        this.roundRect(ctx, 0, 0, W, H, 64);
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // Borde punteado blanco
+        // Línea punteada interior
         ctx.save();
-        this.roundRect(ctx, 26, 26, W - 52, H - 52, 44);
-        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-        ctx.lineWidth = 6;
-        ctx.setLineDash([22, 16]);
+        this.roundRect(ctx, 28, 28, W - 56, H - 56, 46);
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = 5;
+        ctx.setLineDash([20, 14]);
         ctx.stroke();
         ctx.restore();
 
-        // Fondo interior crema
-        this.roundRect(ctx, 52, 52, W - 104, H - 104, 34);
-        ctx.fillStyle = '#FDF4EE';
+        // Fondo interior
+        this.roundRect(ctx, 56, 56, W - 112, H - 112, 36);
+        ctx.fillStyle = f.colorFondo;
         ctx.fill();
-        ctx.strokeStyle = '#F3D9CF';
-        ctx.lineWidth = 3;
-        ctx.stroke();
 
-        // Logo circular (opcional, no rompe si falla)
         ctx.textAlign = 'center';
-        const logoUrl = (this.config && this.config.logo) ? this.config.logo : '../assets/logo.png';
-        try {
-            const logo = await this.loadImage(logoUrl, true);
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(W / 2, 250, 110, 0, Math.PI * 2);
-            ctx.clip();
-            ctx.drawImage(logo, W / 2 - 110, 140, 220, 220);
-            ctx.restore();
-            ctx.beginPath();
-            ctx.arc(W / 2, 250, 110, 0, Math.PI * 2);
-            ctx.strokeStyle = '#C41E3A';
-            ctx.lineWidth = 10;
-            ctx.stroke();
-        } catch (e) { /* sin logo, continúa */ }
 
-        // Nombre del negocio
-        const nombre = ((this.config && this.config.nombre) || 'DORITEQUE').toUpperCase();
-        ctx.fillStyle = '#C41E3A';
-        ctx.font = '900 84px Arial, sans-serif';
-        ctx.fillText(nombre, W / 2, 470);
+        // Logo
+        if (f.mostrarLogo) {
+            const logoUrl = (this.config && this.config.logo) ? this.config.logo : '../assets/logo.png';
+            try {
+                const logo = await this.loadImage(logoUrl, true);
+                ctx.save();
+                ctx.shadowColor = 'rgba(0,0,0,0.25)';
+                ctx.shadowBlur = 24;
+                ctx.shadowOffsetY = 8;
+                ctx.beginPath();
+                ctx.arc(W / 2, 268, 112, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.restore();
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(W / 2, 268, 104, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(logo, W / 2 - 104, 164, 208, 208);
+                ctx.restore();
+                ctx.beginPath();
+                ctx.arc(W / 2, 268, 108, 0, Math.PI * 2);
+                ctx.strokeStyle = f.colorPrimario;
+                ctx.lineWidth = 8;
+                ctx.stroke();
+            } catch (e) { }
+        }
 
+        // Título con tracking
+        const titulo = (f.titulo || (this.config && this.config.nombre) || 'DORITEQUE').toUpperCase();
+        ctx.fillStyle = f.colorPrimario;
+        ctx.font = '900 86px Arial, sans-serif';
+        try { ctx.letterSpacing = '6px'; } catch (e) { }
+        ctx.fillText(titulo, W / 2, 500);
+        try { ctx.letterSpacing = '0px'; } catch (e) { }
+
+        // Subtítulo
         ctx.fillStyle = '#8a8a8a';
-        ctx.font = '600 46px Arial, sans-serif';
-        ctx.fillText('Menú Digital', W / 2, 540);
+        ctx.font = '600 44px Arial, sans-serif';
+        ctx.fillText(f.subtitulo, W / 2, 566);
 
-        // Tarjeta blanca del QR
+        // Promo opcional
+        const promo = f.promo;
+        if (promo) {
+            ctx.fillStyle = f.colorPrimario;
+            ctx.font = '800 40px Arial, sans-serif';
+            ctx.fillText(promo, W / 2, 626);
+        }
+
+        // Tarjeta del QR
+        const cardY = promo ? 668 : 612;
+        const cardW = 760, cardH = 700;
+        const cardX = (W - cardW) / 2;
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.12)';
-        ctx.shadowBlur = 30;
+        ctx.shadowColor = 'rgba(0,0,0,0.10)';
+        ctx.shadowBlur = 28;
         ctx.shadowOffsetY = 10;
-        this.roundRect(ctx, 150, 600, W - 300, 660, 30);
+        this.roundRect(ctx, cardX, cardY, cardW, cardH, 28);
         ctx.fillStyle = '#FFFFFF';
         ctx.fill();
         ctx.restore();
-        this.roundRect(ctx, 150, 600, W - 300, 660, 30);
-        ctx.strokeStyle = '#F3D9CF';
-        ctx.lineWidth = 3;
-        ctx.stroke();
 
-        // QR en rojo de la marca (doble estrategia de descarga)
-        const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=540x540&color=C41E3A&bgcolor=FFFFFF&data=' + encodeURIComponent(url);
+        // QR
+        const qrSize = 560;
+        const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + qrSize + 'x' + qrSize +
+            '&color=' + f.colorPrimario.replace('#', '') + '&bgcolor=FFFFFF&data=' + encodeURIComponent(url);
         const qr = await this.loadQRImage(qrUrl);
-        ctx.drawImage(qr, (W - 540) / 2, 660, 540, 540);
+        ctx.drawImage(qr, (W - qrSize) / 2, cardY + 70, qrSize, qrSize);
 
-        // Texto CTA
-        ctx.fillStyle = '#C41E3A';
-        ctx.font = '900 58px Arial, sans-serif';
-        ctx.fillText('¡ESCANEA Y PIDE AHORA!', W / 2, 1360);
+        // Botón CTA como pastilla
+        ctx.font = '900 46px Arial, sans-serif';
+        const ctaWidth = ctx.measureText(f.cta).width + 120;
+        const ctaY = 1412, ctaH = 88;
+        this.roundRect(ctx, (W - ctaWidth) / 2, ctaY, ctaWidth, ctaH, ctaH / 2);
+        ctx.fillStyle = f.colorPrimario;
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(f.cta, W / 2, ctaY + ctaH / 2 + 2);
+        ctx.textBaseline = 'alphabetic';
 
-        // Círculos de redes
+        // Redes
         const redes = [
             { t: 'IG', v: (this.config && this.config.instagram) || '' },
             { t: 'WA', v: 'WhatsApp' },
             { t: 'TK', v: (this.config && this.config.tiktok) || '' }
         ];
-        const xs = [W / 2 - 160, W / 2, W / 2 + 160];
+        const xs = [W / 2 - 170, W / 2, W / 2 + 170];
         redes.forEach((r, i) => {
             ctx.beginPath();
-            ctx.arc(xs[i], 1440, 44, 0, Math.PI * 2);
-            ctx.fillStyle = '#C41E3A';
+            ctx.arc(xs[i], 1568, 42, 0, Math.PI * 2);
+            ctx.fillStyle = f.colorPrimario;
             ctx.fill();
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = '800 30px Arial, sans-serif';
+            ctx.font = '800 28px Arial, sans-serif';
             ctx.textBaseline = 'middle';
-            ctx.fillText(r.t, xs[i], 1442);
+            ctx.fillText(r.t, xs[i], 1570);
             ctx.textBaseline = 'alphabetic';
         });
 
-        // Handles de redes
-        const handles = redes.map(r => r.v).filter(Boolean).join('  •  ');
-        if (handles) {
+        // Pie
+        const pie = f.pie || redes.map(r => r.v).filter(Boolean).join('   •   ');
+        if (pie) {
             ctx.fillStyle = '#8a8a8a';
             ctx.font = '600 30px Arial, sans-serif';
-            ctx.fillText(handles, W / 2, 1522);
+            ctx.fillText(pie, W / 2, 1648);
         }
 
         return canvas.toDataURL('image/png');
-    },
-
-    downloadFlyer() {
-        if (!this.flyerDataUrl) {
-            alert('La imagen aún no está lista. Genera el flyer de nuevo y espera 2 segundos.');
-            return;
-        }
-        const a = document.createElement('a');
-        a.href = this.flyerDataUrl;
-        a.download = 'doriteque-flyer-qr.png';
-        a.click();
     },
 
     /* ============================================
@@ -309,6 +373,7 @@ const admin = {
                 if (docSnap.exists()) {
                     this.config = docSnap.data();
                     this.fillConfigForm();
+                    this.fillFlyerForm();
                 }
             });
 
@@ -369,7 +434,18 @@ const admin = {
                 msgHeader: getVal('msg-header'),
                 msgGreeting: getVal('msg-greeting'),
                 msgBeforeDetail: getVal('msg-before-detail'),
-                msgAfterTotal: getVal('msg-after-total')
+                msgAfterTotal: getVal('msg-after-total'),
+                flyer: {
+                    titulo: getVal('fly-titulo'),
+                    subtitulo: getVal('fly-subtitulo'),
+                    promo: getVal('fly-promo'),
+                    cta: getVal('fly-cta'),
+                    pie: getVal('fly-pie'),
+                    colorPrimario: document.getElementById('fly-color-primario').value,
+                    colorMarco: document.getElementById('fly-color-marco').value,
+                    colorFondo: document.getElementById('fly-color-fondo').value,
+                    mostrarLogo: document.getElementById('fly-logo').checked
+                }
             };
             await window.setDoc(window.doc(window.db, 'config', 'main'), newConfig);
             alert('✅ Configuración guardada.');

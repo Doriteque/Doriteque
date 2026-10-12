@@ -50,13 +50,14 @@
         <header class="admin-header">
             <h1><i class="fa-solid fa-gear"></i> Panel Admin</h1>
             <div class="admin-header-actions">
-                <button class="btn-header" onclick="admin.generateQR()" title="Generar QR"><i class="fa-solid fa-qrcode"></i></button>
+                <button class="btn-header" onclick="admin.openFlyerEditor()" title="Editor de flyer QR"><i class="fa-solid fa-qrcode"></i></button>
                 <button class="btn-header btn-logout" onclick="admin.logout()" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
         </header>
 
         <nav class="admin-tabs">
             <button class="admin-tab active" data-tab="config" onclick="admin.switchTab('config')"><i class="fa-solid fa-sliders"></i> Configuración</button>
+            <button class="admin-tab" data-tab="flyer" onclick="admin.openFlyerEditor()"><i class="fa-solid fa-qrcode"></i> Flyer QR</button>
             <button class="admin-tab" data-tab="productos" onclick="admin.switchTab('productos')"><i class="fa-solid fa-utensils"></i> Productos</button>
             <button class="admin-tab" data-tab="categorias" onclick="admin.switchTab('categorias')"><i class="fa-solid fa-folder"></i> Categorías</button>
             <button class="admin-tab" data-tab="modificadores" onclick="admin.switchTab('modificadores')"><i class="fa-solid fa-list-check"></i> Modificadores</button>
@@ -83,6 +84,32 @@
                 <div class="form-group"><label>Texto antes del detalle</label><input type="text" id="msg-before-detail"></div>
                 <div class="form-group"><label>Texto después del total</label><input type="text" id="msg-after-total"></div>
                 <button class="btn-save" onclick="admin.saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Guardar mensaje</button>
+            </div>
+        </section>
+
+        <section id="tab-flyer" class="admin-tab-content">
+            <div class="admin-card">
+                <h2><i class="fa-solid fa-qrcode"></i> Editor de publicación con QR</h2>
+                <p style="color:#b0b0b0;font-size:0.85rem;margin:0 0 16px;">Edita los textos y colores. La vista previa se actualiza sola. Guarda para conservar los cambios.</p>
+                <div class="form-group"><label>Título (vacío = nombre del negocio)</label><input type="text" id="fly-titulo" oninput="admin.previewFlyerDebounced()"></div>
+                <div class="form-group"><label>Subtítulo</label><input type="text" id="fly-subtitulo" oninput="admin.previewFlyerDebounced()"></div>
+                <div class="form-group"><label>Texto promocional (opcional)</label><input type="text" id="fly-promo" placeholder="Ej: 10% OFF en tu primer pedido" oninput="admin.previewFlyerDebounced()"></div>
+                <div class="form-group"><label>Texto del botón (CTA)</label><input type="text" id="fly-cta" oninput="admin.previewFlyerDebounced()"></div>
+                <div class="form-group"><label>Pie de página (vacío = redes automáticas)</label><input type="text" id="fly-pie" placeholder="Ej: Pedidos por WhatsApp 0424-1234567" oninput="admin.previewFlyerDebounced()"></div>
+                <div class="flyer-colors">
+                    <div class="form-group"><label>Color principal</label><input type="color" id="fly-color-primario" oninput="admin.previewFlyerDebounced()"></div>
+                    <div class="form-group"><label>Color del marco</label><input type="color" id="fly-color-marco" oninput="admin.previewFlyerDebounced()"></div>
+                    <div class="form-group"><label>Color de fondo</label><input type="color" id="fly-color-fondo" oninput="admin.previewFlyerDebounced()"></div>
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="fly-logo" onchange="admin.previewFlyerDebounced()"> Mostrar logo</label>
+                </div>
+                <div class="flyer-preview">
+                    <img id="flyer-preview" alt="Vista previa del flyer">
+                    <p id="flyer-error" style="display:none;color:#FF1744;font-size:0.9rem;"></p>
+                </div>
+                <button class="btn-save" onclick="admin.saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
+                <button class="btn-save btn-save-dark" onclick="admin.downloadFlyer()"><i class="fa-solid fa-download"></i> Descargar PNG (1080×1720)</button>
             </div>
         </section>
 
@@ -202,23 +229,6 @@
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="admin.closeModifierModal()">Cancelar</button>
                 <button class="btn-primary" onclick="admin.saveModifier()">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL QR / FLYER -->
-    <div id="qr-modal" class="admin-modal" onclick="if(event.target.id==='qr-modal')admin.closeQRModal()">
-        <div class="admin-modal-content" style="text-align:center;">
-            <div class="modal-header">
-                <h3>Publicación con QR</h3>
-                <button class="modal-close" onclick="admin.closeQRModal()"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="modal-body">
-                <div id="qr-container" style="margin:0 0 16px 0;"></div>
-                <p style="color:#b0b0b0;font-size:0.85rem;">Lista para imprimir o publicar en redes</p>
-            </div>
-            <div class="modal-footer" style="justify-content:center;">
-                <button class="btn-primary" onclick="admin.downloadFlyer()"><i class="fa-solid fa-download"></i> Descargar imagen</button>
             </div>
         </div>
     </div>
