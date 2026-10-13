@@ -356,6 +356,8 @@ const checkout = {
             let opts = '';
             
             if (item.opciones) {
+                // Recopilar todas las opciones seleccionadas (sin los nombres de los modificadores)
+                const allOptions = [];
                 Object.keys(item.opciones).forEach(mod => {
                     item.opciones[mod].forEach(opt => {
                         const m = this.menu.modificadores.find(x => x.nombre === mod);
@@ -364,8 +366,13 @@ const checkout = {
                             if (o) price += o.precio || 0;
                         }
                     });
-                    opts += ` (${mod}: ${item.opciones[mod].join(', ')})`;
+                    // Solo agregar las opciones seleccionadas, sin el nombre del modificador
+                    allOptions.push(...item.opciones[mod]);
                 });
+                // Mostrar solo las opciones seleccionadas entre paréntesis
+                if (allOptions.length > 0) {
+                    opts = ` (${allOptions.join(', ')})`;
+                }
             }
             
             const qty = item.qty || 1;
