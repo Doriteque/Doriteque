@@ -303,7 +303,7 @@ body {
 .product-modal-content {
     background: #1a1a1a;
     border: 2px solid #C41E3A;
-    border-radius: 16px;
+    border-radius: 20px;
     max-width: 500px;
     width: 100%;
     max-height: 90vh;
@@ -311,6 +311,7 @@ body {
     position: relative;
     transform: scale(0.9);
     transition: transform 0.3s ease;
+    overflow: hidden;
 }
 
 .product-modal-overlay.visible .product-modal-content {
@@ -334,9 +335,11 @@ body {
 
 .product-modal-img {
     width: 100%;
-    height: 280px;
+    height: 300px;
     object-fit: contain;
-    background: #1a1a1a;
+    background: #111111;
+    padding: 16px;
+    border-bottom: 2px solid #333;
 }
 
 .product-modal-info {
