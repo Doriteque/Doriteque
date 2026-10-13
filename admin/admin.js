@@ -1,3 +1,8 @@
+function placeholderImg(texto) {
+    const limpio = (texto || 'Doriteque').replace(/[<>&]/g, '');
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#1a1a1a"/><rect x="8" y="8" width="384" height="284" fill="none" stroke="#333" stroke-width="2" rx="16"/><text x="50%" y="50%" fill="#C41E3A" font-family="Arial, sans-serif" font-size="30" font-weight="bold" text-anchor="middle" dominant-baseline="middle">' + limpio + '</text></svg>';
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
 const admin = {
     config: {},
     menu: { categorias: [], productos: [], modificadores: [] },
