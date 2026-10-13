@@ -57,7 +57,7 @@ const checkout = {
                 this.selectedPayment = '';
             }, 100);
 
-            // 6. Configurar hora
+            // 6. Configurar hora actual exacta
             setTimeout(() => this.setupDateTime(), 200);
 
             // 7. Setup de búsqueda
@@ -69,20 +69,27 @@ const checkout = {
     },
 
     setupDateTime() {
+        // Tomar la hora exacta del dispositivo del cliente SIN sumar minutos
         const now = new Date();
-        now.setMinutes(now.getMinutes() + 30);
         
         const dtText = document.getElementById('datetime-text');
         if (dtText) {
             dtText.textContent = now.toLocaleString('es-VE', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit'
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true
             });
         }
         
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const dtInput = document.getElementById('client-datetime');
-        if (dtInput) dtInput.value = now.toISOString().slice(0, 16);
+        if (dtInput) {
+            // Construir formato YYYY-MM-DDTHH:mm manualmente para evitar problemas de zona horaria
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            dtInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
     },
 
     setupAddressSearch() {
@@ -374,7 +381,10 @@ const checkout = {
         let fechaHora = '';
         if (dt) {
             const d = new Date(dt);
-            fechaHora = d.toLocaleString('es-VE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+            fechaHora = d.toLocaleString('es-VE', { 
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true 
+            });
         }
 
         const header = (this.config.msgHeader || '🍔 *NUEVO PEDIDO*');
@@ -384,16 +394,16 @@ const checkout = {
         if (greeting) msg += greeting + '\n\n';
         msg += `👤 *Nombre completo*\n${name}\n\n`;
         msg += `📱 *Nro. de WhatsApp*\n+${fullPhone}\n\n`;
-        if (fechaHora) msg += `📅 *Fecha y hora*\n${fechaHora}\n\n`;
+        if (fechaHora) msg += `📅 *Fecha y hora del pedido*\n${fechaHora}\n\n`;
         if (note) msg += `⚠️ *Observación adicional*\n${note}\n\n`;
         
         if (addr) {
-    msg += `📍 *Mapa de ubicación*\n${addr}`;
-    if (detail) msg += `. ${detail}`;
-    msg += '\n\n';
-}
+            msg += `📍 *Dirección de entrega*\n${addr}`;
+            if (detail) msg += `. ${detail}`;
+            msg += '\n\n';
+        }
         
-        msg += `\n📝 *Detalle*\n${detalle}`;
+        msg += `📝 *Detalle del pedido*\n${detalle}`;
         msg += '---------------------------\n\n';
         msg += `💵 *Sub-total:* USD$ ${total.toFixed(2)}\n`;
         msg += `💵 *TOTAL DE LA ORDEN:* USD$ ${total.toFixed(2)} (Bs ${totalBs})\n\n`;
