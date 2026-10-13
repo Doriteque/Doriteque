@@ -209,3 +209,32 @@ input[type="file"]::file-selector-button {
     .admin-item-actions { width: 100%; justify-content: flex-end; }
     .flyer-colors { flex-direction: column; gap: 0; }
                 }
+
+/* PREVIEW DE IMAGEN EN MODAL DE EDICIÓN */
+#image-preview-container {
+    margin-top: 12px;
+    padding: 12px;
+    background: #111;
+    border-radius: 10px;
+    text-align: center;
+}
+
+#image-preview {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto;
+}
+
+#image-preview-container button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background: #C41E3A;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+}
