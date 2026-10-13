@@ -1,4 +1,4 @@
-const CACHE_NAME = 'doriteque-admin-v1';
+const CACHE_NAME = 'doriteque-admin-v3';
 const urlsToCache = [
   './',
   '../',
