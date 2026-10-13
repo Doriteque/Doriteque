@@ -3,6 +3,7 @@ function placeholderImg(texto) {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#1a1a1a"/><rect x="8" y="8" width="384" height="284" fill="none" stroke="#333" stroke-width="2" rx="16"/><text x="50%" y="50%" fill="#C41E3A" font-family="Arial, sans-serif" font-size="30" font-weight="bold" text-anchor="middle" dominant-baseline="middle">' + limpio + '</text></svg>';
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
+
 const app = {
     config: {},
     menu: { categorias: [], productos: [], modificadores: [] },
@@ -31,11 +32,11 @@ const app = {
                 if (!this.menu.modificadores) this.menu.modificadores = [];
                 if (!this.menu.categorias) this.menu.categorias = [];
                 if (!this.menu.productos) this.menu.productos = [];
-                
+
                 this.renderCategorias();
                 this.renderProductos();
                 this.updateCartUI();
-                
+
                 setTimeout(() => this.setupScrollSpy(), 500);
             });
 
@@ -69,13 +70,17 @@ const app = {
                 container.querySelectorAll('.categoria-tab').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 this.categoriaActiva = e.target.dataset.id;
-                
+
+                // Centrar la tab activa horizontalmente (sin mover el scroll vertical)
+                this.centerTab(e.target);
+
                 if (this.categoriaActiva === 'todas') {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
                     const seccion = document.getElementById('seccion-' + this.categoriaActiva);
                     if (seccion) {
-                        const top = seccion.getBoundingClientRect().top + window.pageYOffset - 100;
+                        // Offset de 80px para no quedar tapado por el sticky
+                        const top = seccion.getBoundingClientRect().top + window.pageYOffset - 80;
                         window.scrollTo({ top: top, behavior: 'smooth' });
                     }
                 }
@@ -83,17 +88,25 @@ const app = {
         });
     },
 
+    // NUEVA FUNCIÓN: centra la tab horizontalmente dentro de su contenedor
+    centerTab(tab) {
+        const container = document.getElementById('categorias-tabs');
+        if (!container || !tab) return;
+        const left = tab.offsetLeft - (container.clientWidth - tab.clientWidth) / 2;
+        container.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+    },
+
     renderProductos() {
         const container = document.getElementById('productos-grid');
         const texto = this.busqueda.toLowerCase().trim();
         let html = '';
 
-        const catsToShow = this.categoriaActiva === 'todas' 
-            ? this.menu.categorias 
+        const catsToShow = this.categoriaActiva === 'todas'
+            ? this.menu.categorias
             : this.menu.categorias.filter(c => c.id === this.categoriaActiva);
 
         catsToShow.forEach(cat => {
-            const prods = this.menu.productos.filter(p => 
+            const prods = this.menu.productos.filter(p =>
                 p.categoriaId === cat.id && p.disponible &&
                 (texto === '' || p.nombre.toLowerCase().includes(texto) || p.descripcion.toLowerCase().includes(texto))
             );
@@ -102,11 +115,11 @@ const app = {
 
             html += '<section class="seccion-categoria" id="seccion-' + cat.id + '">';
             html += '<h2 class="titulo-seccion">' + cat.nombre + '</h2>';
-            
+
             prods.forEach(p => {
                 const precioBs = (p.precio * this.config.tasaBs).toFixed(2);
                 const img = p.imagen || placeholderImg(p.nombre);
-                
+
                 html += '<article class="producto-card" onclick="app.openProductModal(\'' + p.id + '\')">';
                 html += '<img src="' + img + '" alt="' + p.nombre + '" class="producto-img" loading="lazy">';
                 html += '<div class="producto-info">';
@@ -128,8 +141,9 @@ const app = {
         if (!producto) return;
 
         this.productoSeleccionado = producto;
-        
-        const img = producto.imagen || 'https://via.placeholder.com/400x300/1a1a1a/C41E3A?text=Doriteque';
+
+        // FIX: usar placeholder propio en vez de via.placeholder.com
+        const img = producto.imagen || placeholderImg(producto.nombre);
         const precioBs = (producto.precio * this.config.tasaBs).toFixed(2);
 
         document.getElementById('modal-img').src = img;
@@ -149,7 +163,7 @@ const app = {
     closeProductModal() {
         const modal = document.getElementById('product-modal');
         modal.classList.remove('visible');
-        
+
         setTimeout(() => {
             modal.style.display = 'none';
             document.body.style.overflow = '';
@@ -161,13 +175,13 @@ const app = {
         const producto = this.menu.productos.find(p => p.id === productId);
         if (!producto) return;
 
-        const tieneMods = producto.modificadoresIds && 
-                          producto.modificadoresIds.length > 0 && 
-                          this.menu.modificadores && 
-                          this.menu.modificadores.length > 0;
+        const tieneMods = producto.modificadoresIds &&
+            producto.modificadoresIds.length > 0 &&
+            this.menu.modificadores &&
+            this.menu.modificadores.length > 0;
 
         if (tieneMods) {
-            const modsAsignados = this.menu.modificadores.filter(m => 
+            const modsAsignados = this.menu.modificadores.filter(m =>
                 producto.modificadoresIds.includes(m.id)
             );
             if (modsAsignados.length > 0) {
@@ -175,50 +189,50 @@ const app = {
                 return;
             }
         }
-        
+
         this.addProductToCart(producto, {});
     },
 
     openCustomizationModal(producto) {
         this.productoSeleccionado = producto;
-        
-        const modificadores = this.menu.modificadores.filter(m => 
+
+        const modificadores = this.menu.modificadores.filter(m =>
             producto.modificadoresIds.includes(m.id)
         );
 
         const modal = document.getElementById('customization-modal');
         const title = document.getElementById('customization-title');
         const content = document.getElementById('customization-content');
-        
+
         title.textContent = producto.nombre;
-        
+
         let html = '';
 
         modificadores.forEach(mod => {
             const obligatorio = mod.obligatorio ? '<span class="required">*</span>' : '<span class="optional">(opcional)</span>';
-            
+
             html += '<div class="customization-section">';
             html += '<h4 class="customization-title">' + mod.nombre + ' ' + obligatorio + '</h4>';
             html += '<div class="customization-options">';
-            
+
             mod.opciones.forEach((op, index) => {
                 const inputType = mod.tipo === 'unico' ? 'radio' : 'checkbox';
                 const inputName = 'mod-' + mod.id;
                 const inputId = inputName + '-' + index;
                 const precioText = op.precio > 0 ? ' +$' + op.precio.toFixed(2) : '';
-                
+
                 html += '<label class="customization-option">';
                 html += '<input type="' + inputType + '" name="' + inputName + '" id="' + inputId + '" value="' + op.id + '" data-precio="' + op.precio + '" data-nombre="' + op.nombre + '" data-modificador="' + mod.nombre + '" onchange="app.updateCustomizationTotal()">';
                 html += '<span class="option-text">' + op.nombre + precioText + '</span>';
                 html += '</label>';
             });
-            
+
             html += '</div></div>';
         });
 
         content.innerHTML = html;
         document.getElementById('customization-total-extra').textContent = '$0.00';
-        
+
         modal.style.display = 'flex';
         modal.offsetHeight;
         modal.classList.add('visible');
@@ -247,7 +261,7 @@ const app = {
         const producto = this.productoSeleccionado;
         if (!producto) return;
 
-        const modificadores = this.menu.modificadores.filter(m => 
+        const modificadores = this.menu.modificadores.filter(m =>
             producto.modificadoresIds.includes(m.id)
         );
 
@@ -277,15 +291,15 @@ const app = {
         if (existing) {
             existing.qty++;
         } else {
-            this.cart.push({ 
-                id: producto.id, 
+            this.cart.push({
+                id: producto.id,
                 qty: 1,
                 opciones: opciones
             });
         }
         this.saveCart();
         this.updateCartUI();
-        
+
         const btn = event.target.closest('.btn-agregar');
         if (btn) {
             const original = btn.innerHTML;
@@ -301,7 +315,7 @@ const app = {
     updateCartQty(productId, delta) {
         const item = this.cart.find(i => i.id === productId);
         if (!item) return;
-        
+
         item.qty += delta;
         if (item.qty <= 0) {
             this.cart = this.cart.filter(i => i.id !== productId);
@@ -325,15 +339,15 @@ const app = {
     calculateTotal() {
         let totalUSD = 0;
         let totalItems = 0;
-        
+
         this.cart.forEach(item => {
             if (!item || !item.id) return;
-            
+
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (prod) {
                 let precioUnitario = prod.precio || 0;
                 const qty = item.qty || 1;
-                
+
                 if (item.opciones) {
                     Object.keys(item.opciones).forEach(modNombre => {
                         const opciones = item.opciones[modNombre];
@@ -350,21 +364,21 @@ const app = {
                 totalItems += qty;
             }
         });
-        
+
         return { totalUSD: totalUSD || 0, totalItems: totalItems || 0 };
     },
 
     updateCartUI() {
         const { totalUSD, totalItems } = this.calculateTotal();
-        
+
         document.getElementById('cart-count').textContent = totalItems;
         document.getElementById('cart-modal-count').textContent = totalItems;
         document.getElementById('cart-total-usd').textContent = 'USD$ ' + totalUSD.toFixed(2);
         document.getElementById('cart-finalizar-total').textContent = 'USD$ ' + totalUSD.toFixed(2);
-        
+
         const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
         document.getElementById('cart-total-bs').textContent = 'Bs ' + totalBs;
-        
+
         const cartBar = document.getElementById('cart-bar-floating');
         if (cartBar) {
             if (totalItems > 0) {
@@ -392,13 +406,13 @@ const app = {
 
         this.cart.forEach(item => {
             if (!item || !item.id) return;
-            
+
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
-            
+
             let precioUnitario = prod.precio || 0;
             let opcionesTexto = '';
-            
+
             if (item.opciones) {
                 Object.keys(item.opciones).forEach(modNombre => {
                     const opciones = item.opciones[modNombre];
@@ -412,7 +426,7 @@ const app = {
                     opcionesTexto += '<div class="cart-item-opciones">' + modNombre + ': ' + opciones.join(', ') + '</div>';
                 });
             }
-            
+
             const qty = item.qty || 1;
             const subtotal = precioUnitario * qty;
 
@@ -451,6 +465,7 @@ const app = {
         window.location.href = 'checkout.html';
     },
 
+    // SCROLL SPY con centrado automático de la tab activa
     setupScrollSpy() {
         const secciones = document.querySelectorAll('.seccion-categoria');
         if (secciones.length === 0) return;
@@ -460,19 +475,23 @@ const app = {
                 if (entry.isIntersecting) {
                     const id = entry.target.id.replace('seccion-', '');
                     this.categoriaActiva = id;
-                    
+
                     const container = document.getElementById('categorias-tabs');
+                    let tabActiva = null;
                     container.querySelectorAll('.categoria-tab').forEach(tab => {
                         tab.classList.remove('active');
-                        if (tab.dataset.id === id) {
-                            tab.classList.add('active');
-                        }
+                        if (tab.dataset.id === id) tabActiva = tab;
                     });
+                    if (tabActiva) {
+                        tabActiva.classList.add('active');
+                        // Centrar la tab activa horizontalmente al hacer scroll
+                        this.centerTab(tabActiva);
+                    }
                 }
             });
         }, {
-            rootMargin: '-100px 0px -70% 0px',
-            threshold: 0.1
+            rootMargin: '-80px 0px -60% 0px',
+            threshold: 0
         });
 
         secciones.forEach(seccion => observer.observe(seccion));
