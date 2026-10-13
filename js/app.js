@@ -71,7 +71,6 @@ const app = {
                 e.target.classList.add('active');
                 this.categoriaActiva = e.target.dataset.id;
 
-                // Centrar la tab activa horizontalmente (sin mover el scroll vertical)
                 this.centerTab(e.target);
 
                 if (this.categoriaActiva === 'todas') {
@@ -79,7 +78,6 @@ const app = {
                 } else {
                     const seccion = document.getElementById('seccion-' + this.categoriaActiva);
                     if (seccion) {
-                        // Offset de 80px para no quedar tapado por el sticky
                         const top = seccion.getBoundingClientRect().top + window.pageYOffset - 80;
                         window.scrollTo({ top: top, behavior: 'smooth' });
                     }
@@ -88,7 +86,6 @@ const app = {
         });
     },
 
-    // NUEVA FUNCIÓN: centra la tab horizontalmente dentro de su contenedor
     centerTab(tab) {
         const container = document.getElementById('categorias-tabs');
         if (!container || !tab) return;
@@ -101,7 +98,9 @@ const app = {
         const texto = this.busqueda.toLowerCase().trim();
         let html = '';
 
-        const catsToShow = this.categoriaActiva === 'todas'
+        // FIX: Si hay búsqueda activa, mostrar TODAS las categorías para que encuentre cualquier plato
+        const hayBusqueda = texto.length > 0;
+        const catsToShow = (this.categoriaActiva === 'todas' || hayBusqueda)
             ? this.menu.categorias
             : this.menu.categorias.filter(c => c.id === this.categoriaActiva);
 
@@ -141,8 +140,6 @@ const app = {
         if (!producto) return;
 
         this.productoSeleccionado = producto;
-
-        // FIX: usar placeholder propio en vez de via.placeholder.com
         const img = producto.imagen || placeholderImg(producto.nombre);
         const precioBs = (producto.precio * this.config.tasaBs).toFixed(2);
 
@@ -195,7 +192,6 @@ const app = {
 
     openCustomizationModal(producto) {
         this.productoSeleccionado = producto;
-
         const modificadores = this.menu.modificadores.filter(m =>
             producto.modificadoresIds.includes(m.id)
         );
@@ -205,12 +201,10 @@ const app = {
         const content = document.getElementById('customization-content');
 
         title.textContent = producto.nombre;
-
         let html = '';
 
         modificadores.forEach(mod => {
             const obligatorio = mod.obligatorio ? '<span class="required">*</span>' : '<span class="optional">(opcional)</span>';
-
             html += '<div class="customization-section">';
             html += '<h4 class="customization-title">' + mod.nombre + ' ' + obligatorio + '</h4>';
             html += '<div class="customization-options">';
@@ -465,7 +459,6 @@ const app = {
         window.location.href = 'checkout.html';
     },
 
-    // SCROLL SPY con centrado automático de la tab activa
     setupScrollSpy() {
         const secciones = document.querySelectorAll('.seccion-categoria');
         if (secciones.length === 0) return;
@@ -484,7 +477,6 @@ const app = {
                     });
                     if (tabActiva) {
                         tabActiva.classList.add('active');
-                        // Centrar la tab activa horizontalmente al hacer scroll
                         this.centerTab(tabActiva);
                     }
                 }
@@ -514,10 +506,19 @@ const app = {
             }
         });
 
+        // FIX: Al limpiar, volver a "Todas" las categorías y actualizar la UI
         btnLimpiar.addEventListener('click', () => {
             inputBuscar.value = '';
             this.busqueda = '';
+            this.categoriaActiva = 'todas';
             btnLimpiar.style.display = 'none';
+            
+            const container = document.getElementById('categorias-tabs');
+            container.querySelectorAll('.categoria-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.dataset.id === 'todas') tab.classList.add('active');
+            });
+            
             this.renderProductos();
         });
 
