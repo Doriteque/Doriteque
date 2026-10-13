@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Doriteque - Menú Digital</title>
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script type="module" src="js/firebase.js"></script>
     <script type="module" src="js/db.js"></script>
@@ -110,63 +110,263 @@
         </div>
     </div>
 
+    <!-- ============================================
+         FOOTER PROFESIONAL
+         ============================================ -->
     <footer class="footer">
         <div class="footer-redes">
-            <a href="#" id="link-instagram" target="_blank"><i class="fa-brands fa-instagram"></i></a>
-            <a href="#" id="link-tiktok" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
-            <a href="#" id="link-whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+            <a id="link-instagram" href="#" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+            <a id="link-tiktok" href="#" target="_blank"><i class="fa-brands fa-tiktok"></i></a>
+            <a id="link-whatsapp" href="#" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
         </div>
-        <p id="footer-metodos">Métodos de pago: Cargando...</p>
-        <p style="margin-top: 8px; font-size: 0.75rem; opacity: 0.6;">© 2026 Doriteque</p>
-        <!-- BARRA FLOTANTE DE TOTAL -->
-<div class="cart-bar-floating" id="cart-bar-floating" onclick="app.toggleCart()">
-    <div class="cart-bar-icon">
-        <i class="fa-solid fa-cart-shopping"></i>
-        <span class="cart-bar-count" id="cart-bar-count">0</span>
-        <span>Ver carrito</span>
-    </div>
-    <span class="cart-bar-total" id="cart-bar-total">USD$ 0.00</span>
-</div>
+        
+        <p id="footer-metodos">💳 Métodos de pago: Cargando...</p>
+
+        <!-- Sección Conócenos -->
+        <div class="footer-section">
+            <h4>Conócenos</h4>
+            <p>Doriteque - Sabor que llega hasta ti. Especialistas en delivery de dorilocos, hamburguesas y snacks de calidad.</p>
+            <p>
+                <a href="#" onclick="openLegalModal('modal-conocenos'); return false;" style="color: #C41E3A; text-decoration: none; font-weight: 700;">
+                    <i class="fa-solid fa-circle-info"></i> Ver más sobre nosotros
+                </a>
+            </p>
+        </div>
+
+        <!-- Sección Ubicación -->
+        <div class="footer-section">
+            <h4>Ubicación</h4>
+            <p>
+                <a href="https://maps.app.goo.gl/vjM7u5mzyJCqVfvW6?g_st=ac" target="_blank" style="color: #C41E3A; text-decoration: none;">
+                    <i class="fa-solid fa-location-dot"></i> Ver en el mapa
+                </a>
+            </p>
+        </div>
+
+        <!-- Sección Legal -->
+        <div class="footer-section">
+            <h4>Información Legal</h4>
+            <p>
+                <a href="#" onclick="openLegalModal('modal-terminos'); return false;" style="color: #b0b0b0; text-decoration: none; display: block; margin: 6px 0;">
+                    <i class="fa-solid fa-shield-halved"></i> Términos y Condiciones
+                </a>
+                <a href="#" onclick="openLegalModal('modal-privacidad'); return false;" style="color: #b0b0b0; text-decoration: none; display: block; margin: 6px 0;">
+                    <i class="fa-solid fa-lock"></i> Política de Privacidad
+                </a>
+                <a href="#" onclick="openLegalModal('modal-envios'); return false;" style="color: #b0b0b0; text-decoration: none; display: block; margin: 6px 0;">
+                    <i class="fa-solid fa-truck"></i> Envíos y Devoluciones
+                </a>
+            </p>
+        </div>
+
+        <!-- Copyright Limpio y Seguro -->
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #333;">
+            <p style="color: #666; font-size: 0.8rem;">
+                Doriteque © 2026. Todos los derechos reservados.
+            </p>
+        </div>
     </footer>
 
+    <!-- BARRA FLOTANTE DE TOTAL (Fuera del footer para que flote bien) -->
+    <div class="cart-bar-floating" id="cart-bar-floating" onclick="app.toggleCart()">
+        <div class="cart-bar-icon">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span class="cart-bar-count" id="cart-bar-count">0</span>
+            <span>Ver carrito</span>
+        </div>
+        <span class="cart-bar-total" id="cart-bar-total">USD$ 0.00</span>
+    </div>
+
+    <!-- ============================================
+         MODALES LEGALES
+         ============================================ -->
+
+    <!-- Modal Conócenos -->
+    <div id="modal-conocenos" class="legal-modal" style="display:none;">
+        <div class="legal-modal-content">
+            <div class="legal-modal-header">
+                <h3><i class="fa-solid fa-circle-info"></i> Conócenos</h3>
+                <button class="legal-close" onclick="closeLegalModal('modal-conocenos')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="legal-modal-body">
+                <h2>Doriteque - Sabor que llega hasta ti</h2>
+                <p>Somos un restaurante especializado en delivery, dedicados a llevarte las mejores dorilocos, hamburguesas y snacks directamente a tu puerta.</p>
+                <p>Nacimos en 2026 con la misión de ofrecerte productos de calidad, preparados con ingredientes frescos y el mejor sazón, sin que tengas que salir de casa.</p>
+                
+                <h3>Nuestro Compromiso</h3>
+                <ul>
+                    <li>Ingredientes frescos y de calidad</li>
+                    <li>Preparación higiénica y segura</li>
+                    <li>Entrega rápida a tu domicilio</li>
+                    <li>Atención personalizada</li>
+                </ul>
+
+                <h3>Información de Contacto</h3>
+                <p><i class="fa-solid fa-clock"></i> <strong>Horario:</strong> <span id="contacto-horario">Cargando...</span></p>
+                <p><i class="fa-brands fa-instagram"></i> <strong>Instagram:</strong> <span id="contacto-instagram">Cargando...</span></p>
+                <p><i class="fa-brands fa-tiktok"></i> <strong>TikTok:</strong> <span id="contacto-tiktok">Cargando...</span></p>
+
+                <h3>Ubicación</h3>
+                <p>
+                    <a href="https://maps.app.goo.gl/vjM7u5mzyJCqVfvW6?g_st=ac" target="_blank" style="color: #C41E3A; text-decoration: none;">
+                        <i class="fa-solid fa-location-dot"></i> Ver ubicación en el mapa
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Términos y Condiciones -->
+    <div id="modal-terminos" class="legal-modal" style="display:none;">
+        <div class="legal-modal-content">
+            <div class="legal-modal-header">
+                <h3><i class="fa-solid fa-shield-halved"></i> Términos y Condiciones</h3>
+                <button class="legal-close" onclick="closeLegalModal('modal-terminos')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="legal-modal-body">
+                <h2>Términos y Condiciones de Doriteque</h2>
+                <p>Estos términos rigen el uso de los servicios de delivery de Doriteque. Al realizar un pedido, usted acepta cumplir con los siguientes términos.</p>
+
+                <h3>1. Pedidos y Delivery</h3>
+                <ul>
+                    <li><strong>Zona de cobertura:</strong> Verifique que su dirección esté dentro de nuestra zona de entrega.</li>
+                    <li><strong>Tiempo de entrega:</strong> Estimado de 45-60 minutos. Puede variar por tráfico o clima.</li>
+                    <li><strong>Entrega:</strong> Debe haber alguien presente. El repartidor espera máximo 10 minutos. Sin reembolso si no hay nadie.</li>
+                </ul>
+
+                <h3>2. Pagos</h3>
+                <ul>
+                    <li><strong>Métodos:</strong> Efectivo, transferencia, pago móvil (según lo indicado en la plataforma).</li>
+                    <li><strong>Precios:</strong> En USD, calculados en Bs según la tasa del día publicada.</li>
+                </ul>
+
+                <h3>3. Política de Alimentos</h3>
+                <ul>
+                    <li><strong>Alergias:</strong> Es responsabilidad del cliente informar sobre restricciones antes de ordenar.</li>
+                    <li><strong>Modificaciones:</strong> Solo se aceptan antes de iniciar la preparación.</li>
+                </ul>
+
+                <h3>4. Reembolsos</h3>
+                <p><strong>Aceptamos reembolso si:</strong> Producto incorrecto, incompleto o en mal estado (notificar en 30 min con foto), o retraso no notificado >90 min.</p>
+                <p><strong>No aceptamos reembolso si:</strong> Cambio de opinión, dirección incorrecta o daños después de aceptar la entrega.</p>
+
+                <p style="margin-top: 20px; font-size: 0.85rem; color: #888;"><strong>Última actualización:</strong> 2026</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Política de Privacidad -->
+    <div id="modal-privacidad" class="legal-modal" style="display:none;">
+        <div class="legal-modal-content">
+            <div class="legal-modal-header">
+                <h3><i class="fa-solid fa-lock"></i> Política de Privacidad</h3>
+                <button class="legal-close" onclick="closeLegalModal('modal-privacidad')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="legal-modal-body">
+                <h2>Política de Privacidad - Doriteque</h2>
+                <p>Valoramos su confianza y nos comprometemos a proteger su información personal al realizar pedidos por delivery.</p>
+
+                <h3>1. Información que Recopilamos</h3>
+                <ul>
+                    <li>Datos de contacto: Nombre, teléfono y dirección de entrega.</li>
+                    <li>Datos del pedido: Productos solicitados y notas especiales.</li>
+                </ul>
+
+                <h3>2. Uso de la Información</h3>
+                <ul>
+                    <li>Procesar y entregar su pedido.</li>
+                    <li>Compartir con el repartidor asignado (solo nombre, teléfono y dirección).</li>
+                </ul>
+
+                <h3>3. Protección y Terceros</h3>
+                <ul>
+                    <li>No vendemos ni alquilamos su información personal.</li>
+                    <li>Solo compartimos datos con el repartidor para completar la entrega.</li>
+                    <li>Los datos de pago se manejan exclusivamente por WhatsApp y no se almacenan en la plataforma.</li>
+                </ul>
+
+                <h3>4. Sus Derechos</h3>
+                <p>Usted tiene derecho a acceder, corregir o solicitar la eliminación de sus datos contactándonos vía WhatsApp.</p>
+
+                <p style="margin-top: 20px; font-size: 0.85rem; color: #888;"><strong>Última actualización:</strong> 2026</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Envíos y Devoluciones -->
+    <div id="modal-envios" class="legal-modal" style="display:none;">
+        <div class="legal-modal-content">
+            <div class="legal-modal-header">
+                <h3><i class="fa-solid fa-truck"></i> Envíos y Devoluciones</h3>
+                <button class="legal-close" onclick="closeLegalModal('modal-envios')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="legal-modal-body">
+                <h2>Políticas de Envío y Reembolso</h2>
+                
+                <h3>1. Política de Envíos</h3>
+                <ul>
+                    <li><strong>Tiempo:</strong> 45-60 minutos estimados.</li>
+                    <li><strong>Costo:</strong> Se calcula según la dirección y se muestra antes de pagar.</li>
+                    <li><strong>Entrega:</strong> El repartidor espera máximo 10 minutos. Si no hay nadie, el pedido se devuelve sin reembolso.</li>
+                </ul>
+
+                <h3>2. Reembolsos</h3>
+                <p><strong>Aceptamos si:</strong> ✅ Producto incorrecto, incompleto o en mal estado (notificar en 30 min con foto).</p>
+                <p><strong>No aceptamos si:</strong> ❌ Cambio de opinión, dirección incorrecta o daños tras aceptar la entrega.</p>
+
+                <h3>3. Proceso de Reembolso</h3>
+                <ol>
+                    <li>Contacte por WhatsApp en máximo 30 minutos.</li>
+                    <li>Proporcione número de pedido y foto del problema.</li>
+                    <li>Revisaremos su caso y aprobaremos reembolso o reemplazo sin costo.</li>
+                </ol>
+
+                <p style="margin-top: 20px; font-size: 0.85rem; color: #888;"><strong>Última actualización:</strong> 2026</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
     <script src="js/app.js"></script>
-    <!-- MODAL DE TÉRMINOS Y CONDICIONES -->
-<div id="modal-terminos" class="legal-modal" style="display:none;">
-    <div class="legal-modal-content">
-        <div class="legal-modal-header">
-            <h3><i class="fa-solid fa-shield-halved"></i> Términos y Condiciones</h3>
-            <button class="legal-close" onclick="closeLegalModal('modal-terminos')"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="legal-modal-body">
-            <!-- Pega aquí el contenido de Términos -->
-        </div>
-    </div>
-</div>
+    
+    <script>
+    // Control de modales legales
+    function openLegalModal(id) {
+        document.getElementById(id).style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // Llenar datos dinámicos si es el modal de Conócenos
+        if (id === 'modal-conocenos' && window.app && window.app.config) {
+            document.getElementById('contacto-horario').textContent = window.app.config.horario || 'Consultar';
+            document.getElementById('contacto-instagram').textContent = '@' + (window.app.config.instagram || 'No disponible');
+            document.getElementById('contacto-tiktok').textContent = '@' + (window.app.config.tiktok || 'No disponible');
+        }
+    }
 
-<!-- MODAL DE PRIVACIDAD -->
-<div id="modal-privacidad" class="legal-modal" style="display:none;">
-    <div class="legal-modal-content">
-        <div class="legal-modal-header">
-            <h3><i class="fa-solid fa-lock"></i> Política de Privacidad</h3>
-            <button class="legal-close" onclick="closeLegalModal('modal-privacidad')"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="legal-modal-body">
-            <!-- Pega aquí el contenido de Privacidad -->
-        </div>
-    </div>
-</div>
+    function closeLegalModal(id) {
+        document.getElementById(id).style.display = 'none';
+        document.body.style.overflow = '';
+    }
 
-<!-- MODAL DE ENVÍOS -->
-<div id="modal-envios" class="legal-modal" style="display:none;">
-    <div class="legal-modal-content">
-        <div class="legal-modal-header">
-            <h3><i class="fa-solid fa-truck"></i> Envíos y Devoluciones</h3>
-            <button class="legal-close" onclick="closeLegalModal('modal-envios')"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="legal-modal-body">
-            <!-- Pega aquí el contenido de Envíos -->
-        </div>
-    </div>
-</div>
+    // Cerrar modal al hacer clic fuera del contenido
+    document.querySelectorAll('.legal-modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeLegalModal(modal.id);
+            }
+        });
+    });
+
+    // Cerrar con tecla Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.legal-modal').forEach(modal => {
+                if (modal.style.display === 'flex') {
+                    closeLegalModal(modal.id);
+                }
+            });
+        }
+    });
+    </script>
 </body>
 </html>
