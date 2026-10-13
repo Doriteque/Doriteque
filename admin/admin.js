@@ -538,7 +538,7 @@ const admin = {
         let html = '';
         this.menu.productos.forEach(p => {
             const cat = this.menu.categorias.find(c => String(c.id) === String(p.categoriaId));
-            const img = p.imagen || 'https://via.placeholder.com/60/1a1a1a/C41E3A?text=D';
+            const img = p.imagen || placeholderImg(p.nombre);
             const badge = p.disponible ? '<span class="badge badge-active">Disponible</span>' : '<span class="badge badge-inactive">No disponible</span>';
             const modsCount = p.modificadoresIds ? p.modificadoresIds.length : 0;
             const modsBadge = modsCount > 0 ? `<span class="badge" style="background:#FF9800;color:white;margin-left:6px;">${modsCount} mods</span>` : '';
