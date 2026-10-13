@@ -342,11 +342,18 @@
         document.getElementById(id).style.display = 'flex';
         document.body.style.overflow = 'hidden';
         
-        // Llenar datos dinámicos si es el modal de Conócenos
-        if (id === 'modal-conocenos' && window.app && window.app.config) {
-            document.getElementById('contacto-horario').textContent = window.app.config.horario || 'Consultar';
-            document.getElementById('contacto-instagram').textContent = '@' + (window.app.config.instagram || 'No disponible');
-            document.getElementById('contacto-tiktok').textContent = '@' + (window.app.config.tiktok || 'No disponible');
+        // FIX: Leer datos directamente del DOM para evitar problemas de timing
+        if (id === 'modal-conocenos') {
+            const horarioEl = document.getElementById('horario-text');
+            const instaEl = document.getElementById('link-instagram');
+            const tiktokEl = document.getElementById('link-tiktok');
+            
+            document.getElementById('contacto-horario').textContent = 
+                horarioEl ? horarioEl.textContent.replace(' | Tasa: Bs', '').trim() : 'Consultar';
+            document.getElementById('contacto-instagram').textContent = 
+                instaEl ? '@' + (instaEl.href.split('/').pop() || 'No disponible') : '@No disponible';
+            document.getElementById('contacto-tiktok').textContent = 
+                tiktokEl ? '@' + (tiktokEl.href.split('/').pop() || 'No disponible') : '@No disponible';
         }
     }
 
