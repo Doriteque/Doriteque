@@ -1,6 +1,6 @@
 # Licencia de Propiedad Intelectual y Derechos de Autor
 
-**Copyright (c) 2026 Maickol Cardenas (C.I. 32.999.467)**  
+**Copyright (c) 2026 Maickol Cardenas**  
 **Proyecto:** Doriteque  
 **País:** República Bolivariana de Venezuela  
 
