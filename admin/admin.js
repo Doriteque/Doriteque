@@ -3,6 +3,7 @@ function placeholderImg(texto) {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#1a1a1a"/><rect x="8" y="8" width="384" height="284" fill="none" stroke="#333" stroke-width="2" rx="16"/><text x="50%" y="50%" fill="#C41E3A" font-family="Arial, sans-serif" font-size="30" font-weight="bold" text-anchor="middle" dominant-baseline="middle">' + limpio + '</text></svg>';
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
+
 const admin = {
     config: {},
     menu: { categorias: [], productos: [], modificadores: [] },
@@ -669,13 +670,62 @@ const admin = {
         document.getElementById('image-preview-container').style.display = 'none';
     },
 
+    async uploadImageToStorage(dataUrl, nombre) {
+        const API_KEY = '3b5c88459a661f5779823149d0e4c9f2';
+        try {
+            const base64 = dataUrl.split(',')[1];
+            const formData = new FormData();
+            formData.append('key', API_KEY);
+            formData.append('image', base64);
+            formData.append('name', (nombre || 'doriteque').replace(/[^a-zA-Z0-9]/g, ''));
+
+            const res = await fetch('https://api.imgbb.com/1/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const json = await res.json();
+
+            if (json && json.success && json.data && json.data.url) {
+                return json.data.url;
+            }
+            throw new Error('ImgBB no devolvió URL');
+        } catch (e) {
+            console.error('Error subiendo imagen a ImgBB:', e);
+            alert('No se pudo subir la imagen a ImgBB. Revisa tu API Key.');
+            return dataUrl;
+        }
+    },
+
+    async migrateImages() {
+        let cambios = 0;
+        for (const p of (this.menu.productos || [])) {
+            if (p.imagen && p.imagen.startsWith('data:')) {
+                const url = await this.uploadImageToStorage(p.imagen, p.nombre);
+                if (url !== p.imagen) {
+                    p.imagen = url;
+                    cambios++;
+                }
+            }
+        }
+        if (cambios === 0) {
+            alert('No hay imágenes base64 por migrar.');
+            return;
+        }
+        await window.setDoc(window.doc(window.db, 'menu', 'main'), {
+            categorias: this.menu.categorias || [],
+            productos: this.menu.productos,
+            modificadores: this.menu.modificadores || []
+        });
+        alert('✅ ' + cambios + ' imagen(es) migradas a ImgBB. El documento ya pesa menos.');
+    },
+
     async saveProduct() {
         const id = document.getElementById('prod-id').value;
         const nombre = document.getElementById('prod-nombre').value.trim();
         const descripcion = document.getElementById('prod-descripcion').value.trim();
         const precio = parseFloat(document.getElementById('prod-precio').value);
         const categoriaId = document.getElementById('prod-categoria').value;
-        const imagen = document.getElementById('prod-imagen').value.trim();
+        let imagen = document.getElementById('prod-imagen').value.trim();
         const disponible = document.getElementById('prod-disponible').checked;
         const modificadoresIds = [];
         document.querySelectorAll('.mod-chip.selected').forEach(chip => modificadoresIds.push(chip.dataset.modId));
@@ -683,6 +733,11 @@ const admin = {
         if (!nombre || !descripcion || isNaN(precio) || !categoriaId) {
             alert('Completa todos los campos obligatorios.');
             return;
+        }
+
+        // Si la imagen es base64, subirla a ImgBB y guardar solo la URL
+        if (imagen.startsWith('data:')) {
+            imagen = await this.uploadImageToStorage(imagen, nombre);
         }
 
         const productoData = { id: id || 'p' + Date.now(), nombre, descripcion, precio, categoriaId, imagen, disponible, modificadoresIds };
