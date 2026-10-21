@@ -5,6 +5,7 @@ const checkout = {
     selectedPayment: '',
     selectedAddress: null,
     selectedCoords: null,
+    tasaBCV: null,
 
     async init() {
         try {
@@ -17,6 +18,13 @@ const checkout = {
                 console.error('Firebase no está cargado');
                 alert('Error: No se pudo conectar. Recarga la página.');
                 return;
+            }
+
+            // Consultar tasa BCV automática al iniciar
+            try { 
+                this.tasaBCV = await window.obtenerTasaBCV(); 
+            } catch (e) { 
+                this.tasaBCV = null; 
             }
 
             // 3. Cargar config y menú
@@ -68,8 +76,11 @@ const checkout = {
         }
     },
 
+    tasa() {
+        return (this.tasaBCV && this.tasaBCV > 0) ? this.tasaBCV : (this.config.tasaBs || 1000);
+    },
+
     setupDateTime() {
-        // Tomar la hora exacta del dispositivo del cliente SIN sumar minutos
         const now = new Date();
         
         const dtText = document.getElementById('datetime-text');
@@ -82,7 +93,6 @@ const checkout = {
         
         const dtInput = document.getElementById('client-datetime');
         if (dtInput) {
-            // Construir formato YYYY-MM-DDTHH:mm manualmente para evitar problemas de zona horaria
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
@@ -356,7 +366,6 @@ const checkout = {
             let opts = '';
             
             if (item.opciones) {
-                // Recopilar todas las opciones seleccionadas (sin los nombres de los modificadores)
                 const allOptions = [];
                 Object.keys(item.opciones).forEach(mod => {
                     item.opciones[mod].forEach(opt => {
@@ -366,10 +375,8 @@ const checkout = {
                             if (o) price += o.precio || 0;
                         }
                     });
-                    // Solo agregar las opciones seleccionadas, sin el nombre del modificador
                     allOptions.push(...item.opciones[mod]);
                 });
-                // Mostrar solo las opciones seleccionadas entre paréntesis
                 if (allOptions.length > 0) {
                     opts = ` (${allOptions.join(', ')})`;
                 }
@@ -381,7 +388,7 @@ const checkout = {
             detalle += `• ${qty}x ${prod.nombre}${opts} | precio ${price.toFixed(0)} | total ${sub.toFixed(0)}\n`;
         });
 
-        const totalBs = (total * (this.config.tasaBs || 1000)).toFixed(2);
+        const totalBs = (total * this.tasa()).toFixed(2);
         const fullPhone = country + phone;
         const negocio = ((this.config.nombre || 'DORITEQUE')).toUpperCase();
 
