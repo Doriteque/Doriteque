@@ -11,6 +11,7 @@ const app = {
     categoriaActiva: 'todas',
     busqueda: '',
     productoSeleccionado: null,
+    tasaBCV: null,
 
     async init() {
         localStorage.removeItem('doriteque_cart');
@@ -22,6 +23,13 @@ const app = {
         }
 
         try {
+            // Consultar tasa BCV automática al iniciar
+            try { 
+                this.tasaBCV = await window.obtenerTasaBCV(); 
+            } catch (e) { 
+                this.tasaBCV = null; 
+            }
+
             window.loadConfig((config) => {
                 this.config = config;
                 this.renderConfig();
@@ -47,9 +55,13 @@ const app = {
         }
     },
 
+    tasa() {
+        return (this.tasaBCV && this.tasaBCV > 0) ? this.tasaBCV : (this.config.tasaBs || 0);
+    },
+
     renderConfig() {
         document.getElementById('header-nombre').textContent = this.config.nombre;
-        document.getElementById('horario-text').textContent = ' ' + this.config.horario + ' | Tasa: Bs ' + this.config.tasaBs;
+        document.getElementById('horario-text').textContent = ' ' + this.config.horario + ' | Tasa: Bs ' + this.tasa().toFixed(2);
         document.getElementById('link-instagram').href = 'https://instagram.com/' + this.config.instagram;
         document.getElementById('link-tiktok').href = 'https://tiktok.com/@' + this.config.tiktok;
         document.getElementById('link-whatsapp').href = 'https://wa.me/' + this.config.whatsapp;
@@ -98,7 +110,6 @@ const app = {
         const texto = this.busqueda.toLowerCase().trim();
         let html = '';
 
-        // FIX: Si hay búsqueda activa, mostrar TODAS las categorías para que encuentre cualquier plato
         const hayBusqueda = texto.length > 0;
         const catsToShow = (this.categoriaActiva === 'todas' || hayBusqueda)
             ? this.menu.categorias
@@ -116,7 +127,7 @@ const app = {
             html += '<h2 class="titulo-seccion">' + cat.nombre + '</h2>';
 
             prods.forEach(p => {
-                const precioBs = (p.precio * this.config.tasaBs).toFixed(2);
+                const precioBs = (p.precio * this.tasa()).toFixed(2);
                 const img = p.imagen || placeholderImg(p.nombre);
 
                 html += '<article class="producto-card" onclick="app.openProductModal(\'' + p.id + '\')">';
@@ -141,7 +152,7 @@ const app = {
 
         this.productoSeleccionado = producto;
         const img = producto.imagen || placeholderImg(producto.nombre);
-        const precioBs = (producto.precio * this.config.tasaBs).toFixed(2);
+        const precioBs = (producto.precio * this.tasa()).toFixed(2);
 
         document.getElementById('modal-img').src = img;
         document.getElementById('modal-img').alt = producto.nombre;
@@ -370,7 +381,7 @@ const app = {
         document.getElementById('cart-total-usd').textContent = 'USD$ ' + totalUSD.toFixed(2);
         document.getElementById('cart-finalizar-total').textContent = 'USD$ ' + totalUSD.toFixed(2);
 
-        const totalBs = (totalUSD * this.config.tasaBs).toFixed(2);
+        const totalBs = (totalUSD * this.tasa()).toFixed(2);
         document.getElementById('cart-total-bs').textContent = 'Bs ' + totalBs;
 
         const cartBar = document.getElementById('cart-bar-floating');
@@ -506,7 +517,6 @@ const app = {
             }
         });
 
-        // FIX: Al limpiar, volver a "Todas" las categorías y actualizar la UI
         btnLimpiar.addEventListener('click', () => {
             inputBuscar.value = '';
             this.busqueda = '';
