@@ -1,53 +1,39 @@
-const CACHE_NAME = 'doriteque-admin-v3';
-const urlsToCache = [
-  './',
-  '../',
-  'index.html',
-  '../index.html',
-  '../css/style.css',
-  '../css/checkout.css',
-  'admin.css',
-  '../js/firebase.js',
-  '../js/db.js',
-  'admin.js',
-  '../assets/logo.png'
-];
+// admin/service-worker.js
+// Siempre intenta traer la versión más nueva desde internet.
+// Solo usa la copia guardada si no hay conexión. Así nunca te quedas con código viejo.
+const CACHE_NAME = 'doriteque-admin-v4';
 
-// Instalar Service Worker
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-    .then(cache => {
-      console.log('Archivos cacheados');
-      return cache.addAll(urlsToCache);
-    })
-  );
+self.addEventListener('install', () => {
+  self.skipWaiting(); // activar la versión nueva de inmediato
 });
 
-// Activar Service Worker
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys()
+    .then(names => Promise.all(
+      names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))
+    ))
+    .then(() => self.clients.claim()) // tomar control de las pestañas abiertas
   );
 });
 
-// Interceptar peticiones
 self.addEventListener('fetch', event => {
+  const req = event.request;
+  const url = new URL(req.url);
+  
+  // Solo archivos de este mismo sitio y solo GET. Firebase y demás van directo a la red.
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  
   event.respondWith(
-    caches.match(event.request)
-    .then(response => {
-      if (response) {
-        return response;
+    // 'no-cache' obliga al navegador a revisar si hay versión nueva (ignora el caché de 10 min de GitHub Pages)
+    fetch(new Request(req.url, { cache: 'no-cache' }))
+    .then(res => {
+      if (res && res.ok) {
+        const copia = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(req, copia));
       }
-      return fetch(event.request);
+      return res;
     })
+    .catch(() => caches.match(req))
   );
 });

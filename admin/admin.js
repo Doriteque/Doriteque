@@ -492,7 +492,49 @@ const admin = {
         setVal('msg-greeting', this.config.msgGreeting || '¡Gracias por tu pedido!');
         setVal('msg-before-detail', this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:');
         setVal('msg-after-total', this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar.');
-    },
+        this.mostrarTasaAuto();
+        },
+        
+        // Muestra la tasa BCV automática en el panel (y avisa si falló)
+        tasaAuto: null,
+            
+            async mostrarTasaAuto(forzar) {
+                    const valor = document.getElementById('tasa-auto-valor');
+                    const estado = document.getElementById('tasa-auto-estado');
+                    if (!valor || !estado) return;
+                    
+                    estado.style.color = '#b0b0b0';
+                    estado.textContent = 'Consultando BCV...';
+                    
+                    if (forzar) {
+                        try { localStorage.removeItem('doriteque_tasa_bcv'); } catch (e) {}
+                    }
+                    
+                    let tasa = null;
+                    try {
+                        if (typeof window.obtenerTasaBCV === 'function') tasa = await window.obtenerTasaBCV();
+                    } catch (e) { tasa = null; }
+                    this.tasaAuto = tasa;
+                    
+                    if (!tasa) {
+                        valor.textContent = '—';
+                        estado.style.color = '#FF4d4d';
+                        estado.textContent = '⚠️ No se pudo obtener la tasa automática. Los clientes verán la tasa manual de abajo: actualízala tú.';
+                        return;
+                    }
+                    
+                    valor.textContent = 'Bs ' + tasa.toFixed(2);
+                    estado.style.color = '#25D366';
+                    estado.textContent = '✅ Automática y actualizada hoy. Esta es la tasa que ven tus clientes.';
+                },
+                
+                // Copia la tasa automática al campo manual (queda lista para guardar como respaldo)
+                usarTasaAuto() {
+                    if (!this.tasaAuto) { alert('La tasa automática no está disponible ahora.'); return; }
+                    const input = document.getElementById('cfg-tasa');
+                    if (input) input.value = this.tasaAuto.toFixed(2);
+                    alert('Copiada. Pulsa "Guardar configuración" para dejarla como respaldo.');
+                },
 
     async saveConfig() {
         try {

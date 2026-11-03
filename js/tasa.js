@@ -66,7 +66,8 @@
       return tasa;
     } catch (e) {
       console.warn('No se pudo actualizar la tasa BCV:', e.message);
-      return cache ? cache.tasa : null;
+                  // Solo se reutiliza una tasa guardada si es de HOY; si no, se usa la manual del admin
+            return (cache && cache.dia === hoyVE()) ? cache.tasa : null;
     }
   };
 })();

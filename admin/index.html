@@ -72,7 +72,22 @@
                 <div class="form-group"><label>Instagram (sin @)</label><input type="text" id="cfg-instagram"></div>
                 <div class="form-group"><label>TikTok (sin @)</label><input type="text" id="cfg-tiktok"></div>
                 <div class="form-group"><label>Horario</label><input type="text" id="cfg-horario"></div>
-                <div class="form-group"><label>Tasa del día (Bs por USD)</label><input type="number" step="0.01" id="cfg-tasa"></div>
+                <div class="form-group">
+                    <label>Tasa BCV automática (Bs por USD)</label>
+                    <div style="background:#262626;border:1px solid #333;border-radius:12px;padding:12px;">
+                        <div id="tasa-auto-valor" style="font-size:1.6rem;font-weight:700;">—</div>
+                        <div id="tasa-auto-estado" style="font-size:0.85rem;margin-top:4px;color:#b0b0b0;">Consultando BCV...</div>
+                        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                            <button type="button" class="btn-secondary" onclick="admin.mostrarTasaAuto(true)"><i class="fa-solid fa-rotate"></i> Actualizar ahora</button>
+                            <button type="button" class="btn-secondary" onclick="admin.usarTasaAuto()"><i class="fa-solid fa-copy"></i> Copiar a la manual</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tasa manual de respaldo (Bs por USD)</label>
+                    <input type="number" step="0.01" id="cfg-tasa">
+                    <small style="color:#b0b0b0;">Solo se usa si la automática falla. Pulsa "Guardar configuración" después de cambiarla.</small>
+                </div>
                 <div class="form-group"><label>Métodos de pago (separados por coma)</label><input type="text" id="cfg-metodos"></div>
                 <div class="form-group"><label>URL del logo</label><input type="text" id="cfg-logo"></div>
                 <button class="btn-save" onclick="admin.saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Guardar configuración</button>
@@ -233,6 +248,7 @@
         </div>
     </div>
 
+    <script src="../js/tasa.js"></script>
     <script src="admin.js"></script>
     <script>
     if ('serviceWorker' in navigator) {
