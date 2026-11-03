@@ -2,10 +2,14 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finalizar Pedido - Doriteque</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/checkout.css">
+    <script>
+        // Versión que cambia cada 10 min: así el caché nunca deja la página con archivos viejos
+        window.V = Math.floor(Date.now() / 600000);
+        document.write('<link rel="stylesheet" href="css/style.css?v=' + window.V + '">');
+        document.write('<link rel="stylesheet" href="css/checkout.css?v=' + window.V + '">');
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script type="module" src="js/firebase.js"></script>
     <script type="module" src="js/db.js"></script>
@@ -69,25 +73,34 @@
             </div>
 
             <div class="form-group">
-                <label>Dirección <span class="required">*</span></label>
+                <label>Dirección de entrega <span class="required">*</span></label>
+
                 <div class="address-input-wrapper">
                     <i class="fa-solid fa-map"></i>
-                    <input type="text" id="address-search" placeholder="Escribe tu dirección..." autocomplete="off" autocapitalize="off">
+                    <input type="text" id="addr-sector" placeholder="Sector o urbanización" maxlength="80" autocomplete="off">
                 </div>
-                
-                <button type="button" class="btn-geolocation" onclick="checkout.getCurrentLocation()">
+
+                <div class="address-input-wrapper" style="margin-top:10px;">
+                    <i class="fa-solid fa-road"></i>
+                    <input type="text" id="addr-calle" placeholder="Calle o avenida, casa o edificio y apto" maxlength="120" autocomplete="off">
+                </div>
+
+                <div class="address-detail-wrapper" style="margin-top:10px;">
+                    <i class="fa-solid fa-flag"></i>
+                    <input type="text" id="addr-ref" placeholder="Punto de referencia (opcional)" maxlength="120" autocomplete="off">
+                </div>
+
+                <button type="button" class="btn-geolocation" id="btn-ubicacion" style="margin-top:14px;">
                     <i class="fa-solid fa-location-crosshairs"></i>
-                    <span>Usar mi ubicación actual</span>
+                    <span>Compartir mi ubicación exacta (Google Maps)</span>
                 </button>
-                
-                <div id="address-suggestions" class="address-suggestions"></div>
-                
+
+                <div id="ubicacion-estado" style="display:none;font-size:0.9rem;line-height:1.4;padding:10px 12px;border-radius:10px;margin-bottom:8px;"></div>
+
                 <div class="address-detail-wrapper">
-                    <i class="fa-solid fa-location-crosshairs"></i>
-                    <input type="text" id="address-detail-input" placeholder="Detalle (casa, apto, referencia)" autocapitalize="off">
+                    <i class="fa-solid fa-link"></i>
+                    <input type="url" id="maps-link" placeholder="O pega aquí tu enlace de Google Maps (opcional)" maxlength="300" inputmode="url" autocapitalize="off" autocomplete="off">
                 </div>
-                <input type="hidden" id="client-address">
-                <input type="hidden" id="client-address-detail">
             </div>
 
             <div class="form-group">
@@ -114,7 +127,9 @@
         </p>
     </main>
 
-    <script src="js/tasa.js"></script>
-    <script src="js/checkout.js"></script>
+    <script>
+        document.write('<script src="js/tasa.js?v=' + window.V + '"><\/script>');
+        document.write('<script src="js/checkout.js?v=' + window.V + '"><\/script>');
+    </script>
 </body>
 </html>

@@ -3,15 +3,37 @@ const checkout = {
     menu: { productos: [], modificadores: [] },
     cart: [],
     selectedPayment: '',
-    selectedAddress: null,
-    selectedCoords: null,
+    coords: null,        // { lat, lon, acc } tomado del GPS del teléfono
     tasaBCV: null,
+    enviando: false,
+
+    // ---------- Utilidades de seguridad ----------
+    esc(valor) {
+        return String(valor == null ? '' : valor)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    },
+
+    // Quita caracteres de control, espacios repetidos y limita el largo
+    limpiar(valor, max) {
+        return String(valor == null ? '' : valor)
+            .replace(/[\u0000-\u001F\u007F]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, max || 200);
+    },
+
+    valor(id) {
+        const el = document.getElementById(id);
+        return el ? el.value : '';
+    },
 
     async init() {
         try {
             // 1. Cargar carrito
-            const savedCart = localStorage.getItem('doriteque_cart');
-            this.cart = savedCart ? JSON.parse(savedCart) : [];
+            let savedCart = [];
+            try { savedCart = JSON.parse(localStorage.getItem('doriteque_cart')) || []; } catch (e) { savedCart = []; }
+            this.cart = Array.isArray(savedCart) ? savedCart : [];
 
             // 2. Verificar que Firebase esté cargado
             if (!window.loadConfig || !window.loadMenu) {
@@ -21,10 +43,10 @@ const checkout = {
             }
 
             // Consultar tasa BCV automática al iniciar
-            try { 
-                this.tasaBCV = await window.obtenerTasaBCV(); 
-            } catch (e) { 
-                this.tasaBCV = null; 
+            try {
+                this.tasaBCV = await window.obtenerTasaBCV();
+            } catch (e) {
+                this.tasaBCV = null;
             }
 
             // 3. Cargar config y menú
@@ -48,8 +70,7 @@ const checkout = {
 
             // 5. Limpiar campos
             setTimeout(() => {
-                const fields = ['client-name', 'client-phone', 'client-address', 'address-search', 'address-detail-input', 'client-note'];
-                fields.forEach(id => {
+                ['client-name', 'client-phone', 'addr-sector', 'addr-calle', 'addr-ref', 'maps-link', 'client-note'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });
@@ -60,16 +81,16 @@ const checkout = {
                     if (radio) radio.checked = false;
                 });
 
-                this.selectedAddress = null;
-                this.selectedCoords = null;
+                this.coords = null;
                 this.selectedPayment = '';
             }, 100);
 
-            // 6. Configurar hora actual exacta
+            // 6. Hora actual exacta
             setTimeout(() => this.setupDateTime(), 200);
 
-            // 7. Setup de búsqueda
-            this.setupAddressSearch();
+            // 7. Botón de ubicación
+            const btn = document.getElementById('btn-ubicacion');
+            if (btn) btn.addEventListener('click', () => this.capturarUbicacion());
         } catch (error) {
             console.error('Error en init:', error);
             alert('Error al cargar: ' + error.message);
@@ -82,7 +103,7 @@ const checkout = {
 
     setupDateTime() {
         const now = new Date();
-        
+
         const dtText = document.getElementById('datetime-text');
         if (dtText) {
             dtText.textContent = now.toLocaleString('es-VE', {
@@ -90,7 +111,7 @@ const checkout = {
                 hour: '2-digit', minute: '2-digit', hour12: true
             });
         }
-        
+
         const dtInput = document.getElementById('client-datetime');
         if (dtInput) {
             const year = now.getFullYear();
@@ -102,177 +123,108 @@ const checkout = {
         }
     },
 
-    setupAddressSearch() {
-        const searchInput = document.getElementById('address-search');
-        const suggestions = document.getElementById('address-suggestions');
-        let debounceTimer;
+    // ---------- Ubicación (sin APIs externas) ----------
+    // Usa el GPS del propio teléfono y manda un enlace de Google Maps con las coordenadas exactas.
+    capturarUbicacion() {
+        const btn = document.getElementById('btn-ubicacion');
+        const textoBtn = btn ? btn.querySelector('span') : null;
 
-        if (!searchInput) return;
-
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.trim();
-            clearTimeout(debounceTimer);
-            
-            if (query.length < 3) {
-                suggestions.classList.remove('active');
-                return;
-            }
-
-            debounceTimer = setTimeout(() => this.searchAddress(query), 300);
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#address-search') && !e.target.closest('#address-suggestions')) {
-                setTimeout(() => suggestions.classList.remove('active'), 200);
-            }
-        });
-    },
-
-    async searchAddress(query) {
-        try {
-            const container = document.getElementById('address-suggestions');
-            container.innerHTML = '';
-            
-            const cleanQuery = query.trim().replace(/\s+/g, ' ');
-            if (cleanQuery.length < 3) {
-                container.classList.remove('active');
-                return;
-            }
-
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&countrycodes=ve&viewbox=-73.3,12.5,-59.8,0.9&bounded=0&limit=10&addressdetails=1&accept-language=es`;
-            const response = await fetch(url);
-            const results = await response.json();
-            
-            if (results.length === 0) {
-                const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&limit=10&addressdetails=1&accept-language=es`;
-                const response2 = await fetch(url2);
-                const results2 = await response2.json();
-                
-                if (results2.length === 0) {
-                    container.classList.remove('active');
-                    return;
-                }
-                this.renderSuggestions(results2, container);
-                return;
-            }
-
-            this.renderSuggestions(results, container);
-        } catch (error) {
-            console.error('Error buscando dirección:', error);
-        }
-    },
-
-    renderSuggestions(results, container) {
-        const unique = [];
-        const seen = new Set();
-        
-        results.forEach(result => {
-            if (!seen.has(result.display_name)) {
-                seen.add(result.display_name);
-                unique.push(result);
-            }
-        });
-
-        unique.slice(0, 8).forEach(result => {
-            const div = document.createElement('div');
-            div.className = 'address-suggestion';
-            
-            const parts = result.display_name.split(',');
-            const main = parts[0].trim();
-            const sub = parts.slice(1, 4).join(', ').trim();
-            
-            div.innerHTML = `
-                <i class="fa-solid fa-location-dot"></i>
-                <div class="address-suggestion-text">
-                    <div class="address-suggestion-main">${main}</div>
-                    <div class="address-suggestion-sub">${sub}</div>
-                </div>
-            `;
-            
-            div.onclick = () => this.selectAddress(result);
-            container.appendChild(div);
-        });
-
-        container.classList.add('active');
-    },
-
-    selectAddress(result) {
-        this.selectedAddress = result.display_name;
-        this.selectedCoords = {
-            lat: parseFloat(result.lat),
-            lon: parseFloat(result.lon)
-        };
-        
-        const addr = document.getElementById('client-address');
-        if (addr) addr.value = result.display_name;
-        
-        const search = document.getElementById('address-search');
-        if (search) search.value = result.display_name;
-        
-        const suggestions = document.getElementById('address-suggestions');
-        if (suggestions) suggestions.classList.remove('active');
-    },
-
-    getCurrentLocation() {
-        const btn = document.querySelector('.btn-geolocation');
-        
         if (!navigator.geolocation) {
-            alert('Tu navegador no soporta geolocalización.');
+            alert('Tu navegador no permite obtener la ubicación. Pega un enlace de Google Maps en el campo de abajo.');
             return;
         }
 
-        btn.classList.add('loading');
-        btn.innerHTML = '<i class="fa-solid fa-spinner"></i><span>Obteniendo ubicación...</span>';
+        if (btn) btn.classList.add('loading');
+        if (textoBtn) textoBtn.textContent = 'Obteniendo ubicación...';
+
+        const restaurar = () => {
+            if (btn) btn.classList.remove('loading');
+            if (textoBtn) textoBtn.textContent = 'Compartir mi ubicación exacta (Google Maps)';
+        };
 
         navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                try {
-                    await this.reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-                    btn.classList.remove('loading');
-                    btn.innerHTML = '<i class="fa-solid fa-check"></i><span>¡Ubicación encontrada!</span>';
-                    setTimeout(() => {
-                        btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
-                    }, 2000);
-                } catch (err) {
-                    alert('No se pudo obtener la dirección.');
-                    btn.classList.remove('loading');
-                    btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
-                }
+            (pos) => {
+                this.coords = {
+                    lat: pos.coords.latitude,
+                    lon: pos.coords.longitude,
+                    acc: Math.round(pos.coords.accuracy || 0)
+                };
+                restaurar();
+                this.mostrarEstadoUbicacion();
             },
             (err) => {
-                btn.classList.remove('loading');
-                btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i><span>Usar mi ubicación actual</span>';
-                alert('Error de ubicación: ' + err.message);
+                restaurar();
+                let msg = 'No se pudo obtener tu ubicación.';
+                if (err.code === 1) msg = 'Permiso de ubicación denegado. Actívalo en los ajustes de tu navegador o pega un enlace de Google Maps.';
+                else if (err.code === 2) msg = 'Tu ubicación no está disponible ahora. Prueba cerca de una ventana o pega un enlace de Google Maps.';
+                else if (err.code === 3) msg = 'Tardó demasiado en obtener la ubicación. Inténtalo otra vez.';
+                alert(msg);
             },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
         );
     },
 
-    async reverseGeocode(lat, lon) {
-        try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&accept-language=es&addressdetails=1`);
-            const data = await response.json();
-            
-            if (data && data.display_name) {
-                this.selectAddress({ display_name: data.display_name, lat, lon });
-                
-                const shortAddr = data.display_name.split(',').slice(0, 3).join(',').trim();
-                setTimeout(() => {
-                    alert(`📍 Dirección:\n\n"${shortAddr}"\n\n⚠️ VERIFICA que sea correcta. Si no, edítala manualmente.`);
-                }, 500);
-            } else {
-                throw new Error('No se pudo obtener la dirección');
-            }
-        } catch (error) {
-            console.error('Error en reverse geocoding:', error);
-            throw error;
-        }
+    mostrarEstadoUbicacion() {
+        const box = document.getElementById('ubicacion-estado');
+        if (!box || !this.coords) return;
+
+        const precisa = this.coords.acc > 0 && this.coords.acc <= 100;
+        box.style.display = 'block';
+        box.style.background = precisa ? '#e8f8ee' : '#fff4e0';
+        box.style.color = precisa ? '#14693a' : '#8a5a00';
+        box.textContent = '';
+
+        const linea = document.createElement('div');
+        linea.textContent = precisa
+            ? '✅ Ubicación capturada (precisión aprox. ' + this.coords.acc + ' m). '
+            : '⚠️ Ubicación capturada con baja precisión (aprox. ' + this.coords.acc + ' m). Pégame mejor un enlace de Google Maps. ';
+        box.appendChild(linea);
+
+        const a = document.createElement('a');
+        a.href = this.enlaceCoordenadas();
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = 'Verla en Google Maps';
+        a.style.fontWeight = '700';
+        box.appendChild(a);
+    },
+
+    enlaceCoordenadas() {
+        if (!this.coords) return '';
+        return 'https://www.google.com/maps?q=' + this.coords.lat.toFixed(6) + ',' + this.coords.lon.toFixed(6);
+    },
+
+    // Acepta solo enlaces https de Google Maps. Devuelve el enlace limpio o ''
+    validarEnlaceMapas(texto) {
+        const t = this.limpiar(texto, 300);
+        if (!t) return '';
+        let u;
+        try { u = new URL(t); } catch (e) { return ''; }
+        if (u.protocol !== 'https:') return '';
+        const host = u.hostname.toLowerCase();
+        const esGoogleMaps =
+            (/^(www\.)?google\.[a-z.]{2,6}$/.test(host) && u.pathname.startsWith('/maps')) ||
+            (/^maps\.google\.[a-z.]{2,6}$/.test(host)) ||
+            (host === 'maps.app.goo.gl') ||
+            (host === 'goo.gl' && u.pathname.startsWith('/maps'));
+        return esGoogleMaps ? u.href : '';
+    },
+
+    // Enlace final para el pedido: el pegado por el cliente tiene prioridad sobre el GPS
+    enlaceFinal() {
+        const pegado = this.validarEnlaceMapas(this.valor('maps-link'));
+        return pegado || this.enlaceCoordenadas();
+    },
+
+    // Deja solo dígitos y quita el 0 inicial (0412 -> 412)
+    telefonoLimpio() {
+        return this.valor('client-phone').replace(/\D/g, '').replace(/^0+/, '');
     },
 
     renderItems() {
         const container = document.getElementById('checkout-items');
         if (!container) return;
-        
+
         let html = '';
         let totalUSD = 0;
         let totalItems = 0;
@@ -281,10 +233,10 @@ const checkout = {
             if (!item || !item.id) return;
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
-            
+
             let price = prod.precio || 0;
             let optsText = '';
-            
+
             if (item.opciones) {
                 Object.keys(item.opciones).forEach(mod => {
                     item.opciones[mod].forEach(opt => {
@@ -294,10 +246,10 @@ const checkout = {
                             if (o) price += o.precio || 0;
                         }
                     });
-                    optsText += `<div class="checkout-item-opciones">${mod}: ${item.opciones[mod].join(', ')}</div>`;
+                    optsText += `<div class="checkout-item-opciones">${this.esc(mod)}: ${this.esc(item.opciones[mod].join(', '))}</div>`;
                 });
             }
-            
+
             const qty = item.qty || 1;
             const sub = price * qty;
             totalUSD += sub;
@@ -305,7 +257,7 @@ const checkout = {
 
             html += `<div class="checkout-item">
                 <div class="checkout-item-info">
-                    <div class="checkout-item-name">${prod.nombre}</div>
+                    <div class="checkout-item-name">${this.esc(prod.nombre)}</div>
                     ${optsText}
                     <div class="checkout-item-qty">${qty}x $${price.toFixed(2)}</div>
                 </div>
@@ -314,13 +266,13 @@ const checkout = {
         });
 
         container.innerHTML = html;
-        
+
         const ec = document.getElementById('edit-cart-count');
         if (ec) ec.textContent = totalItems;
-        
+
         const st = document.getElementById('checkout-subtotal');
         if (st) st.textContent = 'USD$ ' + totalUSD.toFixed(2);
-        
+
         const tt = document.getElementById('checkout-total-usd');
         if (tt) tt.textContent = 'USD$ ' + totalUSD.toFixed(2);
     },
@@ -328,14 +280,32 @@ const checkout = {
     renderPaymentMethods() {
         const container = document.getElementById('payment-methods');
         if (!container) return;
-        
-        const methods = this.config.metodosPago || ['Efectivo'];
-        container.innerHTML = methods.map((m, i) => `
-            <div class="payment-option" onclick="checkout.selectPayment('${m}', this)">
-                <input type="radio" name="payment" value="${m}" id="pay-${i}">
-                <label for="pay-${i}">${m}</label>
-            </div>
-        `).join('');
+
+        const methods = Array.isArray(this.config.metodosPago) && this.config.metodosPago.length
+            ? this.config.metodosPago
+            : ['Efectivo'];
+
+        container.textContent = '';
+        methods.forEach((m, i) => {
+            const nombre = this.limpiar(m, 60);
+            const div = document.createElement('div');
+            div.className = 'payment-option';
+
+            const input = document.createElement('input');
+            input.type = 'radio';
+            input.name = 'payment';
+            input.value = nombre;
+            input.id = 'pay-' + i;
+
+            const label = document.createElement('label');
+            label.setAttribute('for', 'pay-' + i);
+            label.textContent = nombre;
+
+            div.appendChild(input);
+            div.appendChild(label);
+            div.addEventListener('click', () => this.selectPayment(nombre, div));
+            container.appendChild(div);
+        });
     },
 
     selectPayment(method, el) {
@@ -346,25 +316,27 @@ const checkout = {
     },
 
     buildMessage() {
-        const name = (document.getElementById('client-name').value || '').trim();
-        const country = document.getElementById('client-country').value;
-        const phone = (document.getElementById('client-phone').value || '').trim();
-        const addr = (document.getElementById('client-address').value || document.getElementById('address-search').value || '').trim();
-        const detail = (document.getElementById('address-detail-input').value || '').trim();
-        const dt = document.getElementById('client-datetime').value;
-        const note = (document.getElementById('client-note').value || '').trim();
+        const name = this.limpiar(this.valor('client-name'), 80);
+        const country = this.valor('client-country').replace(/\D/g, '');
+        const phone = this.telefonoLimpio();
+        const sector = this.limpiar(this.valor('addr-sector'), 80);
+        const calle = this.limpiar(this.valor('addr-calle'), 120);
+        const ref = this.limpiar(this.valor('addr-ref'), 120);
+        const mapa = this.enlaceFinal();
+        const dt = this.valor('client-datetime');
+        const note = this.limpiar(this.valor('client-note'), 300);
 
         let total = 0;
         let detalle = '';
-        
+
         this.cart.forEach(item => {
             if (!item || !item.id) return;
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
-            
+
             let price = prod.precio || 0;
             let opts = '';
-            
+
             if (item.opciones) {
                 const allOptions = [];
                 Object.keys(item.opciones).forEach(mod => {
@@ -381,7 +353,7 @@ const checkout = {
                     opts = ` (${allOptions.join(', ')})`;
                 }
             }
-            
+
             const qty = item.qty || 1;
             const sub = price * qty;
             total += sub;
@@ -395,28 +367,27 @@ const checkout = {
         let fechaHora = '';
         if (dt) {
             const d = new Date(dt);
-            fechaHora = d.toLocaleString('es-VE', { 
+            fechaHora = d.toLocaleString('es-VE', {
                 day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit', hour12: true 
+                hour: '2-digit', minute: '2-digit', hour12: true
             });
         }
 
         const header = (this.config.msgHeader || '🍔 *NUEVO PEDIDO*');
         const greeting = (this.config.msgGreeting || '');
-        
+
         let msg = header + ' - ' + negocio + '\n\n';
         if (greeting) msg += greeting + '\n\n';
         msg += `👤 *Nombre completo*\n${name}\n\n`;
         msg += `📱 *Nro. de WhatsApp*\n+${fullPhone}\n\n`;
         if (fechaHora) msg += `📅 *Fecha y hora del pedido*\n${fechaHora}\n\n`;
         if (note) msg += `⚠️ *Observación adicional*\n${note}\n\n`;
-        
-        if (addr) {
-            msg += `📍 *Dirección de entrega*\n${addr}`;
-            if (detail) msg += `. ${detail}`;
-            msg += '\n\n';
-        }
-        
+
+        msg += `📍 *Dirección de entrega*\n${sector}. ${calle}`;
+        if (ref) msg += `\nReferencia: ${ref}`;
+        msg += '\n\n';
+        if (mapa) msg += `🗺️ *Ubicación en Google Maps*\n${mapa}\n\n`;
+
         msg += `📝 *Detalle del pedido*\n${detalle}`;
         msg += '---------------------------\n\n';
         msg += `💵 *Sub-total:* USD$ ${total.toFixed(2)}\n`;
@@ -427,25 +398,37 @@ const checkout = {
     },
 
     sendOrder() {
-        const name = (document.getElementById('client-name').value || '').trim();
-        const phone = (document.getElementById('client-phone').value || '').trim();
-        const addr = (document.getElementById('client-address').value || document.getElementById('address-search').value || '').trim();
+        if (this.enviando) return;
 
-        if (!name) { alert('Ingresa tu nombre.'); return; }
-        if (!phone) { alert('Ingresa tu WhatsApp.'); return; }
-        if (!addr) { alert('Ingresa tu dirección.'); return; }
+        const name = this.limpiar(this.valor('client-name'), 80);
+        const phone = this.telefonoLimpio();
+        const sector = this.limpiar(this.valor('addr-sector'), 80);
+        const calle = this.limpiar(this.valor('addr-calle'), 120);
+        const linkPegado = this.limpiar(this.valor('maps-link'), 300);
+
+        if (name.length < 2) { alert('Ingresa tu nombre.'); return; }
+        if (phone.length < 7 || phone.length > 11) { alert('Ingresa un número de WhatsApp válido (sin el código del país).'); return; }
+        if (!sector) { alert('Ingresa tu sector o urbanización.'); return; }
+        if (!calle) { alert('Ingresa tu calle, casa o edificio.'); return; }
+        if (linkPegado && !this.validarEnlaceMapas(linkPegado)) {
+            alert('El enlace no parece ser de Google Maps. Revísalo o déjalo vacío.');
+            return;
+        }
         if (!this.selectedPayment) { alert('Selecciona método de pago.'); return; }
 
+        const whatsapp = String(this.config.whatsapp || '').replace(/\D/g, '');
+        if (!whatsapp) { alert('El negocio aún no tiene WhatsApp configurado.'); return; }
+
+        this.enviando = true;
         const msg = this.buildMessage();
-        const url = `https://wa.me/${this.config.whatsapp}?text=${encodeURIComponent(msg)}`;
-        window.open(url, '_blank');
+        const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank', 'noopener');
 
         localStorage.removeItem('doriteque_cart');
         this.cart = [];
-        this.selectedAddress = null;
-        this.selectedCoords = null;
+        this.coords = null;
         this.selectedPayment = '';
-        
+
         setTimeout(() => { window.location.href = 'index.html'; }, 1000);
     }
 };
