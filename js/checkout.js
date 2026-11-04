@@ -422,7 +422,6 @@ const checkout = {
         const msg = this.buildMessage();
         const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank', 'noopener');
-        try { localStorage.setItem('doriteque_pedido', JSON.stringify({ t: Date.now() })); } catch (e) {}
 
         localStorage.removeItem('doriteque_cart');
         this.cart = [];
