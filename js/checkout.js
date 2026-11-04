@@ -42,11 +42,14 @@ const checkout = {
                 return;
             }
 
-            // Consultar tasa BCV automática al iniciar
+            // Tasa BCV: se usa la guardada de hoy al instante y se actualiza en paralelo (sin retrasar la página)
             try {
-                this.tasaBCV = await window.obtenerTasaBCV();
-            } catch (e) {
-                this.tasaBCV = null;
+                const c = JSON.parse(localStorage.getItem('doriteque_tasa_bcv'));
+                const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+                if (c && c.dia === hoy && Number(c.tasa) > 0) this.tasaBCV = Number(c.tasa);
+            } catch (e) { }
+            if (typeof window.obtenerTasaBCV === 'function') {
+                window.obtenerTasaBCV().then((t) => { if (t) this.tasaBCV = t; }).catch(() => { });
             }
 
             // 3. Cargar config y menú

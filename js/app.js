@@ -52,7 +52,47 @@ function placeholderImg(texto) {
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
 
+// ---------- Caché del menú (para que abra al instante la segunda vez) ----------
+const CACHE_MENU = 'doriteque_menu_cache_v1';
+const CACHE_CONFIG = 'doriteque_config_cache_v1';
+
+function leerCache(clave) {
+    try {
+        const t = localStorage.getItem(clave);
+        return t ? JSON.parse(t) : null;
+    } catch (e) { return null; }
+}
+
+function guardarCache(clave, valor) {
+    try {
+        const t = JSON.stringify(valor);
+        if (t.length < 1500000) localStorage.setItem(clave, t); // si es demasiado grande, no se guarda
+    } catch (e) { /* sin espacio: se ignora */ }
+}
+
+function normalizarMenu(m) {
+    const menu = m || {};
+    return {
+        ...menu,
+        categorias: Array.isArray(menu.categorias) ? menu.categorias : [],
+        productos: Array.isArray(menu.productos) ? menu.productos : [],
+        modificadores: Array.isArray(menu.modificadores) ? menu.modificadores : []
+    };
+}
+
+// Tasa guardada de HOY (si la hay) para el primer dibujo de la página
+function tasaGuardadaDeHoy() {
+    try {
+        const c = JSON.parse(localStorage.getItem('doriteque_tasa_bcv'));
+        const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+        if (c && c.dia === hoy && Number(c.tasa) > 0) return Number(c.tasa);
+    } catch (e) { }
+    return null;
+}
+
 const app = {
+    _menuTexto: '',
+    observador: null,
     config: {},
     menu: { categorias: [], productos: [], modificadores: [] },
     cart: [],
@@ -66,41 +106,99 @@ const app = {
         this.cart = [];
 
         if (!window.loadConfig || !window.loadMenu) {
-            setTimeout(() => this.init(), 500);
+            setTimeout(() => this.init(), 300);
             return;
         }
 
         try {
-            // Consultar tasa BCV automática al iniciar
-            try {
-                this.tasaBCV = await window.obtenerTasaBCV();
-            } catch (e) {
-                this.tasaBCV = null;
-            }
-
             window.loadConfig((config) => {
                 this.config = config || {};
+                guardarCache(CACHE_CONFIG, this.config);
                 this.renderConfig();
             });
 
             window.loadMenu((menu) => {
-                this.menu = menu || {};
-                if (!Array.isArray(this.menu.modificadores)) this.menu.modificadores = [];
-                if (!Array.isArray(this.menu.categorias)) this.menu.categorias = [];
-                if (!Array.isArray(this.menu.productos)) this.menu.productos = [];
+                const nuevo = normalizarMenu(menu);
+                guardarCache(CACHE_MENU, nuevo);
+                this.menu = nuevo;
 
-                this.renderCategorias();
-                this.renderProductos();
-                this.updateCartUI();
-
-                setTimeout(() => this.setupScrollSpy(), 500);
+                // Solo se vuelve a dibujar si algo cambió (evita parpadeos y saltos de pantalla)
+                const texto = JSON.stringify(nuevo);
+                if (texto !== this._menuTexto) {
+                    this._menuTexto = texto;
+                    this.renderCategorias();
+                    this.renderProductos();
+                    this.updateCartUI();
+                }
+                setTimeout(() => this.setupScrollSpy(), 300);
             });
 
             this.setupEventListeners();
+            this.actualizarTasa(); // en paralelo: ya no retrasa el menú
         } catch (error) {
             console.error('Error cargando datos:', error);
             document.getElementById('productos-grid').innerHTML = '<p class="loading">Error al cargar el menú.</p>';
         }
+    },
+
+    // Dibuja al instante lo último que vio el cliente, mientras Firebase termina de cargar
+    renderDesdeCache() {
+        try {
+            const cfg = leerCache(CACHE_CONFIG);
+            const mnu = leerCache(CACHE_MENU);
+            if (!mnu) return false;
+
+            if (cfg) this.config = cfg;
+            this.tasaBCV = tasaGuardadaDeHoy();
+            this.menu = normalizarMenu(mnu);
+            this._menuTexto = JSON.stringify(this.menu);
+
+            if (cfg) this.renderConfig();
+            this.renderCategorias();
+            this.renderProductos();
+            this.updateCartUI();
+            setTimeout(() => this.setupScrollSpy(), 300);
+            return true;
+        } catch (e) {
+            console.warn('No se pudo usar el caché del menú:', e.message);
+            return false;
+        }
+    },
+
+    // Esqueleto gris animado mientras carga la primera vez
+    mostrarEsqueleto() {
+        const grid = document.getElementById('productos-grid');
+        if (!grid) return;
+        if (!document.getElementById('esqueleto-estilo')) {
+            const st = document.createElement('style');
+            st.id = 'esqueleto-estilo';
+            st.textContent =
+                '@keyframes esqueletoBrillo{0%{background-position:-200px 0}100%{background-position:calc(200px + 100%) 0}}' +
+                '.esqueleto-card{background:#1f1f1f;border-radius:16px;padding:12px;margin:12px 0;}' +
+                '.esqueleto-img,.esqueleto-linea{border-radius:10px;background:linear-gradient(90deg,#2a2a2a 0,#3a3a3a 50%,#2a2a2a 100%);background-size:200px 100%;background-repeat:no-repeat;background-color:#2a2a2a;animation:esqueletoBrillo 1.2s infinite linear;}' +
+                '.esqueleto-img{height:150px;margin-bottom:12px;}' +
+                '.esqueleto-linea{height:14px;margin:8px 0;width:80%;}' +
+                '.esqueleto-linea.corta{width:45%;}';
+            document.head.appendChild(st);
+        }
+        let h = '';
+        for (let i = 0; i < 4; i++) {
+            h += '<div class="esqueleto-card"><div class="esqueleto-img"></div><div class="esqueleto-linea"></div><div class="esqueleto-linea corta"></div></div>';
+        }
+        grid.innerHTML = h;
+    },
+
+    // Consulta la tasa BCV sin bloquear el menú; al llegar, actualiza los precios en Bs
+    actualizarTasa() {
+        if (typeof window.obtenerTasaBCV !== 'function') return;
+        window.obtenerTasaBCV().then((t) => {
+            if (t && t > 0 && t !== this.tasaBCV) {
+                this.tasaBCV = t;
+                this.renderConfig();
+                this.renderProductos();
+                this.updateCartUI();
+            }
+        }).catch(() => { });
     },
 
     tasa() {
@@ -117,7 +215,9 @@ const app = {
         const metodos = Array.isArray(c.metodosPago) ? c.metodosPago : [];
         document.getElementById('footer-metodos').textContent = '💳 ' + metodos.join(' | ');
         const logo = urlImagenSegura(c.logo);
-        if (logo) document.getElementById('header-logo').src = logo;
+        const esLogoPorDefecto = !logo || /(^|\/)assets\/logo\.png$/.test(logo);
+        // Si el logo es el de siempre, se usa la versión liviana (12 KB en vez de 158 KB)
+        document.getElementById('header-logo').src = esLogoPorDefecto ? 'assets/logo-header.webp' : logo;
         this.revisarResena();
     },
 
@@ -645,6 +745,7 @@ const app = {
     setupScrollSpy() {
         const secciones = document.querySelectorAll('.seccion-categoria');
         if (secciones.length === 0) return;
+        if (this.observador) this.observador.disconnect();
 
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -669,6 +770,7 @@ const app = {
             threshold: 0
         });
 
+        this.observador = observer;
         secciones.forEach(seccion => observer.observe(seccion));
     },
 
@@ -736,5 +838,8 @@ const app = {
         this.updateCartUI();
     }
 };
+
+// Pintar al instante lo último que vio el cliente (si lo hay); si es su primera visita, mostrar el esqueleto
+try { if (!app.renderDesdeCache()) app.mostrarEsqueleto(); } catch (e) { console.warn('Arranque rápido omitido:', e.message); }
 
 document.addEventListener('DOMContentLoaded', () => app.init());
