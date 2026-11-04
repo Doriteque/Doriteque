@@ -7,8 +7,11 @@
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Doriteque - Menú Digital</title>
-    <link rel="stylesheet" href="css/style.css?v=3">
-    <link rel="manifest" href="admin/manifest.json?v=3">
+        <script>
+        // Versión que cambia cada 10 min: así el caché nunca deja la página con archivos viejos
+        window.V = Math.floor(Date.now() / 600000);
+        document.write('<link rel="stylesheet" href="css/style.css?v=' + window.V + '">');
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://firestore.googleapis.com">
@@ -333,9 +336,10 @@
         </div>
     </div>
 
-    <!-- SCRIPTS -->
-    <script src="js/tasa.js"></script>
-    <script src="js/app.js"></script>
+        <script>
+        document.write('<script src="js/tasa.js?v=' + window.V + '"><\/script>');
+        document.write('<script src="js/app.js?v=' + window.V + '"><\/script>');
+    </script>
     
     <script>
     // Control de modales legales

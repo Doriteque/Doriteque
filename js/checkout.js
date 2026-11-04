@@ -70,7 +70,7 @@ const checkout = {
 
             // 5. Limpiar campos
             setTimeout(() => {
-                ['client-name', 'client-phone', 'addr-sector', 'addr-calle', 'addr-ref', 'maps-link', 'client-note'].forEach(id => {
+                ['client-name', 'client-phone', 'addr-calle', 'addr-ref', 'client-note'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });
@@ -130,7 +130,7 @@ const checkout = {
         const textoBtn = btn ? btn.querySelector('span') : null;
 
         if (!navigator.geolocation) {
-            alert('Tu navegador no permite obtener la ubicación. Pega un enlace de Google Maps en el campo de abajo.');
+            alert('Tu navegador no permite obtener la ubicación. Escribe tu dirección y un punto de referencia.');
             return;
         }
 
@@ -151,12 +151,13 @@ const checkout = {
                 };
                 restaurar();
                 this.mostrarEstadoUbicacion();
+                this.actualizarObligatorios();
             },
             (err) => {
                 restaurar();
                 let msg = 'No se pudo obtener tu ubicación.';
-                if (err.code === 1) msg = 'Permiso de ubicación denegado. Actívalo en los ajustes de tu navegador o pega un enlace de Google Maps.';
-                else if (err.code === 2) msg = 'Tu ubicación no está disponible ahora. Prueba cerca de una ventana o pega un enlace de Google Maps.';
+                if (err.code === 1) msg = 'Permiso de ubicación denegado. Actívalo en los ajustes de tu navegador o escribe tu dirección y un punto de referencia.';
+                else if (err.code === 2) msg = 'Tu ubicación no está disponible ahora. Prueba cerca de una ventana o escribe tu dirección y un punto de referencia.';
                 else if (err.code === 3) msg = 'Tardó demasiado en obtener la ubicación. Inténtalo otra vez.';
                 alert(msg);
             },
@@ -177,7 +178,7 @@ const checkout = {
         const linea = document.createElement('div');
         linea.textContent = precisa
             ? '✅ Ubicación capturada (precisión aprox. ' + this.coords.acc + ' m). '
-            : '⚠️ Ubicación capturada con baja precisión (aprox. ' + this.coords.acc + ' m). Pégame mejor un enlace de Google Maps. ';
+            : '⚠️ Ubicación capturada con baja precisión (aprox. ' + this.coords.acc + ' m). Intenta de nuevo cerca de una ventana o escribe tu dirección y un punto de referencia. ';
         box.appendChild(linea);
 
         const a = document.createElement('a');
@@ -194,26 +195,23 @@ const checkout = {
         return 'https://www.google.com/maps?q=' + this.coords.lat.toFixed(6) + ',' + this.coords.lon.toFixed(6);
     },
 
-    // Acepta solo enlaces https de Google Maps. Devuelve el enlace limpio o ''
-    validarEnlaceMapas(texto) {
-        const t = this.limpiar(texto, 300);
-        if (!t) return '';
-        let u;
-        try { u = new URL(t); } catch (e) { return ''; }
-        if (u.protocol !== 'https:') return '';
-        const host = u.hostname.toLowerCase();
-        const esGoogleMaps =
-            (/^(www\.)?google\.[a-z.]{2,6}$/.test(host) && u.pathname.startsWith('/maps')) ||
-            (/^maps\.google\.[a-z.]{2,6}$/.test(host)) ||
-            (host === 'maps.app.goo.gl') ||
-            (host === 'goo.gl' && u.pathname.startsWith('/maps'));
-        return esGoogleMaps ? u.href : '';
-    },
+    // Si ya hay ubicación GPS, la dirección escrita y la referencia pasan a ser opcionales
+    actualizarObligatorios() {
+        const tieneGPS = !!this.coords;
+        const ast = document.getElementById('addr-required');
+        if (ast) ast.style.display = tieneGPS ? 'none' : 'inline';
 
-    // Enlace final para el pedido: el pegado por el cliente tiene prioridad sobre el GPS
-    enlaceFinal() {
-        const pegado = this.validarEnlaceMapas(this.valor('maps-link'));
-        return pegado || this.enlaceCoordenadas();
+        const calle = document.getElementById('addr-calle');
+        const ref = document.getElementById('addr-ref');
+        if (calle) calle.placeholder = tieneGPS ? 'Sector, calle, casa o edificio (opcional)' : 'Sector, calle, casa o edificio y apto';
+        if (ref) ref.placeholder = tieneGPS ? 'Punto de referencia (opcional)' : 'Punto de referencia';
+
+        const ayuda = document.getElementById('addr-ayuda');
+        if (ayuda) {
+            ayuda.textContent = tieneGPS
+                ? 'Ya tenemos tu ubicación. Si quieres, agrega tu dirección o un punto de referencia.'
+                : 'Escribe tu dirección y un punto de referencia, o comparte tu ubicación con el botón azul.';
+        }
     },
 
     // Deja solo dígitos y quita el 0 inicial (0412 -> 412)
@@ -319,10 +317,9 @@ const checkout = {
         const name = this.limpiar(this.valor('client-name'), 80);
         const country = this.valor('client-country').replace(/\D/g, '');
         const phone = this.telefonoLimpio();
-        const sector = this.limpiar(this.valor('addr-sector'), 80);
-        const calle = this.limpiar(this.valor('addr-calle'), 120);
+        const calle = this.limpiar(this.valor('addr-calle'), 200);
         const ref = this.limpiar(this.valor('addr-ref'), 120);
-        const mapa = this.enlaceFinal();
+        const mapa = this.enlaceCoordenadas();
         const dt = this.valor('client-datetime');
         const note = this.limpiar(this.valor('client-note'), 300);
 
@@ -383,9 +380,12 @@ const checkout = {
         if (fechaHora) msg += `📅 *Fecha y hora del pedido*\n${fechaHora}\n\n`;
         if (note) msg += `⚠️ *Observación adicional*\n${note}\n\n`;
 
-        msg += `📍 *Dirección de entrega*\n${sector}. ${calle}`;
-        if (ref) msg += `\nReferencia: ${ref}`;
-        msg += '\n\n';
+        if (calle || ref) {
+            msg += '📍 *Dirección de entrega*\n';
+            if (calle) msg += `${calle}\n`;
+            if (ref) msg += `Referencia: ${ref}\n`;
+            msg += '\n';
+        }
         if (mapa) msg += `🗺️ *Ubicación en Google Maps*\n${mapa}\n\n`;
 
         msg += `📝 *Detalle del pedido*\n${detalle}`;
@@ -402,17 +402,16 @@ const checkout = {
 
         const name = this.limpiar(this.valor('client-name'), 80);
         const phone = this.telefonoLimpio();
-        const sector = this.limpiar(this.valor('addr-sector'), 80);
-        const calle = this.limpiar(this.valor('addr-calle'), 120);
-        const linkPegado = this.limpiar(this.valor('maps-link'), 300);
+        const calle = this.limpiar(this.valor('addr-calle'), 200);
+        const ref = this.limpiar(this.valor('addr-ref'), 120);
 
         if (name.length < 2) { alert('Ingresa tu nombre.'); return; }
         if (phone.length < 7 || phone.length > 11) { alert('Ingresa un número de WhatsApp válido (sin el código del país).'); return; }
-        if (!sector) { alert('Ingresa tu sector o urbanización.'); return; }
-        if (!calle) { alert('Ingresa tu calle, casa o edificio.'); return; }
-        if (linkPegado && !this.validarEnlaceMapas(linkPegado)) {
-            alert('El enlace no parece ser de Google Maps. Revísalo o déjalo vacío.');
-            return;
+
+        // Sin ubicación GPS: la dirección y el punto de referencia son obligatorios
+        if (!this.coords) {
+            if (calle.length < 5) { alert('Escribe tu dirección o comparte tu ubicación con el botón azul.'); return; }
+            if (ref.length < 3) { alert('Escribe un punto de referencia o comparte tu ubicación con el botón azul.'); return; }
         }
         if (!this.selectedPayment) { alert('Selecciona método de pago.'); return; }
 

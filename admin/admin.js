@@ -386,13 +386,10 @@ const admin = {
         ctx.stroke();
         ctx.globalAlpha = 1;
 
-        // QR con corrección alta (tolera el logo encima)
+                // QR con corrección alta (tolera el logo encima), generado localmente
         const qrSize = 560;
         const qrY = cardY + 80;
-        const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + qrSize + 'x' + qrSize +
-            '&ecc=H&color=' + f.colorPrimario.replace('#', '') + '&bgcolor=FFFFFF&data=' + encodeURIComponent(url);
-        const qr = await this.loadQRImage(qrUrl);
-        ctx.drawImage(qr, (W - qrSize) / 2, qrY, qrSize, qrSize);
+        QRGen.draw(ctx, url, (W - qrSize) / 2, qrY, qrSize, f.colorPrimario, '#FFFFFF', 'H');
 
         // Logo al centro del QR
         if (logoImg) {

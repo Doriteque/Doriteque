@@ -11,6 +11,18 @@
         document.write('<link rel="stylesheet" href="css/checkout.css?v=' + window.V + '">');
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Evita el doble borde en los campos de dirección */
+        .address-input-wrapper input,
+        .address-detail-wrapper input {
+            border: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            width: auto !important;
+            min-width: 0;
+        }
+    </style>
     <script type="module" src="js/firebase.js"></script>
     <script type="module" src="js/db.js"></script>
 </head>
@@ -51,56 +63,27 @@
         <section class="checkout-card">
             <h2 class="card-title">Completa tus datos</h2>
             
-            <div class="form-group">
-                <label>Nombre completo <span class="required">*</span></label>
-                <input type="text" id="client-name" placeholder="Escribe tu nombre completo">
-            </div>
-
-            <div class="form-group">
-                <label>Nro. de WhatsApp <span class="required">*</span></label>
-                <div class="phone-input-wrapper">
-                    <div class="country-selector">
-                        <span class="flag-emoji">🇻🇪</span>
-                        <select id="client-country">
-                            <option value="58">+58</option>
-                            <option value="57">+57</option>
-                            <option value="51">+51</option>
-                            <option value="1">+1</option>
-                        </select>
-                    </div>
-                    <input type="tel" id="client-phone" placeholder="Escribe tu número">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Dirección de entrega <span class="required">*</span></label>
-
+                        <div class="form-group">
+                <label>Dirección de entrega <span class="required" id="addr-required">*</span></label>
+                
                 <div class="address-input-wrapper">
                     <i class="fa-solid fa-map"></i>
-                    <input type="text" id="addr-sector" placeholder="Sector o urbanización" maxlength="80" autocomplete="off">
+                    <input type="text" id="addr-calle" placeholder="Sector, calle, casa o edificio y apto" maxlength="200" autocomplete="off">
                 </div>
-
-                <div class="address-input-wrapper" style="margin-top:10px;">
-                    <i class="fa-solid fa-road"></i>
-                    <input type="text" id="addr-calle" placeholder="Calle o avenida, casa o edificio y apto" maxlength="120" autocomplete="off">
-                </div>
-
+                
                 <div class="address-detail-wrapper" style="margin-top:10px;">
                     <i class="fa-solid fa-flag"></i>
-                    <input type="text" id="addr-ref" placeholder="Punto de referencia (opcional)" maxlength="120" autocomplete="off">
+                    <input type="text" id="addr-ref" placeholder="Punto de referencia" maxlength="120" autocomplete="off">
                 </div>
-
+                
                 <button type="button" class="btn-geolocation" id="btn-ubicacion" style="margin-top:14px;">
                     <i class="fa-solid fa-location-crosshairs"></i>
                     <span>Compartir mi ubicación exacta (Google Maps)</span>
                 </button>
-
+                
                 <div id="ubicacion-estado" style="display:none;font-size:0.9rem;line-height:1.4;padding:10px 12px;border-radius:10px;margin-bottom:8px;"></div>
-
-                <div class="address-detail-wrapper">
-                    <i class="fa-solid fa-link"></i>
-                    <input type="url" id="maps-link" placeholder="O pega aquí tu enlace de Google Maps (opcional)" maxlength="300" inputmode="url" autocapitalize="off" autocomplete="off">
-                </div>
+                
+                <small id="addr-ayuda" style="display:block;color:#777;font-size:0.85rem;">Escribe tu dirección y un punto de referencia, o comparte tu ubicación con el botón azul.</small>
             </div>
 
             <div class="form-group">
