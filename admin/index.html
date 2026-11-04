@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Doriteque Admin">
     <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="../assets/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/apple-touch-icon.png">
 
     <script type="module" src="../js/firebase.js"></script>
     <script type="module" src="../js/db.js"></script>
@@ -103,28 +103,55 @@
         </section>
 
         <section id="tab-flyer" class="admin-tab-content">
-            <div class="admin-card">
-                <h2><i class="fa-solid fa-qrcode"></i> Editor de publicación con QR</h2>
-                <p style="color:#b0b0b0;font-size:0.85rem;margin:0 0 16px;">Edita los textos y colores. La vista previa se actualiza sola. Guarda para conservar los cambios.</p>
-                <div class="form-group"><label>Título (vacío = nombre del negocio)</label><input type="text" id="fly-titulo" oninput="admin.previewFlyerDebounced()"></div>
-                <div class="form-group"><label>Subtítulo</label><input type="text" id="fly-subtitulo" oninput="admin.previewFlyerDebounced()"></div>
-                <div class="form-group"><label>Texto promocional (opcional)</label><input type="text" id="fly-promo" placeholder="Ej: 10% OFF en tu primer pedido" oninput="admin.previewFlyerDebounced()"></div>
-                <div class="form-group"><label>Texto del botón (CTA)</label><input type="text" id="fly-cta" oninput="admin.previewFlyerDebounced()"></div>
-                <div class="form-group"><label>Pie de página (vacío = redes automáticas)</label><input type="text" id="fly-pie" placeholder="Ej: Pedidos por WhatsApp 0424-1234567" oninput="admin.previewFlyerDebounced()"></div>
-                <div class="flyer-colors">
-                    <div class="form-group"><label>Color principal</label><input type="color" id="fly-color-primario" oninput="admin.previewFlyerDebounced()"></div>
-                    <div class="form-group"><label>Color del marco</label><input type="color" id="fly-color-marco" oninput="admin.previewFlyerDebounced()"></div>
-                    <div class="form-group"><label>Color de fondo</label><input type="color" id="fly-color-fondo" oninput="admin.previewFlyerDebounced()"></div>
+            <div class="flyer-layout">
+
+                <div class="admin-card">
+                    <h2><i class="fa-solid fa-qrcode"></i> Flyer con QR</h2>
+                    <p class="fly-hint">La vista previa se actualiza sola. Pulsa "Guardar cambios" para conservar lo que edites.</p>
+
+                    <div class="fly-section">
+                        <h3>✍️ Textos</h3>
+                        <div class="form-group"><label>Título (vacío = nombre del negocio)</label><input type="text" id="fly-titulo" maxlength="40" oninput="admin.previewFlyerDebounced()"></div>
+                        <div class="form-group"><label>Subtítulo</label><input type="text" id="fly-subtitulo" maxlength="40" oninput="admin.previewFlyerDebounced()"></div>
+                        <div class="form-group"><label>Texto promocional (opcional)</label><input type="text" id="fly-promo" maxlength="50" placeholder="Ej: 10% OFF en tu primer pedido" oninput="admin.previewFlyerDebounced()"></div>
+                        <div class="form-group"><label>Texto del botón (CTA)</label><input type="text" id="fly-cta" maxlength="40" oninput="admin.previewFlyerDebounced()"></div>
+                        <div class="form-group" style="margin-bottom:0;"><label>Pie de página (vacío = redes automáticas)</label><input type="text" id="fly-pie" maxlength="60" placeholder="Ej: Pedidos por WhatsApp 0424-1234567" oninput="admin.previewFlyerDebounced()"></div>
+                    </div>
+
+                    <div class="fly-section">
+                        <h3>🎨 Colores</h3>
+                        <div class="palettes">
+                            <button type="button" class="pal" onclick="admin.aplicarPaleta('clasico')"><span class="pal-dots"><i style="background:#C41E3A"></i><i style="background:#FF7A00"></i><i style="background:#FDF4EE"></i></span>Clásico</button>
+                            <button type="button" class="pal" onclick="admin.aplicarPaleta('fuego')"><span class="pal-dots"><i style="background:#B71C1C"></i><i style="background:#FFB300"></i><i style="background:#FFF8E1"></i></span>Fuego</button>
+                            <button type="button" class="pal" onclick="admin.aplicarPaleta('bosque')"><span class="pal-dots"><i style="background:#1B5E20"></i><i style="background:#8BC34A"></i><i style="background:#F1F8E9"></i></span>Bosque</button>
+                            <button type="button" class="pal" onclick="admin.aplicarPaleta('oceano')"><span class="pal-dots"><i style="background:#0D47A1"></i><i style="background:#29B6F6"></i><i style="background:#E3F2FD"></i></span>Océano</button>
+                            <button type="button" class="pal" onclick="admin.aplicarPaleta('uva')"><span class="pal-dots"><i style="background:#4A148C"></i><i style="background:#BA68C8"></i><i style="background:#F3E5F5"></i></span>Uva</button>
+                            <button type="button" class="pal" onclick="admin.aplicarPaleta('noche')"><span class="pal-dots"><i style="background:#212121"></i><i style="background:#C41E3A"></i><i style="background:#F5F5F5"></i></span>Noche</button>
+                        </div>
+                        <div class="flyer-colors">
+                            <div class="form-group"><label>Principal</label><input type="color" id="fly-color-primario" oninput="admin.previewFlyerDebounced()"></div>
+                            <div class="form-group"><label>Marco</label><input type="color" id="fly-color-marco" oninput="admin.previewFlyerDebounced()"></div>
+                            <div class="form-group"><label>Fondo</label><input type="color" id="fly-color-fondo" oninput="admin.previewFlyerDebounced()"></div>
+                        </div>
+                        <label class="switch-row" style="margin-top:4px;">
+                            <span>Mostrar logo<small>Arriba y en el centro del QR</small></span>
+                            <input type="checkbox" id="fly-logo" onchange="admin.previewFlyerDebounced()">
+                        </label>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="fly-logo" onchange="admin.previewFlyerDebounced()"> Mostrar logo</label>
+
+                <div class="admin-card flyer-side">
+                    <div class="flyer-preview">
+                        <img id="flyer-preview" alt="Vista previa del flyer">
+                        <p id="flyer-error" style="display:none;color:#FF1744;font-size:0.9rem;"></p>
+                    </div>
+                    <div class="fly-actions">
+                        <button class="btn-save" onclick="admin.saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
+                        <button class="btn-save btn-save-dark" onclick="admin.shareFlyer()"><i class="fa-solid fa-share-nodes"></i> Compartir flyer</button>
+                        <button class="btn-save btn-save-dark" onclick="admin.downloadFlyer()"><i class="fa-solid fa-download"></i> Descargar PNG (1080×1720)</button>
+                    </div>
                 </div>
-                <div class="flyer-preview">
-                    <img id="flyer-preview" alt="Vista previa del flyer">
-                    <p id="flyer-error" style="display:none;color:#FF1744;font-size:0.9rem;"></p>
-                </div>
-                <button class="btn-save" onclick="admin.saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
-                <button class="btn-save btn-save-dark" onclick="admin.downloadFlyer()"><i class="fa-solid fa-download"></i> Descargar PNG (1080×1720)</button>
+
             </div>
         </section>
 
@@ -224,21 +251,32 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="mod-id">
-                <div class="form-group"><label>Nombre</label><input type="text" id="mod-nombre"></div>
+                <input type="hidden" id="mod-tipo" value="unico">
+
                 <div class="form-group">
-                    <label>Tipo</label>
-                    <select id="mod-tipo">
-                        <option value="unico">Selección única</option>
-                        <option value="multiple">Selección múltiple</option>
-                    </select>
+                    <label>Nombre del modificador</label>
+                    <input type="text" id="mod-nombre" maxlength="60" placeholder="Ej: Salsas, Tamaño, Extras">
                 </div>
+
                 <div class="form-group">
-                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="mod-obligatorio"> Obligatorio</label>
+                    <label>¿Cuántas opciones puede elegir el cliente?</label>
+                    <div class="seg">
+                        <button type="button" class="seg-btn active" id="seg-unico" onclick="admin.setModTipo('unico')"><i class="fa-solid fa-circle-dot"></i> Una sola</button>
+                        <button type="button" class="seg-btn" id="seg-multiple" onclick="admin.setModTipo('multiple')"><i class="fa-solid fa-square-check"></i> Varias</button>
+                    </div>
                 </div>
+
                 <div class="form-group">
-                    <label>Opciones</label>
+                    <label class="switch-row">
+                        <span>Obligatorio<small>El cliente debe elegir antes de agregar</small></span>
+                        <input type="checkbox" id="mod-obligatorio">
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>Opciones <span style="color:#b0b0b0;font-weight:500;">(precio extra en USD, 0 = gratis)</span></label>
                     <div id="opciones-container"></div>
-                    <button type="button" class="btn-secondary" onclick="admin.addOpcion()" style="margin-top:8px;"><i class="fa-solid fa-plus"></i> Agregar opción</button>
+                    <button type="button" class="btn-add-opt" onclick="admin.addOpcion()"><i class="fa-solid fa-plus"></i> Agregar opción</button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -249,7 +287,7 @@
     </div>
 
     <script src="../js/tasa.js"></script>
-        <script src="qrgen.js"></script>
+    <script src="qrgen.js"></script>
     <script src="admin.js"></script>
     <script>
     if ('serviceWorker' in navigator) {

@@ -180,6 +180,47 @@ const admin = {
         a.click();
     },
 
+    // Colores predefinidos para el flyer (el QR se mantiene siempre oscuro para que escanee bien)
+    aplicarPaleta(nombre) {
+        const paletas = {
+            clasico: ['#C41E3A', '#FF7A00', '#FDF4EE'],
+            fuego:   ['#B71C1C', '#FFB300', '#FFF8E1'],
+            bosque:  ['#1B5E20', '#8BC34A', '#F1F8E9'],
+            oceano:  ['#0D47A1', '#29B6F6', '#E3F2FD'],
+            uva:     ['#4A148C', '#BA68C8', '#F3E5F5'],
+            noche:   ['#212121', '#C41E3A', '#F5F5F5']
+        };
+        const p = paletas[nombre];
+        if (!p) return;
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        set('fly-color-primario', p[0]);
+        set('fly-color-marco', p[1]);
+        set('fly-color-fondo', p[2]);
+        this.previewFlyerDebounced();
+    },
+
+    // Comparte el flyer directo a WhatsApp, Instagram, etc. (si el teléfono lo permite)
+    async shareFlyer() {
+        if (!this.flyerDataUrl) {
+            alert('Genera la vista previa primero.');
+            return;
+        }
+        try {
+            const partes = this.flyerDataUrl.split(',');
+            const bin = atob(partes[1]);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            const file = new File([bytes], 'doriteque-flyer-qr.png', { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'Flyer Doriteque' });
+                return;
+            }
+        } catch (e) {
+            if (e && e.name === 'AbortError') return; // el usuario canceló
+        }
+        this.downloadFlyer();
+    },
+
     loadImage(src, useCors) {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -386,7 +427,7 @@ const admin = {
         ctx.stroke();
         ctx.globalAlpha = 1;
 
-                // QR con corrección alta (tolera el logo encima), generado localmente
+        // QR con corrección alta (tolera el logo encima), generado localmente
         const qrSize = 560;
         const qrY = cardY + 80;
         QRGen.draw(ctx, url, (W - qrSize) / 2, qrY, qrSize, f.colorPrimario, '#FFFFFF', 'H');
@@ -489,49 +530,7 @@ const admin = {
         setVal('msg-greeting', this.config.msgGreeting || '¡Gracias por tu pedido!');
         setVal('msg-before-detail', this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:');
         setVal('msg-after-total', this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar.');
-        this.mostrarTasaAuto();
-        },
-        
-        // Muestra la tasa BCV automática en el panel (y avisa si falló)
-        tasaAuto: null,
-            
-            async mostrarTasaAuto(forzar) {
-                    const valor = document.getElementById('tasa-auto-valor');
-                    const estado = document.getElementById('tasa-auto-estado');
-                    if (!valor || !estado) return;
-                    
-                    estado.style.color = '#b0b0b0';
-                    estado.textContent = 'Consultando BCV...';
-                    
-                    if (forzar) {
-                        try { localStorage.removeItem('doriteque_tasa_bcv'); } catch (e) {}
-                    }
-                    
-                    let tasa = null;
-                    try {
-                        if (typeof window.obtenerTasaBCV === 'function') tasa = await window.obtenerTasaBCV();
-                    } catch (e) { tasa = null; }
-                    this.tasaAuto = tasa;
-                    
-                    if (!tasa) {
-                        valor.textContent = '—';
-                        estado.style.color = '#FF4d4d';
-                        estado.textContent = '⚠️ No se pudo obtener la tasa automática. Los clientes verán la tasa manual de abajo: actualízala tú.';
-                        return;
-                    }
-                    
-                    valor.textContent = 'Bs ' + tasa.toFixed(2);
-                    estado.style.color = '#25D366';
-                    estado.textContent = '✅ Automática y actualizada hoy. Esta es la tasa que ven tus clientes.';
-                },
-                
-                // Copia la tasa automática al campo manual (queda lista para guardar como respaldo)
-                usarTasaAuto() {
-                    if (!this.tasaAuto) { alert('La tasa automática no está disponible ahora.'); return; }
-                    const input = document.getElementById('cfg-tasa');
-                    if (input) input.value = this.tasaAuto.toFixed(2);
-                    alert('Copiada. Pulsa "Guardar configuración" para dejarla como respaldo.');
-                },
+    },
 
     async saveConfig() {
         try {
@@ -920,32 +919,63 @@ const admin = {
        MODIFICADORES
        ============================================ */
 
+    esc(valor) {
+        return String(valor == null ? '' : valor)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    },
+
     renderModifiers() {
         const container = document.getElementById('modificadores-list');
         if (!container) return;
-        if (!this.menu.modificadores || this.menu.modificadores.length === 0) {
-            container.innerHTML = '<p style="color:#b0b0b0;text-align:center;padding:20px;">No hay modificadores.</p>';
+        const mods = this.menu.modificadores || [];
+
+        if (mods.length === 0) {
+            container.innerHTML = '<div class="mod-empty"><i class="fa-solid fa-list-check"></i>' +
+                '<p>Aún no tienes modificadores</p>' +
+                '<small>Sirven para ofrecer extras, salsas, tamaños, etc.</small></div>';
             return;
         }
-        let html = '';
-        this.menu.modificadores.forEach(m => {
-            const tipoTexto = m.tipo === 'unico' ? 'Único' : 'Múltiple';
-            const obligatorioTexto = m.obligatorio ? 'Obligatorio' : 'Opcional';
-            html += `<div class="admin-item">
-                <div class="admin-item-info">
-                    <div class="admin-item-nombre">${m.nombre}</div>
-                    <div class="admin-item-desc">${tipoTexto} | ${obligatorioTexto} | ${m.opciones.length} opciones</div>
-                </div>
-                <div class="admin-item-actions">
-                    <button class="btn-icon btn-edit" data-action="edit-mod" data-id="${m.id}"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-icon btn-delete" data-action="delete-mod" data-id="${m.id}"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </div>`;
-        });
-        container.innerHTML = html;
+
+        container.innerHTML = mods.map(m => {
+            const opciones = Array.isArray(m.opciones) ? m.opciones : [];
+            const usados = (this.menu.productos || []).filter(p => p.modificadoresIds && p.modificadoresIds.includes(m.id)).length;
+            const unico = m.tipo === 'unico';
+
+            const chips = opciones.map(o => {
+                const precio = Number(o.precio) > 0 ? '+$' + Number(o.precio).toFixed(2) : 'Gratis';
+                return '<span class="mod-opt">' + this.esc(o.nombre) + ' <b>' + precio + '</b></span>';
+            }).join('');
+
+            return '<div class="mod-card">' +
+                '<div class="mod-head">' +
+                    '<div class="mod-name">' + this.esc(m.nombre) + '</div>' +
+                    '<div class="mod-actions">' +
+                        '<button class="btn-icon btn-edit" data-action="edit-mod" data-id="' + this.esc(m.id) + '"><i class="fa-solid fa-pen"></i></button>' +
+                        '<button class="btn-icon btn-delete" data-action="delete-mod" data-id="' + this.esc(m.id) + '"><i class="fa-solid fa-trash"></i></button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="mod-badges">' +
+                    '<span class="mod-badge ' + (unico ? 'b-unico' : 'b-multi') + '"><i class="fa-solid ' + (unico ? 'fa-circle-dot' : 'fa-square-check') + '"></i> ' + (unico ? 'Elige una' : 'Elige varias') + '</span>' +
+                    '<span class="mod-badge ' + (m.obligatorio ? 'b-oblig' : 'b-opc') + '">' + (m.obligatorio ? 'Obligatorio' : 'Opcional') + '</span>' +
+                    '<span class="mod-badge b-uso"><i class="fa-solid fa-utensils"></i> ' + usados + (usados === 1 ? ' producto' : ' productos') + '</span>' +
+                '</div>' +
+                '<div class="mod-options">' + chips + '</div>' +
+            '</div>';
+        }).join('');
     },
 
     editModifier(id) { this.openModifierModal(String(id)); },
+
+    setModTipo(tipo) {
+        const val = tipo === 'multiple' ? 'multiple' : 'unico';
+        const hidden = document.getElementById('mod-tipo');
+        if (hidden) hidden.value = val;
+        const a = document.getElementById('seg-unico');
+        const b = document.getElementById('seg-multiple');
+        if (a) a.classList.toggle('active', val === 'unico');
+        if (b) b.classList.toggle('active', val === 'multiple');
+    },
 
     openModifierModal(modId = null) {
         const modal = document.getElementById('modifier-modal');
@@ -958,14 +988,14 @@ const admin = {
             title.textContent = 'Editar modificador';
             document.getElementById('mod-id').value = m.id;
             document.getElementById('mod-nombre').value = m.nombre;
-            document.getElementById('mod-tipo').value = m.tipo;
-            document.getElementById('mod-obligatorio').checked = m.obligatorio;
-            m.opciones.forEach(op => this.addOpcion(op.nombre, op.precio, op.id));
+            this.setModTipo(m.tipo);
+            document.getElementById('mod-obligatorio').checked = !!m.obligatorio;
+            (m.opciones || []).forEach(op => this.addOpcion(op.nombre, op.precio, op.id));
         } else {
             title.textContent = 'Nuevo modificador';
             document.getElementById('mod-id').value = '';
             document.getElementById('mod-nombre').value = '';
-            document.getElementById('mod-tipo').value = 'unico';
+            this.setModTipo('unico');
             document.getElementById('mod-obligatorio').checked = false;
             this.addOpcion();
         }
@@ -977,10 +1007,41 @@ const admin = {
     addOpcion(nombre = '', precio = 0, id = null) {
         const container = document.getElementById('opciones-container');
         const opcionId = id || 'opt' + Date.now() + Math.random().toString(36).substr(2, 5);
-        const div = document.createElement('div');
-        div.className = 'opcion-row';
-        div.innerHTML = `<input type="text" placeholder="Nombre" value="${nombre}" class="opcion-nombre"><input type="number" step="0.01" placeholder="Precio" value="${precio}" class="opcion-precio"><button type="button" class="btn-icon btn-delete" onclick="this.parentElement.remove()"><i class="fa-solid fa-trash"></i></button><input type="hidden" value="${opcionId}" class="opcion-id">`;
-        container.appendChild(div);
+
+        const row = document.createElement('div');
+        row.className = 'opcion-row';
+
+        const inNombre = document.createElement('input');
+        inNombre.type = 'text';
+        inNombre.className = 'opcion-nombre';
+        inNombre.placeholder = 'Nombre (ej: Queso extra)';
+        inNombre.maxLength = 60;
+        inNombre.value = nombre;
+
+        const inPrecio = document.createElement('input');
+        inPrecio.type = 'number';
+        inPrecio.className = 'opcion-precio';
+        inPrecio.step = '0.01';
+        inPrecio.min = '0';
+        inPrecio.placeholder = '$ 0.00';
+        inPrecio.value = precio;
+
+        const btnDel = document.createElement('button');
+        btnDel.type = 'button';
+        btnDel.className = 'btn-icon btn-delete';
+        btnDel.innerHTML = '<i class="fa-solid fa-trash"></i>';
+        btnDel.addEventListener('click', () => row.remove());
+
+        const inId = document.createElement('input');
+        inId.type = 'hidden';
+        inId.className = 'opcion-id';
+        inId.value = opcionId;
+
+        row.appendChild(inNombre);
+        row.appendChild(inPrecio);
+        row.appendChild(btnDel);
+        row.appendChild(inId);
+        container.appendChild(row);
     },
 
     async saveModifier() {
