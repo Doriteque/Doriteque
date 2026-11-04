@@ -542,11 +542,76 @@ const admin = {
         setVal('msg-greeting', this.config.msgGreeting || '¡Gracias por tu pedido!');
         setVal('msg-before-detail', this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:');
         setVal('msg-after-total', this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar.');
+        setVal('cfg-resena', this.config.googleReviewUrl);
+        this.mostrarTasaAuto();
+    },
+
+    // Muestra la tasa BCV automática en el panel (y avisa si falló)
+    tasaAuto: null,
+
+    async mostrarTasaAuto(forzar) {
+        const valor = document.getElementById('tasa-auto-valor');
+        const estado = document.getElementById('tasa-auto-estado');
+        if (!valor || !estado) return;
+
+        estado.style.color = '#b0b0b0';
+        estado.textContent = 'Consultando BCV...';
+
+        if (forzar) {
+            try { localStorage.removeItem('doriteque_tasa_bcv'); } catch (e) { }
+        }
+
+        let tasa = null;
+        try {
+            if (typeof window.obtenerTasaBCV === 'function') tasa = await window.obtenerTasaBCV();
+        } catch (e) { tasa = null; }
+        this.tasaAuto = tasa;
+
+        if (!tasa) {
+            valor.textContent = '—';
+            estado.style.color = '#FF4d4d';
+            estado.textContent = '⚠️ No se pudo obtener la tasa automática. Los clientes verán la tasa manual de abajo: actualízala tú.';
+            return;
+        }
+
+        valor.textContent = 'Bs ' + tasa.toFixed(2);
+        estado.style.color = '#25D366';
+        estado.textContent = '✅ Automática y actualizada hoy. Esta es la tasa que ven tus clientes.';
+    },
+
+    // Copia la tasa automática al campo manual (queda lista para guardar como respaldo)
+    usarTasaAuto() {
+        if (!this.tasaAuto) { alert('La tasa automática no está disponible ahora.'); return; }
+        const input = document.getElementById('cfg-tasa');
+        if (input) input.value = this.tasaAuto.toFixed(2);
+        alert('Copiada. Pulsa "Guardar configuración" para dejarla como respaldo.');
+    },
+
+    // Acepta solo enlaces https de Google para reseñas. Devuelve el enlace limpio o ''
+    urlResenaValida(texto) {
+        const t = String(texto || '').trim();
+        if (!t) return '';
+        let u;
+        try { u = new URL(t); } catch (e) { return ''; }
+        if (u.protocol !== 'https:') return '';
+        const h = u.hostname.toLowerCase();
+        const ok = h === 'g.page' || h === 'g.co' || h === 'maps.app.goo.gl' ||
+            (h === 'goo.gl' && u.pathname.startsWith('/maps')) ||
+            (h === 'search.google.com' && u.pathname.startsWith('/local/writereview')) ||
+            (/^(www\.)?google\.[a-z.]{2,6}$/.test(h) && (u.pathname.startsWith('/maps') || u.pathname.startsWith('/search')));
+        return ok ? u.href : '';
     },
 
     async saveConfig() {
         try {
             const getVal = (id) => document.getElementById(id).value.trim();
+            const resenaCampo = document.getElementById('cfg-resena');
+            const resenaTexto = resenaCampo ? resenaCampo.value.trim() : '';
+            const resenaUrl = this.urlResenaValida(resenaTexto);
+            if (resenaTexto && !resenaUrl) {
+                alert('El enlace de reseñas no parece válido. Debe empezar con https:// y ser de Google (por ejemplo https://g.page/r/...).');
+                return;
+            }
             const newConfig = {
                 nombre: getVal('cfg-nombre'),
                 whatsapp: getVal('cfg-whatsapp'),
@@ -561,6 +626,7 @@ const admin = {
                 msgGreeting: getVal('msg-greeting'),
                 msgBeforeDetail: getVal('msg-before-detail'),
                 msgAfterTotal: getVal('msg-after-total'),
+                googleReviewUrl: resenaUrl,
                 flyer: {
                     titulo: getVal('fly-titulo'),
                     subtitulo: getVal('fly-subtitulo'),

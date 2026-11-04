@@ -27,6 +27,25 @@ function urlImagenSegura(url) {
 function soloUsuario(valor) { return String(valor || '').replace(/[^A-Za-z0-9._]/g, '').slice(0, 40); }
 function soloDigitos(valor) { return String(valor || '').replace(/\D/g, '').slice(0, 20); }
 
+// Reseñas de Google: cuánto esperar después del pedido y hasta cuándo se pide
+const RESENA_ESPERA_MS = 2 * 60 * 60 * 1000;        // 2 horas después del pedido
+const RESENA_VENCE_MS = 3 * 24 * 60 * 60 * 1000;    // después de 3 días ya no se pide
+
+// Solo enlaces https de Google para reseñas
+function urlResenaSegura(texto) {
+    const t = String(texto || '').trim();
+    if (!t) return '';
+    let u;
+    try { u = new URL(t); } catch (e) { return ''; }
+    if (u.protocol !== 'https:') return '';
+    const h = u.hostname.toLowerCase();
+    const ok = h === 'g.page' || h === 'g.co' || h === 'maps.app.goo.gl' ||
+        (h === 'goo.gl' && u.pathname.startsWith('/maps')) ||
+        (h === 'search.google.com' && u.pathname.startsWith('/local/writereview')) ||
+        (/^(www\.)?google\.[a-z.]{2,6}$/.test(h) && (u.pathname.startsWith('/maps') || u.pathname.startsWith('/search')));
+    return ok ? u.href : '';
+}
+
 function placeholderImg(texto) {
     const limpio = (texto || 'Doriteque').replace(/[<>&"']/g, '');
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#1a1a1a"/><rect x="8" y="8" width="384" height="284" fill="none" stroke="#333" stroke-width="2" rx="16"/><text x="50%" y="50%" fill="#C41E3A" font-family="Arial, sans-serif" font-size="30" font-weight="bold" text-anchor="middle" dominant-baseline="middle">' + limpio + '</text></svg>';
@@ -99,6 +118,102 @@ const app = {
         document.getElementById('footer-metodos').textContent = '💳 ' + metodos.join(' | ');
         const logo = urlImagenSegura(c.logo);
         if (logo) document.getElementById('header-logo').src = logo;
+        this.revisarResena();
+    },
+
+    // ---------- Aviso de reseña de Google ----------
+    // Aparece cuando el cliente vuelve al menú entre 2 horas y 3 días después de un pedido.
+    // Se le pide a TODOS los clientes por igual (Google no permite filtrar quién reseña).
+    resenaMostrada: false,
+
+    revisarResena() {
+        try {
+            if (this.resenaMostrada) return;
+            const url = urlResenaSegura(this.config.googleReviewUrl);
+            if (!url) return;
+
+            // Para probar el aviso sin esperar 2 horas: abre el menú con  #probar-resena  al final del enlace
+            if (window.location && window.location.hash === '#probar-resena') {
+                this.resenaMostrada = true;
+                this.mostrarAvisoResena(url, Date.now());
+                return;
+            }
+
+            const pedido = JSON.parse(localStorage.getItem('doriteque_pedido') || 'null');
+            const t = pedido ? Number(pedido.t) : 0;
+            if (!t) return;
+
+            const edad = Date.now() - t;
+            if (edad < RESENA_ESPERA_MS || edad > RESENA_VENCE_MS) return;
+            if (localStorage.getItem('doriteque_resena') === String(t)) return;
+
+            this.resenaMostrada = true;
+            this.mostrarAvisoResena(url, t);
+        } catch (e) {
+            console.warn('No se pudo revisar el aviso de reseña:', e.message);
+        }
+    },
+
+    mostrarAvisoResena(url, t) {
+        const estilo = document.createElement('style');
+        estilo.textContent =
+            '.resena-aviso{position:fixed;left:12px;right:12px;bottom:16px;max-width:420px;margin:0 auto;background:#1f1f1f;color:#fff;' +
+            'border:1px solid #333;border-radius:18px;padding:18px;z-index:2500;box-shadow:0 10px 40px rgba(0,0,0,.6);text-align:center;}' +
+            '.resena-aviso h3{margin:0 0 6px;font-size:1.1rem;font-weight:800;}' +
+            '.resena-aviso p{margin:0 0 10px;font-size:.9rem;color:#b0b0b0;line-height:1.4;}' +
+            '.resena-estrellas{display:flex;justify-content:center;gap:4px;margin:6px 0 10px;}' +
+            '.resena-estrella{background:none;border:none;font-size:2.2rem;line-height:1;color:#FFC107;cursor:pointer;padding:4px;}' +
+            '.resena-nota{font-size:.78rem;color:#888;margin:0 0 10px;}' +
+            '.resena-cerrar{background:none;border:none;color:#b0b0b0;font-size:.9rem;font-weight:700;cursor:pointer;padding:8px 12px;}';
+        document.head.appendChild(estilo);
+
+        const caja = document.createElement('div');
+        caja.className = 'resena-aviso';
+        caja.setAttribute('role', 'dialog');
+
+        const titulo = document.createElement('h3');
+        titulo.textContent = '¿Cómo estuvo tu pedido? 🍔';
+        const texto = document.createElement('p');
+        texto.textContent = 'Tu opinión ayuda a que más personas nos encuentren.';
+
+        const fila = document.createElement('div');
+        fila.className = 'resena-estrellas';
+
+        const cerrar = () => {
+            try { localStorage.setItem('doriteque_resena', String(t)); } catch (e) { }
+            if (caja.parentNode) caja.parentNode.removeChild(caja);
+            if (estilo.parentNode) estilo.parentNode.removeChild(estilo);
+        };
+
+        for (let i = 1; i <= 5; i++) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'resena-estrella';
+            b.setAttribute('aria-label', i + (i === 1 ? ' estrella' : ' estrellas'));
+            b.textContent = '★';
+            b.addEventListener('click', () => {
+                window.open(url, '_blank', 'noopener');
+                cerrar();
+            });
+            fila.appendChild(b);
+        }
+
+        const nota = document.createElement('p');
+        nota.className = 'resena-nota';
+        nota.textContent = 'Elegirás tus estrellas en Google.';
+
+        const ahoraNo = document.createElement('button');
+        ahoraNo.type = 'button';
+        ahoraNo.className = 'resena-cerrar';
+        ahoraNo.textContent = 'Ahora no';
+        ahoraNo.addEventListener('click', cerrar);
+
+        caja.appendChild(titulo);
+        caja.appendChild(texto);
+        caja.appendChild(fila);
+        caja.appendChild(nota);
+        caja.appendChild(ahoraNo);
+        document.body.appendChild(caja);
     },
 
     renderCategorias() {
