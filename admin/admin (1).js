@@ -107,18 +107,29 @@ const admin = {
        MÓDULO FLYER QR (EDITOR + DESCARGA)
        ============================================ */
 
-    getFlyer() {
-        const f = (this.config && this.config.flyer) || {};
+    // desdeForm = true  -> usa lo que estás editando ahora mismo (vista previa en vivo)
+    // desdeForm = false -> usa lo último que guardaste
+    getFlyer(desdeForm = true) {
+        const saved = (this.config && this.config.flyer) || {};
+        const usarForm = desdeForm && this.flyerFormListo && !!document.getElementById('fly-titulo');
+        const get = (id, guardado) => {
+            if (!usarForm) return guardado;
+            const el = document.getElementById(id);
+            return el ? el.value : guardado;
+        };
+        const subtitulo = get('fly-subtitulo', saved.subtitulo);
+        const cta = get('fly-cta', saved.cta);
+        const logoEl = usarForm ? document.getElementById('fly-logo') : null;
         return {
-            titulo: f.titulo || '',
-            subtitulo: (f.subtitulo !== undefined && f.subtitulo !== '') ? f.subtitulo : 'Menú Digital',
-            promo: f.promo || '',
-            cta: (f.cta !== undefined && f.cta !== '') ? f.cta : '¡ESCANEA Y PIDE AHORA!',
-            pie: f.pie || '',
-            colorPrimario: f.colorPrimario || '#C41E3A',
-            colorMarco: f.colorMarco || '#FF7A00',
-            colorFondo: f.colorFondo || '#FDF4EE',
-            mostrarLogo: f.mostrarLogo !== false
+            titulo: get('fly-titulo', saved.titulo) || '',
+            subtitulo: (subtitulo !== undefined && subtitulo !== '') ? subtitulo : 'Menú Digital',
+            promo: get('fly-promo', saved.promo) || '',
+            cta: (cta !== undefined && cta !== '') ? cta : '¡ESCANEA Y PIDE AHORA!',
+            pie: get('fly-pie', saved.pie) || '',
+            colorPrimario: get('fly-color-primario', saved.colorPrimario) || '#C41E3A',
+            colorMarco: get('fly-color-marco', saved.colorMarco) || '#FF7A00',
+            colorFondo: get('fly-color-fondo', saved.colorFondo) || '#FDF4EE',
+            mostrarLogo: logoEl ? logoEl.checked : saved.mostrarLogo !== false
         };
     },
 
@@ -129,7 +140,7 @@ const admin = {
     },
 
     fillFlyerForm() {
-        const f = this.getFlyer();
+        const f = this.getFlyer(false);
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
         set('fly-titulo', f.titulo);
         set('fly-subtitulo', f.subtitulo);
@@ -141,6 +152,7 @@ const admin = {
         set('fly-color-fondo', f.colorFondo);
         const logo = document.getElementById('fly-logo');
         if (logo) logo.checked = f.mostrarLogo;
+        this.flyerFormListo = true;
     },
 
     previewFlyerDebounced() {
@@ -708,8 +720,45 @@ const admin = {
         document.getElementById('image-preview-container').style.display = 'none';
     },
 
+    // La clave de ImgBB ya NO va escrita en el código: se guarda en tu base de datos,
+    // en una zona que solo puede leer el administrador con sesión iniciada.
+    imgbbKey: null,
+
+    async obtenerClaveImgBB(pedirNueva) {
+        if (this.imgbbKey && !pedirNueva) return this.imgbbKey;
+
+        if (!pedirNueva) {
+            try {
+                const snap = await window.getDoc(window.doc(window.db, 'secrets', 'imgbb'));
+                if (snap.exists() && snap.data().key) {
+                    this.imgbbKey = String(snap.data().key);
+                    return this.imgbbKey;
+                }
+            } catch (e) {
+                console.warn('No se pudo leer la clave de ImgBB:', e.message);
+            }
+        }
+
+        const texto = prompt('Pega tu clave (API key) de ImgBB. Se guarda en tu cuenta, no en el código:');
+        const clave = texto ? texto.trim() : '';
+        if (!/^[a-zA-Z0-9]{20,64}$/.test(clave)) return null;
+
+        try {
+            await window.setDoc(window.doc(window.db, 'secrets', 'imgbb'), { key: clave });
+        } catch (e) {
+            alert('No se pudo guardar la clave: ' + e.message);
+            return null;
+        }
+        this.imgbbKey = clave;
+        return clave;
+    },
+
     async uploadImageToStorage(dataUrl, nombre) {
-        const API_KEY = '3b5c88459a661f5779823149d0e4c9f2';
+        const API_KEY = await this.obtenerClaveImgBB(false);
+        if (!API_KEY) {
+            alert('Falta la clave de ImgBB. La imagen no se subió.');
+            return dataUrl;
+        }
         try {
             const base64 = dataUrl.split(',')[1];
             const formData = new FormData();
@@ -729,7 +778,11 @@ const admin = {
             throw new Error('ImgBB no devolvió URL');
         } catch (e) {
             console.error('Error subiendo imagen a ImgBB:', e);
-            alert('No se pudo subir la imagen a ImgBB. Revisa tu API Key.');
+            this.imgbbKey = null;
+            if (confirm('No se pudo subir la imagen. ¿Quieres pegar una clave de ImgBB nueva?')) {
+                const nueva = await this.obtenerClaveImgBB(true);
+                if (nueva) alert('Clave guardada. Vuelve a subir la imagen.');
+            }
             return dataUrl;
         }
     },
