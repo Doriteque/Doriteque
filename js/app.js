@@ -1,5 +1,34 @@
+/* ============================================
+   Utilidades de seguridad
+   ============================================ */
+
+// Convierte texto en algo inofensivo para poner dentro de HTML
+function esc(valor) {
+    return String(valor == null ? '' : valor)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Número seguro (si no es número, devuelve 0)
+function num(valor) {
+    const n = Number(valor);
+    return isFinite(n) ? n : 0;
+}
+
+// Solo deja pasar imágenes https, imágenes incrustadas (base64) o archivos de la carpeta assets/
+function urlImagenSegura(url) {
+    const s = String(url || '').trim();
+    if (/^https:\/\//i.test(s)) return s;
+    if (/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+\/=]+$/i.test(s)) return s;
+    if (/^(\.\/)?assets\/[A-Za-z0-9_.\/-]+$/.test(s) && s.indexOf('..') === -1) return s;
+    return '';
+}
+
+function soloUsuario(valor) { return String(valor || '').replace(/[^A-Za-z0-9._]/g, '').slice(0, 40); }
+function soloDigitos(valor) { return String(valor || '').replace(/\D/g, '').slice(0, 20); }
+
 function placeholderImg(texto) {
-    const limpio = (texto || 'Doriteque').replace(/[<>&]/g, '');
+    const limpio = (texto || 'Doriteque').replace(/[<>&"']/g, '');
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#1a1a1a"/><rect x="8" y="8" width="384" height="284" fill="none" stroke="#333" stroke-width="2" rx="16"/><text x="50%" y="50%" fill="#C41E3A" font-family="Arial, sans-serif" font-size="30" font-weight="bold" text-anchor="middle" dominant-baseline="middle">' + limpio + '</text></svg>';
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
@@ -24,22 +53,22 @@ const app = {
 
         try {
             // Consultar tasa BCV automática al iniciar
-            try { 
-                this.tasaBCV = await window.obtenerTasaBCV(); 
-            } catch (e) { 
-                this.tasaBCV = null; 
+            try {
+                this.tasaBCV = await window.obtenerTasaBCV();
+            } catch (e) {
+                this.tasaBCV = null;
             }
 
             window.loadConfig((config) => {
-                this.config = config;
+                this.config = config || {};
                 this.renderConfig();
             });
 
             window.loadMenu((menu) => {
-                this.menu = menu;
-                if (!this.menu.modificadores) this.menu.modificadores = [];
-                if (!this.menu.categorias) this.menu.categorias = [];
-                if (!this.menu.productos) this.menu.productos = [];
+                this.menu = menu || {};
+                if (!Array.isArray(this.menu.modificadores)) this.menu.modificadores = [];
+                if (!Array.isArray(this.menu.categorias)) this.menu.categorias = [];
+                if (!Array.isArray(this.menu.productos)) this.menu.productos = [];
 
                 this.renderCategorias();
                 this.renderProductos();
@@ -56,24 +85,27 @@ const app = {
     },
 
     tasa() {
-        return (this.tasaBCV && this.tasaBCV > 0) ? this.tasaBCV : (this.config.tasaBs || 0);
+        return (this.tasaBCV && this.tasaBCV > 0) ? this.tasaBCV : num(this.config.tasaBs);
     },
 
     renderConfig() {
-        document.getElementById('header-nombre').textContent = this.config.nombre;
-        document.getElementById('horario-text').textContent = ' ' + this.config.horario + ' | Tasa: Bs ' + this.tasa().toFixed(2);
-        document.getElementById('link-instagram').href = 'https://instagram.com/' + this.config.instagram;
-        document.getElementById('link-tiktok').href = 'https://tiktok.com/@' + this.config.tiktok;
-        document.getElementById('link-whatsapp').href = 'https://wa.me/' + this.config.whatsapp;
-        document.getElementById('footer-metodos').textContent = '💳 ' + this.config.metodosPago.join(' | ');
-        if (this.config.logo) document.getElementById('header-logo').src = this.config.logo;
+        const c = this.config || {};
+        document.getElementById('header-nombre').textContent = c.nombre || '';
+        document.getElementById('horario-text').textContent = ' ' + (c.horario || '') + ' | Tasa: Bs ' + this.tasa().toFixed(2);
+        document.getElementById('link-instagram').href = 'https://instagram.com/' + soloUsuario(c.instagram);
+        document.getElementById('link-tiktok').href = 'https://tiktok.com/@' + soloUsuario(c.tiktok);
+        document.getElementById('link-whatsapp').href = 'https://wa.me/' + soloDigitos(c.whatsapp);
+        const metodos = Array.isArray(c.metodosPago) ? c.metodosPago : [];
+        document.getElementById('footer-metodos').textContent = '💳 ' + metodos.join(' | ');
+        const logo = urlImagenSegura(c.logo);
+        if (logo) document.getElementById('header-logo').src = logo;
     },
 
     renderCategorias() {
         const container = document.getElementById('categorias-tabs');
         let html = '<button class="categoria-tab active" data-id="todas">Todos</button>';
         this.menu.categorias.forEach(cat => {
-            html += '<button class="categoria-tab" data-id="' + cat.id + '">' + cat.nombre + '</button>';
+            html += '<button class="categoria-tab" data-id="' + esc(cat.id) + '">' + esc(cat.nombre) + '</button>';
         });
         container.innerHTML = html;
 
@@ -118,26 +150,29 @@ const app = {
         catsToShow.forEach(cat => {
             const prods = this.menu.productos.filter(p =>
                 p.categoriaId === cat.id && p.disponible &&
-                (texto === '' || p.nombre.toLowerCase().includes(texto) || p.descripcion.toLowerCase().includes(texto))
+                (texto === '' ||
+                    String(p.nombre || '').toLowerCase().includes(texto) ||
+                    String(p.descripcion || '').toLowerCase().includes(texto))
             );
 
             if (prods.length === 0) return;
 
-            html += '<section class="seccion-categoria" id="seccion-' + cat.id + '">';
-            html += '<h2 class="titulo-seccion">' + cat.nombre + '</h2>';
+            html += '<section class="seccion-categoria" id="seccion-' + esc(cat.id) + '">';
+            html += '<h2 class="titulo-seccion">' + esc(cat.nombre) + '</h2>';
 
             prods.forEach(p => {
-                const precioBs = (p.precio * this.tasa()).toFixed(2);
-                const img = p.imagen || placeholderImg(p.nombre);
+                const precio = num(p.precio);
+                const precioBs = (precio * this.tasa()).toFixed(2);
+                const img = urlImagenSegura(p.imagen) || placeholderImg(p.nombre);
 
-                html += '<article class="producto-card" onclick="app.openProductModal(\'' + p.id + '\')">';
-                html += '<img src="' + img + '" alt="' + p.nombre + '" class="producto-img" loading="lazy">';
+                html += '<article class="producto-card" data-id="' + esc(p.id) + '">';
+                html += '<img src="' + esc(img) + '" alt="' + esc(p.nombre) + '" class="producto-img" loading="lazy">';
                 html += '<div class="producto-info">';
-                html += '<h3 class="producto-nombre">' + p.nombre + '</h3>';
-                html += '<p class="producto-desc">' + p.descripcion + '</p>';
-                html += '<div class="producto-precio">$' + p.precio.toFixed(2) + '</div>';
+                html += '<h3 class="producto-nombre">' + esc(p.nombre) + '</h3>';
+                html += '<p class="producto-desc">' + esc(p.descripcion) + '</p>';
+                html += '<div class="producto-precio">$' + precio.toFixed(2) + '</div>';
                 html += '<div class="producto-precio-bs">Bs ' + precioBs + '</div>';
-                html += '<button class="btn-agregar" onclick="event.stopPropagation(); app.addToCart(\'' + p.id + '\')"><i class="fa-solid fa-plus"></i> Agregar</button>';
+                html += '<button class="btn-agregar" data-id="' + esc(p.id) + '"><i class="fa-solid fa-plus"></i> Agregar</button>';
                 html += '</div></article>';
             });
             html += '</section>';
@@ -146,20 +181,33 @@ const app = {
         container.innerHTML = html || '<p class="loading">No se encontraron productos.</p>';
     },
 
+    // Un solo "oído" para toda la lista de productos (sin código dentro del HTML)
+    handleGridClick(e) {
+        const btn = e.target.closest ? e.target.closest('.btn-agregar') : null;
+        if (btn) {
+            e.stopPropagation();
+            this.addToCart(btn.dataset.id, btn);
+            return;
+        }
+        const card = e.target.closest ? e.target.closest('.producto-card') : null;
+        if (card) this.openProductModal(card.dataset.id);
+    },
+
     openProductModal(productId) {
         const producto = this.menu.productos.find(p => p.id === productId);
         if (!producto) return;
 
         this.productoSeleccionado = producto;
-        const img = producto.imagen || placeholderImg(producto.nombre);
-        const precioBs = (producto.precio * this.tasa()).toFixed(2);
+        const img = urlImagenSegura(producto.imagen) || placeholderImg(producto.nombre);
+        const precio = num(producto.precio);
+        const precioBs = (precio * this.tasa()).toFixed(2);
 
         document.getElementById('modal-img').src = img;
-        document.getElementById('modal-img').alt = producto.nombre;
-        document.getElementById('modal-title').textContent = producto.nombre;
-        document.getElementById('modal-price-usd').textContent = '$' + producto.precio.toFixed(2);
+        document.getElementById('modal-img').alt = producto.nombre || '';
+        document.getElementById('modal-title').textContent = producto.nombre || '';
+        document.getElementById('modal-price-usd').textContent = '$' + precio.toFixed(2);
         document.getElementById('modal-price-bs').textContent = 'Bs ' + precioBs;
-        document.getElementById('modal-desc').textContent = producto.descripcion;
+        document.getElementById('modal-desc').textContent = producto.descripcion || '';
 
         const modal = document.getElementById('product-modal');
         modal.style.display = 'flex';
@@ -179,13 +227,12 @@ const app = {
         }, 300);
     },
 
-    addToCart(productId) {
+    addToCart(productId, btn) {
         const producto = this.menu.productos.find(p => p.id === productId);
         if (!producto) return;
 
-        const tieneMods = producto.modificadoresIds &&
+        const tieneMods = Array.isArray(producto.modificadoresIds) &&
             producto.modificadoresIds.length > 0 &&
-            this.menu.modificadores &&
             this.menu.modificadores.length > 0;
 
         if (tieneMods) {
@@ -198,7 +245,7 @@ const app = {
             }
         }
 
-        this.addProductToCart(producto, {});
+        this.addProductToCart(producto, {}, btn);
     },
 
     openCustomizationModal(producto) {
@@ -211,24 +258,27 @@ const app = {
         const title = document.getElementById('customization-title');
         const content = document.getElementById('customization-content');
 
-        title.textContent = producto.nombre;
+        title.textContent = producto.nombre || '';
         let html = '';
 
-        modificadores.forEach(mod => {
+        modificadores.forEach((mod, modIndex) => {
             const obligatorio = mod.obligatorio ? '<span class="required">*</span>' : '<span class="optional">(opcional)</span>';
             html += '<div class="customization-section">';
-            html += '<h4 class="customization-title">' + mod.nombre + ' ' + obligatorio + '</h4>';
+            html += '<h4 class="customization-title">' + esc(mod.nombre) + ' ' + obligatorio + '</h4>';
             html += '<div class="customization-options">';
 
-            mod.opciones.forEach((op, index) => {
+            (Array.isArray(mod.opciones) ? mod.opciones : []).forEach((op, index) => {
                 const inputType = mod.tipo === 'unico' ? 'radio' : 'checkbox';
-                const inputName = 'mod-' + mod.id;
+                const inputName = 'mod-' + modIndex;
                 const inputId = inputName + '-' + index;
-                const precioText = op.precio > 0 ? ' +$' + op.precio.toFixed(2) : '';
+                const precioOp = num(op.precio);
+                const precioText = precioOp > 0 ? ' +$' + precioOp.toFixed(2) : '';
 
                 html += '<label class="customization-option">';
-                html += '<input type="' + inputType + '" name="' + inputName + '" id="' + inputId + '" value="' + op.id + '" data-precio="' + op.precio + '" data-nombre="' + op.nombre + '" data-modificador="' + mod.nombre + '" onchange="app.updateCustomizationTotal()">';
-                html += '<span class="option-text">' + op.nombre + precioText + '</span>';
+                html += '<input type="' + inputType + '" name="' + inputName + '" id="' + inputId + '" value="' + esc(op.id) + '"' +
+                    ' data-precio="' + precioOp + '" data-nombre="' + esc(op.nombre) + '"' +
+                    ' data-modificador="' + esc(mod.nombre) + '" data-modid="' + esc(mod.id) + '">';
+                html += '<span class="option-text">' + esc(op.nombre) + precioText + '</span>';
                 html += '</label>';
             });
 
@@ -270,10 +320,12 @@ const app = {
             producto.modificadoresIds.includes(m.id)
         );
 
-        for (let mod of modificadores) {
+        const marcados = Array.from(document.querySelectorAll('#customization-content input:checked'));
+
+        for (const mod of modificadores) {
             if (mod.obligatorio) {
-                const selected = document.querySelectorAll('input[name="mod-' + mod.id + '"]:checked');
-                if (selected.length === 0) {
+                const hay = marcados.some(i => i.dataset.modid === String(mod.id));
+                if (!hay) {
                     alert('Debes seleccionar al menos una opción de: ' + mod.nombre);
                     return;
                 }
@@ -281,17 +333,17 @@ const app = {
         }
 
         const opcionesSeleccionadas = {};
-        document.querySelectorAll('#customization-content input:checked').forEach(input => {
+        marcados.forEach(input => {
             const modNombre = input.dataset.modificador;
             if (!opcionesSeleccionadas[modNombre]) opcionesSeleccionadas[modNombre] = [];
             opcionesSeleccionadas[modNombre].push(input.dataset.nombre);
         });
 
-        this.addProductToCart(producto, opcionesSeleccionadas);
+        this.addProductToCart(producto, opcionesSeleccionadas, null);
         this.closeCustomizationModal();
     },
 
-    addProductToCart(producto, opciones) {
+    addProductToCart(producto, opciones, btn) {
         const existing = this.cart.find(item => item.id === producto.id);
         if (existing) {
             existing.qty++;
@@ -305,7 +357,6 @@ const app = {
         this.saveCart();
         this.updateCartUI();
 
-        const btn = event.target.closest('.btn-agregar');
         if (btn) {
             const original = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Agregado';
@@ -337,8 +388,36 @@ const app = {
         this.updateCartUI();
     },
 
+    // Un solo "oído" para los botones del carrito
+    handleCartClick(e) {
+        const btn = e.target.closest ? e.target.closest('button[data-accion]') : null;
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (btn.dataset.accion === 'menos') this.updateCartQty(id, -1);
+        else if (btn.dataset.accion === 'mas') this.updateCartQty(id, 1);
+        else if (btn.dataset.accion === 'quitar') this.removeFromCart(id);
+    },
+
     saveCart() {
         localStorage.setItem('doriteque_cart', JSON.stringify(this.cart));
+    },
+
+    // Precio de una línea del carrito (producto + extras)
+    precioUnitario(prod, item) {
+        let precio = num(prod.precio);
+        if (item.opciones) {
+            Object.keys(item.opciones).forEach(modNombre => {
+                const opciones = Array.isArray(item.opciones[modNombre]) ? item.opciones[modNombre] : [];
+                opciones.forEach(opNombre => {
+                    const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
+                    if (mod && Array.isArray(mod.opciones)) {
+                        const op = mod.opciones.find(o => o.nombre === opNombre);
+                        if (op) precio += num(op.precio);
+                    }
+                });
+            });
+        }
+        return precio;
     },
 
     calculateTotal() {
@@ -347,27 +426,11 @@ const app = {
 
         this.cart.forEach(item => {
             if (!item || !item.id) return;
-
             const prod = this.menu.productos.find(p => p.id === item.id);
-            if (prod) {
-                let precioUnitario = prod.precio || 0;
-                const qty = item.qty || 1;
-
-                if (item.opciones) {
-                    Object.keys(item.opciones).forEach(modNombre => {
-                        const opciones = item.opciones[modNombre];
-                        opciones.forEach(opNombre => {
-                            const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
-                            if (mod) {
-                                const op = mod.opciones.find(o => o.nombre === opNombre);
-                                if (op) precioUnitario += op.precio || 0;
-                            }
-                        });
-                    });
-                }
-                totalUSD += precioUnitario * qty;
-                totalItems += qty;
-            }
+            if (!prod) return;
+            const qty = item.qty || 1;
+            totalUSD += this.precioUnitario(prod, item) * qty;
+            totalItems += qty;
         });
 
         return { totalUSD: totalUSD || 0, totalItems: totalItems || 0 };
@@ -415,38 +478,32 @@ const app = {
             const prod = this.menu.productos.find(p => p.id === item.id);
             if (!prod) return;
 
-            let precioUnitario = prod.precio || 0;
+            const precioUnit = this.precioUnitario(prod, item);
             let opcionesTexto = '';
 
             if (item.opciones) {
                 Object.keys(item.opciones).forEach(modNombre => {
-                    const opciones = item.opciones[modNombre];
-                    opciones.forEach(opNombre => {
-                        const mod = this.menu.modificadores.find(m => m.nombre === modNombre);
-                        if (mod) {
-                            const op = mod.opciones.find(o => o.nombre === opNombre);
-                            if (op) precioUnitario += op.precio || 0;
-                        }
-                    });
-                    opcionesTexto += '<div class="cart-item-opciones">' + modNombre + ': ' + opciones.join(', ') + '</div>';
+                    const opciones = Array.isArray(item.opciones[modNombre]) ? item.opciones[modNombre] : [];
+                    opcionesTexto += '<div class="cart-item-opciones">' + esc(modNombre) + ': ' + esc(opciones.join(', ')) + '</div>';
                 });
             }
 
             const qty = item.qty || 1;
-            const subtotal = precioUnitario * qty;
+            const subtotal = precioUnit * qty;
+            const id = esc(item.id);
 
             html += '<div class="cart-item">';
             html += '<div class="cart-item-info">';
-            html += '<div class="cart-item-nombre">' + prod.nombre + '</div>';
+            html += '<div class="cart-item-nombre">' + esc(prod.nombre) + '</div>';
             if (opcionesTexto) html += opcionesTexto;
-            html += '<div class="cart-item-precio">' + qty + ' × $' + precioUnitario.toFixed(2) + ' = $' + subtotal.toFixed(2) + '</div>';
+            html += '<div class="cart-item-precio">' + qty + ' × $' + precioUnit.toFixed(2) + ' = $' + subtotal.toFixed(2) + '</div>';
             html += '</div>';
             html += '<div class="cart-item-controles">';
-            html += '<button class="btn-cantidad" onclick="app.updateCartQty(\'' + item.id + '\', -1)">−</button>';
+            html += '<button class="btn-cantidad" data-accion="menos" data-id="' + id + '">−</button>';
             html += '<span>' + qty + '</span>';
-            html += '<button class="btn-cantidad" onclick="app.updateCartQty(\'' + item.id + '\', 1)">+</button>';
+            html += '<button class="btn-cantidad" data-accion="mas" data-id="' + id + '">+</button>';
             html += '</div>';
-            html += '<button class="btn-eliminar" onclick="app.removeFromCart(\'' + item.id + '\')"><i class="fa-solid fa-trash"></i></button>';
+            html += '<button class="btn-eliminar" data-accion="quitar" data-id="' + id + '"><i class="fa-solid fa-trash"></i></button>';
             html += '</div>';
         });
 
@@ -522,15 +579,20 @@ const app = {
             this.busqueda = '';
             this.categoriaActiva = 'todas';
             btnLimpiar.style.display = 'none';
-            
+
             const container = document.getElementById('categorias-tabs');
             container.querySelectorAll('.categoria-tab').forEach(tab => {
                 tab.classList.remove('active');
                 if (tab.dataset.id === 'todas') tab.classList.add('active');
             });
-            
+
             this.renderProductos();
         });
+
+        // Lista de productos, carrito y opciones: un solo oído para cada uno
+        document.getElementById('productos-grid').addEventListener('click', (e) => this.handleGridClick(e));
+        document.getElementById('cart-items-container').addEventListener('click', (e) => this.handleCartClick(e));
+        document.getElementById('customization-content').addEventListener('change', () => this.updateCustomizationTotal());
 
         document.getElementById('cart-modal').addEventListener('click', (e) => {
             if (e.target.id === 'cart-modal') this.toggleCart();
