@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://ve.dolarapi.com https://api.imgbb.com; frame-src https://doriteque.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'">
-        <script>
+    <script>
         if (window.top !== window.self) {
             document.documentElement.style.display = 'none';
             try { window.top.location = window.location; } catch (e) {}
@@ -79,7 +79,7 @@
                 <div class="form-group"><label>Instagram (sin @)</label><input type="text" id="cfg-instagram"></div>
                 <div class="form-group"><label>TikTok (sin @)</label><input type="text" id="cfg-tiktok"></div>
                 <div class="form-group"><label>Horario</label><input type="text" id="cfg-horario"></div>
-                                <div class="form-group">
+                <div class="form-group">
                     <label>Enlace de reseñas de Google</label>
                     <input type="url" id="cfg-resena" placeholder="https://g.page/r/...">
                     <small style="color:#b0b0b0;">Se muestra a los clientes que vuelven al menú después de un pedido. Déjalo vacío para desactivar el aviso.</small>
@@ -222,6 +222,9 @@
                 </div>
                 <div class="form-group">
                     <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="prod-disponible" checked> Disponible</label>
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="prod-destacado"> ⭐ Destacado (aparece en "Más vendidos")</label>
                 </div>
                 <div class="form-group">
                     <label>Modificadores asociados</label>

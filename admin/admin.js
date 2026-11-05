@@ -664,11 +664,12 @@ const admin = {
             const badge = p.disponible ? '<span class="badge badge-active">Disponible</span>' : '<span class="badge badge-inactive">No disponible</span>';
             const modsCount = p.modificadoresIds ? p.modificadoresIds.length : 0;
             const modsBadge = modsCount > 0 ? `<span class="badge" style="background:#FF9800;color:white;margin-left:6px;">${modsCount} mods</span>` : '';
+            const topBadge = p.destacado ? '<span class="badge" style="background:#FFC107;color:#1a1a1a;margin-left:6px;">⭐ Más vendido</span>' : '';
             const idStr = String(p.id);
             html += `<div class="admin-item">
                 <img src="${img}" class="admin-item-img" alt="${p.nombre}">
                 <div class="admin-item-info">
-                    <div class="admin-item-nombre">${p.nombre} ${badge} ${modsBadge}</div>
+                    <div class="admin-item-nombre">${p.nombre} ${badge} ${modsBadge}${topBadge}</div>
                     <div class="admin-item-desc">${cat ? cat.nombre : 'Sin categoría'}</div>
                     <div class="admin-item-precio">$${Number(p.precio).toFixed(2)}</div>
                 </div>
@@ -731,6 +732,7 @@ const admin = {
             document.getElementById('prod-categoria').value = p.categoriaId;
             document.getElementById('prod-imagen').value = p.imagen || '';
             document.getElementById('prod-disponible').checked = (p.disponible === true);
+            document.getElementById('prod-destacado').checked = (p.destacado === true);
             if (p.imagen && String(p.imagen).length > 10) {
                 document.getElementById('image-preview').src = p.imagen;
                 document.getElementById('image-preview-container').style.display = 'block';
@@ -746,6 +748,7 @@ const admin = {
             document.getElementById('prod-categoria').value = '';
             document.getElementById('prod-imagen').value = '';
             document.getElementById('prod-disponible').checked = true;
+            document.getElementById('prod-destacado').checked = false;
             document.getElementById('image-preview-container').style.display = 'none';
         }
         modal.style.display = 'flex';
@@ -884,6 +887,7 @@ const admin = {
         const categoriaId = document.getElementById('prod-categoria').value;
         let imagen = document.getElementById('prod-imagen').value.trim();
         const disponible = document.getElementById('prod-disponible').checked;
+        const destacado = document.getElementById('prod-destacado').checked;
         const modificadoresIds = [];
         document.querySelectorAll('.mod-chip.selected').forEach(chip => modificadoresIds.push(chip.dataset.modId));
 
@@ -897,7 +901,7 @@ const admin = {
             imagen = await this.uploadImageToStorage(imagen, nombre);
         }
 
-        const productoData = { id: id || 'p' + Date.now(), nombre, descripcion, precio, categoriaId, imagen, disponible, modificadoresIds };
+        const productoData = { id: id || 'p' + Date.now(), nombre, descripcion, precio, categoriaId, imagen, disponible, destacado, modificadoresIds };
 
         try {
             const newProductos = [...(this.menu.productos || [])];

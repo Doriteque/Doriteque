@@ -49,10 +49,21 @@ function urlResenaSegura(texto) {
     return ok ? u.href : '';
 }
 
-function placeholderImg(texto) {
-    const limpio = (texto || 'Doriteque').replace(/[<>&"']/g, '');
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#1a1a1a"/><rect x="8" y="8" width="384" height="284" fill="none" stroke="#333" stroke-width="2" rx="16"/><text x="50%" y="50%" fill="#C41E3A" font-family="Arial, sans-serif" font-size="30" font-weight="bold" text-anchor="middle" dominant-baseline="middle">' + limpio + '</text></svg>';
+// Imagen de relleno cuando un producto no tiene foto: cuadrada y sin texto que se corte
+function placeholderImg() {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">' +
+        '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a1216"/><stop offset="1" stop-color="#151515"/></linearGradient></defs>' +
+        '<rect width="300" height="300" fill="url(#g)"/>' +
+        '<circle cx="150" cy="150" r="78" fill="none" stroke="#C41E3A" stroke-width="6" opacity="0.9"/>' +
+        '<text x="150" y="152" font-size="84" text-anchor="middle" dominant-baseline="central">🍽️</text></svg>';
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
+
+// Bolívares al estilo venezolano: 12.528,46
+function fmtBs(valor) {
+    const partes = num(valor).toFixed(2).split('.');
+    partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return partes[0] + ',' + partes[1];
 }
 
 // ---------- Caché del menú (para que abra al instante la segunda vez) ----------
@@ -212,7 +223,7 @@ const app = {
     renderConfig() {
         const c = this.config || {};
         document.getElementById('header-nombre').textContent = c.nombre || '';
-        document.getElementById('horario-text').textContent = ' ' + (c.horario || '') + ' | Tasa: Bs ' + this.tasa().toFixed(2);
+        document.getElementById('horario-text').textContent = ' ' + (c.horario || '') + ' | Tasa: Bs ' + fmtBs(this.tasa());
         document.getElementById('link-instagram').href = 'https://instagram.com/' + soloUsuario(c.instagram);
         document.getElementById('link-tiktok').href = 'https://tiktok.com/@' + soloUsuario(c.tiktok);
         document.getElementById('link-whatsapp').href = 'https://wa.me/' + soloDigitos(c.whatsapp);
@@ -397,11 +408,32 @@ const app = {
         let html = '';
 
         const hayBusqueda = texto.length > 0;
-        const catsToShow = (this.categoriaActiva === 'todas' || hayBusqueda)
-            ? this.menu.categorias
-            : this.menu.categorias.filter(c => c.id === this.categoriaActiva);
 
-        catsToShow.forEach(cat => {
+        // ---- Sección "Más vendidos" (productos marcados como destacados en el admin) ----
+        if (!hayBusqueda) {
+            const destacados = this.menu.productos.filter(p => p.destacado && p.disponible);
+            if (destacados.length > 0) {
+                html += '<section class="seccion-destacados" id="seccion-destacados">';
+                html += '<h2 class="titulo-seccion">🔥 Más vendidos</h2>';
+                html += '<div class="destacados-scroll">';
+                destacados.forEach(p => {
+                    const precio = num(p.precio);
+                    const img = urlImagenSegura(p.imagen) || placeholderImg();
+                    html += '<article class="destacado-card" data-id="' + esc(p.id) + '">';
+                    html += '<img src="' + esc(img) + '" alt="' + esc(p.nombre) + '" class="destacado-img" width="156" height="120" loading="lazy" decoding="async">';
+                    html += '<div class="destacado-info">';
+                    html += '<h3 class="destacado-nombre">' + esc(p.nombre) + '</h3>';
+                    html += '<div class="destacado-fila">';
+                    html += '<span class="destacado-precio">$' + precio.toFixed(2) + '</span>';
+                    html += '<button class="btn-agregar btn-agregar-chico" data-id="' + esc(p.id) + '" aria-label="Agregar ' + esc(p.nombre) + '"><i class="fa-solid fa-plus"></i></button>';
+                    html += '</div></div></article>';
+                });
+                html += '</div></section>';
+            }
+        }
+
+        // Siempre se dibujan todas las categorías: las pestañas solo desplazan la pantalla hasta cada una
+        this.menu.categorias.forEach(cat => {
             const prods = this.menu.productos.filter(p =>
                 p.categoriaId === cat.id && p.disponible &&
                 (texto === '' ||
@@ -416,12 +448,14 @@ const app = {
 
             prods.forEach(p => {
                 const precio = num(p.precio);
-                const precioBs = (precio * this.tasa()).toFixed(2);
-                const img = urlImagenSegura(p.imagen) || placeholderImg(p.nombre);
+                const precioBs = fmtBs(precio * this.tasa());
+                const img = urlImagenSegura(p.imagen) || placeholderImg();
+                const etiqueta = p.destacado ? '<span class="etiqueta-top">🔥 Más vendido</span>' : '';
 
                 html += '<article class="producto-card" data-id="' + esc(p.id) + '">';
                 html += '<img src="' + esc(img) + '" alt="' + esc(p.nombre) + '" class="producto-img" width="104" height="104" loading="lazy" decoding="async">';
                 html += '<div class="producto-info">';
+                html += etiqueta;
                 html += '<h3 class="producto-nombre">' + esc(p.nombre) + '</h3>';
                 html += '<p class="producto-desc">' + esc(p.descripcion) + '</p>';
                 html += '<div class="producto-fila">';
@@ -447,7 +481,7 @@ const app = {
             this.addToCart(btn.dataset.id, btn);
             return;
         }
-        const card = e.target.closest ? e.target.closest('.producto-card') : null;
+        const card = e.target.closest ? e.target.closest('.producto-card, .destacado-card') : null;
         if (card) this.openProductModal(card.dataset.id);
     },
 
@@ -456,9 +490,9 @@ const app = {
         if (!producto) return;
 
         this.productoSeleccionado = producto;
-        const img = urlImagenSegura(producto.imagen) || placeholderImg(producto.nombre);
+        const img = urlImagenSegura(producto.imagen) || placeholderImg();
         const precio = num(producto.precio);
-        const precioBs = (precio * this.tasa()).toFixed(2);
+        const precioBs = fmtBs(precio * this.tasa());
 
         document.getElementById('modal-img').src = img;
         document.getElementById('modal-img').alt = producto.nombre || '';
@@ -702,7 +736,7 @@ const app = {
         document.getElementById('cart-total-usd').textContent = 'USD$ ' + totalUSD.toFixed(2);
         document.getElementById('cart-finalizar-total').textContent = 'USD$ ' + totalUSD.toFixed(2);
 
-        const totalBs = (totalUSD * this.tasa()).toFixed(2);
+        const totalBs = fmtBs(totalUSD * this.tasa());
         document.getElementById('cart-total-bs').textContent = 'Bs ' + totalBs;
 
         if (document.body && document.body.classList) document.body.classList.toggle('con-carrito', totalItems > 0);

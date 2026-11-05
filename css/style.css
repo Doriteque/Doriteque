@@ -1110,3 +1110,93 @@ body.con-carrito .wa-flotante {
         font-size: 0.9rem;
     }
 }
+
+/* ---- Sección "Más vendidos" (carrusel horizontal) ---- */
+.seccion-destacados {
+    margin-bottom: 26px;
+}
+
+.destacados-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 2px 16px 8px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+}
+
+.destacados-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.destacado-card {
+    flex: 0 0 156px;
+    scroll-snap-align: start;
+    background: linear-gradient(145deg, #1d1d1d, #161616);
+    border: 1px solid #2c2c2c;
+    border-radius: 18px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.2s;
+}
+
+.destacado-card:active {
+    transform: scale(0.97);
+    border-color: #C41E3A;
+}
+
+.destacado-img {
+    display: block;
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    background: #252525;
+}
+
+.destacado-info {
+    padding: 10px;
+}
+
+.destacado-nombre {
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin: 0 0 8px;
+    min-height: 2.4em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.destacado-fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.destacado-precio {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #FF1744;
+}
+
+.btn-agregar-chico {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    font-size: 0.95rem;
+}
+
+.etiqueta-top {
+    align-self: flex-start;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #FFC107;
+    background: rgba(255, 193, 7, 0.12);
+    border-radius: 20px;
+    padding: 2px 8px;
+    margin-bottom: 5px;
+}
