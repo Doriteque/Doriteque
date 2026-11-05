@@ -30,6 +30,9 @@ function soloDigitos(valor) { return String(valor || '').replace(/\D/g, '').slic
 // Reseñas de Google: cuánto esperar después del pedido y hasta cuándo se pide
 const RESENA_ESPERA_MS = 2 * 60 * 60 * 1000;        // 2 horas después del pedido
 const RESENA_VENCE_MS = 3 * 24 * 60 * 60 * 1000;    // después de 3 días ya no se pide
+const RESENA_PAUSA_ESTRELLAS_MS = 30 * 24 * 60 * 60 * 1000;  // si tocó una estrella: no se vuelve a pedir en 30 días
+const RESENA_PAUSA_AHORA_NO_MS = 7 * 24 * 60 * 60 * 1000;    // si tocó "Ahora no": no se vuelve a pedir en 7 días
+const RESENA_PAUSA_MOSTRADA_MS = 24 * 60 * 60 * 1000;       // apenas se muestra: no se repite en 24 horas aunque la ignore
 
 // Solo enlaces https de Google para reseñas
 function urlResenaSegura(texto) {
@@ -174,16 +177,17 @@ const app = {
             st.id = 'esqueleto-estilo';
             st.textContent =
                 '@keyframes esqueletoBrillo{0%{background-position:-200px 0}100%{background-position:calc(200px + 100%) 0}}' +
-                '.esqueleto-card{background:#1f1f1f;border-radius:16px;padding:12px;margin:12px 0;}' +
+                '.esqueleto-card{display:flex;gap:12px;background:#1a1a1a;border:1px solid #2c2c2c;border-radius:18px;padding:10px;margin-bottom:12px;}' +
                 '.esqueleto-img,.esqueleto-linea{border-radius:10px;background:linear-gradient(90deg,#2a2a2a 0,#3a3a3a 50%,#2a2a2a 100%);background-size:200px 100%;background-repeat:no-repeat;background-color:#2a2a2a;animation:esqueletoBrillo 1.2s infinite linear;}' +
-                '.esqueleto-img{height:150px;margin-bottom:12px;}' +
-                '.esqueleto-linea{height:14px;margin:8px 0;width:80%;}' +
-                '.esqueleto-linea.corta{width:45%;}';
+                '.esqueleto-img{width:104px;height:104px;flex-shrink:0;border-radius:12px;}' +
+                '.esqueleto-texto{flex:1;min-width:0;padding-top:4px;}' +
+                '.esqueleto-linea{height:14px;margin:0 0 10px;width:85%;}' +
+                '.esqueleto-linea.corta{width:50%;}';
             document.head.appendChild(st);
         }
         let h = '';
-        for (let i = 0; i < 4; i++) {
-            h += '<div class="esqueleto-card"><div class="esqueleto-img"></div><div class="esqueleto-linea"></div><div class="esqueleto-linea corta"></div></div>';
+        for (let i = 0; i < 5; i++) {
+            h += '<div class="esqueleto-card"><div class="esqueleto-img"></div><div class="esqueleto-texto"><div class="esqueleto-linea"></div><div class="esqueleto-linea corta"></div><div class="esqueleto-linea corta"></div></div></div>';
         }
         grid.innerHTML = h;
     },
@@ -214,11 +218,29 @@ const app = {
         document.getElementById('link-whatsapp').href = 'https://wa.me/' + soloDigitos(c.whatsapp);
         const metodos = Array.isArray(c.metodosPago) ? c.metodosPago : [];
         document.getElementById('footer-metodos').textContent = '💳 ' + metodos.join(' | ');
+        this.actualizarBotonWhatsApp(soloDigitos(c.whatsapp));
         const logo = urlImagenSegura(c.logo);
         const esLogoPorDefecto = !logo || /(^|\/)assets\/logo\.png$/.test(logo);
         // Si el logo es el de siempre, se usa la versión liviana (12 KB en vez de 158 KB)
         document.getElementById('header-logo').src = esLogoPorDefecto ? 'assets/logo-header.webp' : logo;
         this.revisarResena();
+    },
+
+    // Botón verde flotante para escribir por WhatsApp
+    actualizarBotonWhatsApp(numero) {
+        let a = document.getElementById('wa-flotante');
+        if (!numero) { if (a && a.parentNode) a.parentNode.removeChild(a); return; }
+        if (!a) {
+            a = document.createElement('a');
+            a.id = 'wa-flotante';
+            a.className = 'wa-flotante';
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.setAttribute('aria-label', 'Escríbenos por WhatsApp');
+            a.innerHTML = '<i class="fa-brands fa-whatsapp"></i>';
+            document.body.appendChild(a);
+        }
+        a.href = 'https://wa.me/' + numero;
     },
 
     // ---------- Aviso de reseña de Google ----------
@@ -232,12 +254,18 @@ const app = {
             const url = urlResenaSegura(this.config.googleReviewUrl);
             if (!url) return;
 
-            // Para probar el aviso sin esperar 2 horas: abre el menú con  #probar-resena  al final del enlace
+            // Para probar el aviso sin esperar 2 horas: abre el menú con  #probar-resena  al final del enlace.
+            // Se muestra una sola vez y se quita el "#probar-resena" de la dirección para que no se repita.
             if (window.location && window.location.hash === '#probar-resena') {
                 this.resenaMostrada = true;
-                this.mostrarAvisoResena(url, Date.now());
+                try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { }
+                this.mostrarAvisoResena(url, Date.now(), true);
                 return;
             }
+
+            // Pausa: si ya respondió hace poco, no se vuelve a pedir
+            const hasta = Number(localStorage.getItem('doriteque_resena_hasta') || 0);
+            if (hasta && Date.now() < hasta) return;
 
             const pedido = JSON.parse(localStorage.getItem('doriteque_pedido') || 'null');
             const t = pedido ? Number(pedido.t) : 0;
@@ -248,13 +276,18 @@ const app = {
             if (localStorage.getItem('doriteque_resena') === String(t)) return;
 
             this.resenaMostrada = true;
-            this.mostrarAvisoResena(url, t);
+            // Se marca como mostrada desde ya: sale UNA sola vez por pedido, aunque el cliente no toque nada
+            try {
+                localStorage.setItem('doriteque_resena', String(t));
+                localStorage.setItem('doriteque_resena_hasta', String(Date.now() + RESENA_PAUSA_MOSTRADA_MS));
+            } catch (e) { }
+            this.mostrarAvisoResena(url, t, false);
         } catch (e) {
             console.warn('No se pudo revisar el aviso de reseña:', e.message);
         }
     },
 
-    mostrarAvisoResena(url, t) {
+    mostrarAvisoResena(url, t, esPrueba) {
         const estilo = document.createElement('style');
         estilo.textContent =
             '.resena-aviso{position:fixed;left:12px;right:12px;bottom:16px;max-width:420px;margin:0 auto;background:#1f1f1f;color:#fff;' +
@@ -279,8 +312,14 @@ const app = {
         const fila = document.createElement('div');
         fila.className = 'resena-estrellas';
 
-        const cerrar = () => {
-            try { localStorage.setItem('doriteque_resena', String(t)); } catch (e) { }
+        // pausaMs: cuánto tiempo no se vuelve a mostrar el aviso en este teléfono
+        const cerrar = (pausaMs) => {
+            if (!esPrueba) {
+                try {
+                    localStorage.setItem('doriteque_resena', String(t));
+                    localStorage.setItem('doriteque_resena_hasta', String(Date.now() + pausaMs));
+                } catch (e) { }
+            }
             if (caja.parentNode) caja.parentNode.removeChild(caja);
             if (estilo.parentNode) estilo.parentNode.removeChild(estilo);
         };
@@ -293,7 +332,7 @@ const app = {
             b.textContent = '★';
             b.addEventListener('click', () => {
                 window.open(url, '_blank', 'noopener');
-                cerrar();
+                cerrar(RESENA_PAUSA_ESTRELLAS_MS);
             });
             fila.appendChild(b);
         }
@@ -306,7 +345,7 @@ const app = {
         ahoraNo.type = 'button';
         ahoraNo.className = 'resena-cerrar';
         ahoraNo.textContent = 'Ahora no';
-        ahoraNo.addEventListener('click', cerrar);
+        ahoraNo.addEventListener('click', () => cerrar(RESENA_PAUSA_AHORA_NO_MS));
 
         caja.appendChild(titulo);
         caja.appendChild(texto);
@@ -381,13 +420,17 @@ const app = {
                 const img = urlImagenSegura(p.imagen) || placeholderImg(p.nombre);
 
                 html += '<article class="producto-card" data-id="' + esc(p.id) + '">';
-                html += '<img src="' + esc(img) + '" alt="' + esc(p.nombre) + '" class="producto-img" loading="lazy">';
+                html += '<img src="' + esc(img) + '" alt="' + esc(p.nombre) + '" class="producto-img" width="104" height="104" loading="lazy" decoding="async">';
                 html += '<div class="producto-info">';
                 html += '<h3 class="producto-nombre">' + esc(p.nombre) + '</h3>';
                 html += '<p class="producto-desc">' + esc(p.descripcion) + '</p>';
+                html += '<div class="producto-fila">';
+                html += '<div class="producto-precios">';
                 html += '<div class="producto-precio">$' + precio.toFixed(2) + '</div>';
                 html += '<div class="producto-precio-bs">Bs ' + precioBs + '</div>';
-                html += '<button class="btn-agregar" data-id="' + esc(p.id) + '"><i class="fa-solid fa-plus"></i> Agregar</button>';
+                html += '</div>';
+                html += '<button class="btn-agregar" data-id="' + esc(p.id) + '" aria-label="Agregar ' + esc(p.nombre) + '"><i class="fa-solid fa-plus"></i></button>';
+                html += '</div>';
                 html += '</div></article>';
             });
             html += '</section>';
@@ -574,7 +617,7 @@ const app = {
 
         if (btn) {
             const original = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Agregado';
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
             btn.style.background = '#25D366';
             setTimeout(() => {
                 btn.innerHTML = original;
@@ -661,6 +704,8 @@ const app = {
 
         const totalBs = (totalUSD * this.tasa()).toFixed(2);
         document.getElementById('cart-total-bs').textContent = 'Bs ' + totalBs;
+
+        if (document.body && document.body.classList) document.body.classList.toggle('con-carrito', totalItems > 0);
 
         const cartBar = document.getElementById('cart-bar-floating');
         if (cartBar) {

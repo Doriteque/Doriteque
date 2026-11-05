@@ -95,11 +95,12 @@ body {
    BARRA DE INFORMACIÓN
    ============================================ */
 .info-bar {
-    background: #C41E3A;
-    padding: 10px 20px;
+    background: linear-gradient(90deg, #A8142F, #C41E3A);
+    padding: 8px 16px;
     text-align: center;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 700;
+    line-height: 1.35;
 }
 
 /* ============================================
@@ -173,13 +174,13 @@ body {
 }
 
 .categoria-tab {
-    padding: 12px 24px;
+    padding: 10px 20px;
     background: #252525;
     border: 2px solid #333;
     border-radius: 30px;
     color: white;
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.2s;
@@ -194,87 +195,144 @@ body {
    PRODUCTOS
    ============================================ */
 .productos-grid {
-    padding: 20px;
-}
-
-.seccion-categoria {
-    margin-bottom: 32px;
-}
-
-.titulo-seccion {
-    font-size: 1.5rem;
-    font-weight: 900;
-    margin-bottom: 16px;
-    padding-left: 16px;
-    border-left: 4px solid #C41E3A;
-}
-
-.producto-card {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 16px;
-    overflow: hidden;
-    margin-bottom: 16px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.producto-card:active {
-    transform: scale(0.98);
-}
-
-.producto-img {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
-    background: #1a1a1a;
-}
-
-.producto-info {
     padding: 16px;
 }
 
-.producto-nombre {
+.seccion-categoria {
+    margin-bottom: 26px;
+}
+
+.titulo-seccion {
     font-size: 1.3rem;
     font-weight: 900;
-    margin-bottom: 8px;
+    margin-bottom: 14px;
+    padding-left: 14px;
+    border-left: 4px solid #C41E3A;
 }
 
-.producto-desc {
-    color: #b0b0b0;
-    font-size: 0.9rem;
+/* ---- Tarjeta compacta: foto a la izquierda, datos a la derecha ---- */
+.producto-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px;
+    background: linear-gradient(145deg, #1d1d1d, #161616);
+    border: 1px solid #2c2c2c;
+    border-radius: 18px;
     margin-bottom: 12px;
-    line-height: 1.4;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.2s;
 }
 
-.producto-precio {
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: #FF1744;
+.producto-card:active {
+    transform: scale(0.985);
+    border-color: #C41E3A;
+}
+
+.producto-img {
+    width: 104px;
+    height: 104px;
+    min-width: 104px;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: 12px;
+    background: #252525;
+}
+
+.producto-info {
+    flex: 1;
+    min-width: 0;
+    min-height: 104px;
+    display: flex;
+    flex-direction: column;
+    padding: 2px 2px 0 0;
+}
+
+.producto-nombre {
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.25;
     margin-bottom: 4px;
 }
 
+.producto-desc {
+    color: #a8a8a8;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.producto-fila {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.producto-precio {
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #FF1744;
+    line-height: 1.1;
+    margin: 0;
+}
+
 .producto-precio-bs {
-    font-size: 1rem;
-    color: #b0b0b0;
-    margin-bottom: 16px;
+    font-size: 0.78rem;
+    color: #9a9a9a;
+    margin: 2px 0 0;
 }
 
 .btn-agregar {
-    width: 100%;
-    padding: 14px;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: #C41E3A;
     color: white;
     border: none;
-    border-radius: 10px;
+    border-radius: 50%;
     font-size: 1.1rem;
-    font-weight: 900;
     cursor: pointer;
-    transition: background 0.2s;
+    box-shadow: 0 4px 12px rgba(196, 30, 58, 0.45);
+    transition: background 0.2s, transform 0.1s;
 }
 
 .btn-agregar:active {
     background: #FF1744;
+    transform: scale(0.92);
+}
+
+/* ---- Botón flotante de WhatsApp ---- */
+.wa-flotante {
+    position: fixed;
+    left: 16px;
+    bottom: 20px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #25D366;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.7rem;
+    text-decoration: none;
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.45);
+    z-index: 997;
+    transition: bottom 0.2s;
+}
+
+body.con-carrito .wa-flotante {
+    bottom: 92px;
 }
 
 /* ============================================
