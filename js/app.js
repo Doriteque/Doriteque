@@ -104,6 +104,32 @@ function tasaGuardadaDeHoy() {
     return null;
 }
 
+// ---------- Carrito guardado en el teléfono ----------
+const CARRITO_VIGENCIA_MS = 6 * 60 * 60 * 1000; // 6 horas
+
+function cargarCarritoGuardado() {
+    try {
+        const t = Number(localStorage.getItem('doriteque_cart_t') || 0);
+        if (!t || Date.now() - t > CARRITO_VIGENCIA_MS) return [];
+        const datos = JSON.parse(localStorage.getItem('doriteque_cart') || '[]');
+        if (!Array.isArray(datos)) return [];
+        const limpio = [];
+        datos.forEach(item => {
+            if (!item || typeof item.id !== 'string' || !item.id) return;
+            const qty = Math.min(99, Math.max(1, parseInt(item.qty, 10) || 1));
+            const opciones = {};
+            if (item.opciones && typeof item.opciones === 'object') {
+                Object.keys(item.opciones).forEach(mod => {
+                    const lista = item.opciones[mod];
+                    if (Array.isArray(lista)) opciones[mod] = lista.filter(x => typeof x === 'string');
+                });
+            }
+            limpio.push({ id: item.id, qty: qty, opciones: opciones });
+        });
+        return limpio;
+    } catch (e) { return []; }
+}
+
 const app = {
     _menuTexto: '',
     observador: null,
@@ -116,9 +142,6 @@ const app = {
     tasaBCV: null,
 
     async init() {
-        localStorage.removeItem('doriteque_cart');
-        this.cart = [];
-
         if (!window.loadConfig || !window.loadMenu) {
             setTimeout(() => this.init(), 300);
             return;
@@ -691,7 +714,10 @@ const app = {
     },
 
     saveCart() {
-        localStorage.setItem('doriteque_cart', JSON.stringify(this.cart));
+        try {
+            localStorage.setItem('doriteque_cart', JSON.stringify(this.cart));
+            localStorage.setItem('doriteque_cart_t', String(Date.now()));
+        } catch (e) { }
     },
 
     // Precio de una línea del carrito (producto + extras)
@@ -919,6 +945,7 @@ const app = {
 };
 
 // Pintar al instante lo último que vio el cliente (si lo hay); si es su primera visita, mostrar el esqueleto
+app.cart = cargarCarritoGuardado();
 try { if (!app.renderDesdeCache()) app.mostrarEsqueleto(); } catch (e) { console.warn('Arranque rápido omitido:', e.message); }
 
 document.addEventListener('DOMContentLoaded', () => app.init());

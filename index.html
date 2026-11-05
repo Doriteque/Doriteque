@@ -5,6 +5,25 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://ve.dolarapi.com; frame-src https://doriteque.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Doriteque - Menú Digital</title>
+    <meta name="description" content="Menú digital de Doriteque: dorilocos, hamburguesas y snacks con delivery. Pide fácil por WhatsApp.">
+    <meta name="theme-color" content="#C41E3A">
+    <link rel="icon" type="image/png" href="assets/icon-192.png">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+    <!-- Vista previa al compartir el enlace (WhatsApp, Instagram, Facebook) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Doriteque">
+    <meta property="og:locale" content="es_VE">
+    <meta property="og:title" content="Doriteque - Menú Digital">
+    <meta property="og:description" content="Dorilocos, hamburguesas y snacks con delivery. Pide fácil por WhatsApp.">
+    <meta property="og:url" content="https://doriteque.github.io/Doriteque/">
+    <meta property="og:image" content="https://doriteque.github.io/Doriteque/assets/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Doriteque - Menú Digital">
+    <meta name="twitter:description" content="Dorilocos, hamburguesas y snacks con delivery. Pide fácil por WhatsApp.">
+    <meta name="twitter:image" content="https://doriteque.github.io/Doriteque/assets/og-image.jpg">
     <script>
         // Versión que cambia cada 10 min: así el caché nunca deja la página con archivos viejos
         window.V = Math.floor(Date.now() / 600000);
@@ -22,7 +41,7 @@
 <body>
     <header class="header">
         <div class="header-logo">
-            <img src="assets/logo-header.webp" alt="Logo" id="header-logo" width="45" height="45" onerror="this.style.display='none'">
+            <img src="assets/logo-header.webp" alt="Logo" id="header-logo" width="48" height="48" onerror="this.style.display='none'">
             <h1 id="header-nombre">Doriteque</h1>
         </div>
         <button class="cart-btn" onclick="app.toggleCart()">
