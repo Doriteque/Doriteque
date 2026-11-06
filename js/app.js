@@ -66,6 +66,58 @@ function fmtBs(valor) {
     return partes[0] + ',' + partes[1];
 }
 
+// ---------- Horario del local (hora de Venezuela) ----------
+// 0 = domingo, 1 = lunes ... 6 = sábado. Cada día: [abre, cierra] en horas (15 = 3:00 pm, 24 = 12:00 am). null = cerrado todo el día.
+const HORARIO_LOCAL = {
+    0: [15, 24],   // domingo
+    1: null,       // lunes: cerrado
+    2: [15, 24],   // martes
+    3: [15, 24],   // miércoles
+    4: [15, 24],   // jueves
+    5: [15, 24],   // viernes
+    6: [15, 24]    // sábado
+};
+const NOMBRES_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function formatoHora(h) {
+    const hh = h % 24;
+    const sufijo = hh >= 12 ? 'pm' : 'am';
+    let h12 = Math.floor(hh) % 12;
+    if (h12 === 0) h12 = 12;
+    const mm = Math.round((hh - Math.floor(hh)) * 60);
+    return h12 + ':' + String(mm).padStart(2, '0') + ' ' + sufijo;
+}
+
+// Venezuela está en UTC-4 todo el año (no cambia de hora)
+function estadoLocal(ahoraMs) {
+    const d = new Date(ahoraMs - 4 * 60 * 60 * 1000);
+    const dia = d.getUTCDay();
+    const hora = d.getUTCHours() + d.getUTCMinutes() / 60;
+    const hoy = HORARIO_LOCAL[dia];
+
+    if (hoy && hora >= hoy[0] && hora < hoy[1]) {
+        return { abierto: true, cierra: hoy[1], minutos: Math.max(1, Math.round((hoy[1] - hora) * 60)) };
+    }
+    if (hoy && hora < hoy[0]) return { abierto: false, abreHoy: true, abre: hoy[0] };
+    for (let i = 1; i <= 7; i++) {
+        const nd = (dia + i) % 7;
+        const h = HORARIO_LOCAL[nd];
+        if (h) return { abierto: false, abreHoy: false, diasFalta: i, dia: nd, abre: h[0] };
+    }
+    return { abierto: false, sinHorario: true };
+}
+
+function textoEstadoLocal(est) {
+    if (est.abierto) {
+        if (est.minutos <= 60) return '🟢 Abierto · cerramos en ' + est.minutos + ' min';
+        return '🟢 Abierto ahora · cerramos a las ' + formatoHora(est.cierra);
+    }
+    if (est.sinHorario) return '🔴 Cerrado';
+    if (est.abreHoy) return '🔴 Cerrado · abrimos hoy a las ' + formatoHora(est.abre);
+    if (est.diasFalta === 1) return '🔴 Cerrado · abrimos mañana a las ' + formatoHora(est.abre);
+    return '🔴 Cerrado · abrimos el ' + NOMBRES_DIAS[est.dia] + ' a las ' + formatoHora(est.abre);
+}
+
 // ---------- Caché del menú (para que abra al instante la segunda vez) ----------
 const CACHE_MENU = 'doriteque_menu_cache_v1';
 const CACHE_CONFIG = 'doriteque_config_cache_v1';
@@ -176,6 +228,9 @@ const app = {
 
             this.setupEventListeners();
             this.actualizarTasa(); // en paralelo: ya no retrasa el menú
+            this.configurarAtajosDueno();
+            // El letrero Abierto/Cerrado se actualiza solo cada minuto
+            setInterval(() => this.renderEstadoLocal(), 60000);
         } catch (error) {
             console.error('Error cargando datos:', error);
             document.getElementById('productos-grid').innerHTML = '<p class="loading">Error al cargar el menú.</p>';
@@ -352,8 +407,61 @@ const app = {
         const esLogoPorDefecto = !logo || /(^|\/)assets\/logo\.png$/.test(logo);
         // Si el logo es el de siempre, se usa la versión liviana (12 KB en vez de 158 KB)
         document.getElementById('header-logo').src = esLogoPorDefecto ? 'assets/logo-header.webp' : logo;
+        this.renderEstadoLocal();
         this.revisarResena();
         this.revisarDiagnostico();
+    },
+
+    // Atajos para el dueño: cambiar el # de la dirección con la página abierta, o tocar 5 veces el © del pie de página
+    configurarAtajosDueno() {
+        try {
+            window.addEventListener('hashchange', () => {
+                this.revisarResena();
+                this.revisarDiagnostico();
+            });
+            const parrafos = document.querySelectorAll('.footer p');
+            const copyright = parrafos.length ? parrafos[parrafos.length - 1] : null;
+            if (copyright) {
+                let toques = 0, ultimo = 0;
+                copyright.addEventListener('click', () => {
+                    const t = Date.now();
+                    toques = (t - ultimo < 1500) ? toques + 1 : 1;
+                    ultimo = t;
+                    if (toques >= 5) {
+                        toques = 0;
+                        this.mostrarDiagnostico();
+                    }
+                });
+            }
+        } catch (e) { }
+    },
+
+    // Letrero "Abierto ahora / Cerrado" dentro de la barra roja de arriba
+    renderEstadoLocal() {
+        try {
+            const barra = document.querySelector('.info-bar');
+            if (!barra) return;
+            let el = document.getElementById('estado-local');
+            if (!el) {
+                if (!document.getElementById('estado-local-estilo')) {
+                    const st = document.createElement('style');
+                    st.id = 'estado-local-estilo';
+                    st.textContent =
+                        '.estado-local{display:inline-block;padding:4px 14px;border-radius:20px;font-size:.82rem;font-weight:800;margin-bottom:6px;color:#fff;}' +
+                        '.estado-local.abierto{background:#15803d;}' +
+                        '.estado-local.cerrado{background:#1a1a1a;}';
+                    document.head.appendChild(st);
+                }
+                el = document.createElement('div');
+                el.id = 'estado-local';
+                barra.insertBefore(el, barra.firstChild);
+            }
+            const est = estadoLocal(Date.now());
+            el.className = 'estado-local ' + (est.abierto ? 'abierto' : 'cerrado');
+            el.textContent = textoEstadoLocal(est);
+        } catch (e) {
+            console.warn('No se pudo mostrar el estado del local:', e.message);
+        }
     },
 
     // Botón verde flotante para escribir por WhatsApp
@@ -422,12 +530,16 @@ const app = {
     // Abre el menú con  #diagnostico  al final de la dirección: explica por qué sale o no sale la reseña,
     // y permite adelantar 3 horas el último pedido para probarla sin esperar.
     revisarDiagnostico() {
-        try {
-            if (this._diagMostrado) return;
-            if (!(window.location && window.location.hash === '#diagnostico')) return;
-            this._diagMostrado = true;
-            try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { }
+        if (this._diagMostrado) return;
+        if (!(window.location && window.location.hash === '#diagnostico')) return;
+        this._diagMostrado = true;
+        try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { }
+        this.mostrarDiagnostico();
+    },
 
+    mostrarDiagnostico() {
+        try {
+            if (document.getElementById('dg-overlay')) return;
             const ahora = Date.now();
             const url = urlResenaSegura(this.config.googleReviewUrl);
             let pedido = null;
@@ -464,6 +576,7 @@ const app = {
             document.head.appendChild(estilo);
 
             const overlay = document.createElement('div');
+            overlay.id = 'dg-overlay';
             overlay.className = 'dg-overlay';
             const card = document.createElement('div');
             card.className = 'dg-card';
@@ -508,6 +621,7 @@ const app = {
                 recargar();
             });
             boton('Cerrar', 'dg-gris', () => {
+                this._diagMostrado = false;
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
                 if (estilo.parentNode) estilo.parentNode.removeChild(estilo);
             });
@@ -1152,5 +1266,7 @@ const app = {
     else if (guardado.length) app.carritoPendiente = guardado;      // vuelve por su cuenta: se le pregunta
 })();
 try { if (!app.renderDesdeCache()) app.mostrarEsqueleto(); } catch (e) { console.warn('Arranque rápido omitido:', e.message); }
+
+try { app.renderEstadoLocal(); } catch (e) { }
 
 document.addEventListener('DOMContentLoaded', () => app.init());
