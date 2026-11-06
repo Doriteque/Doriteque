@@ -1,6 +1,6 @@
+
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, doc, getDoc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const firebaseConfig = {
@@ -14,21 +14,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 const auth = getAuth(app);
 
+// Firebase para el panel de administración (base de datos + inicio de sesión)
 // Exponer funciones globales
 window.db = db;
-window.storage = storage;
 window.auth = auth;
 window.collection = collection;
 window.doc = doc;
 window.getDoc = getDoc;
 window.setDoc = setDoc;
 window.onSnapshot = onSnapshot;
-window.ref = ref;
-window.uploadBytes = uploadBytes;
-window.getDownloadURL = getDownloadURL;
 window.signInWithEmailAndPassword = signInWithEmailAndPassword;
 window.onAuthStateChanged = onAuthStateChanged;
 window.signOut = signOut;

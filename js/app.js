@@ -131,6 +131,9 @@ function cargarCarritoGuardado() {
 }
 
 const app = {
+    carritoPendiente: [],
+    avisoCarritoMostrado: false,
+    avisoCarritoAbierto: false,
     _menuTexto: '',
     observador: null,
     config: {},
@@ -168,6 +171,7 @@ const app = {
                     this.updateCartUI();
                 }
                 setTimeout(() => this.setupScrollSpy(), 300);
+                this.preguntarCarritoPendiente();
             });
 
             this.setupEventListeners();
@@ -175,6 +179,97 @@ const app = {
         } catch (error) {
             console.error('Error cargando datos:', error);
             document.getElementById('productos-grid').innerHTML = '<p class="loading">Error al cargar el menú.</p>';
+        }
+    },
+
+    // ---------- Pedido sin enviar (de hace menos de 6 horas) ----------
+    // Si el cliente vuelve por su cuenta, se le PREGUNTA si quiere continuar con ese pedido.
+    // (Si viene de "Editar carrito" en la misma pestaña, se recupera solo.)
+    preguntarCarritoPendiente() {
+        try {
+            if (this.avisoCarritoMostrado || !this.carritoPendiente.length) return;
+            if (!this.menu.productos.length) return;
+
+            // Solo productos que todavía existen y están disponibles
+            const items = this.carritoPendiente.filter(item =>
+                this.menu.productos.some(p => p.id === item.id && p.disponible));
+            this.carritoPendiente = [];
+            if (items.length === 0) {
+                try { localStorage.removeItem('doriteque_cart'); } catch (e) { }
+                return;
+            }
+            this.avisoCarritoMostrado = true;
+            this.avisoCarritoAbierto = true;
+
+            let totalUSD = 0, totalItems = 0;
+            items.forEach(item => {
+                const prod = this.menu.productos.find(p => p.id === item.id);
+                totalUSD += this.precioUnitario(prod, item) * item.qty;
+                totalItems += item.qty;
+            });
+
+            const estilo = document.createElement('style');
+            estilo.textContent =
+                '.pendiente-aviso{position:fixed;left:12px;right:12px;bottom:16px;max-width:420px;margin:0 auto;background:#1f1f1f;color:#fff;' +
+                'border:1px solid #C41E3A;border-radius:18px;padding:18px;z-index:2600;box-shadow:0 10px 40px rgba(0,0,0,.6);text-align:center;}' +
+                '.pendiente-aviso h3{margin:0 0 6px;font-size:1.1rem;font-weight:800;}' +
+                '.pendiente-aviso p{margin:0 0 14px;font-size:.92rem;color:#b0b0b0;line-height:1.4;}' +
+                '.pendiente-botones{display:flex;gap:10px;}' +
+                '.pendiente-botones button{flex:1;padding:13px 8px;border-radius:12px;border:none;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit;}' +
+                '.pendiente-si{background:#C41E3A;color:#fff;}' +
+                '.pendiente-no{background:#333;color:#ddd;}';
+            document.head.appendChild(estilo);
+
+            const caja = document.createElement('div');
+            caja.className = 'pendiente-aviso';
+            caja.setAttribute('role', 'dialog');
+
+            const titulo = document.createElement('h3');
+            titulo.textContent = '¿Continuar con tu pedido? 🛒';
+            const texto = document.createElement('p');
+            texto.textContent = 'Dejaste ' + totalItems + (totalItems === 1 ? ' producto' : ' productos') +
+                ' por USD$ ' + totalUSD.toFixed(2) + ' sin enviar.';
+
+            const botones = document.createElement('div');
+            botones.className = 'pendiente-botones';
+
+            const cerrar = () => {
+                this.avisoCarritoAbierto = false;
+                if (caja.parentNode) caja.parentNode.removeChild(caja);
+                if (estilo.parentNode) estilo.parentNode.removeChild(estilo);
+            };
+
+            const si = document.createElement('button');
+            si.type = 'button';
+            si.className = 'pendiente-si';
+            si.textContent = 'Sí, continuar';
+            si.addEventListener('click', () => {
+                this.cart = items;
+                this.saveCart();
+                this.updateCartUI();
+                cerrar();
+            });
+
+            const no = document.createElement('button');
+            no.type = 'button';
+            no.className = 'pendiente-no';
+            no.textContent = 'No, empezar de nuevo';
+            no.addEventListener('click', () => {
+                try {
+                    localStorage.removeItem('doriteque_cart');
+                    localStorage.removeItem('doriteque_cart_t');
+                } catch (e) { }
+                cerrar();
+            });
+
+            botones.appendChild(si);
+            botones.appendChild(no);
+            caja.appendChild(titulo);
+            caja.appendChild(texto);
+            caja.appendChild(botones);
+            document.body.appendChild(caja);
+        } catch (e) {
+            console.warn('No se pudo revisar el pedido pendiente:', e.message);
         }
     },
 
@@ -284,7 +379,8 @@ const app = {
 
     revisarResena() {
         try {
-            if (this.resenaMostrada) return;
+            // Si hay un pedido sin enviar por preguntar (o la pregunta está abierta), la reseña espera
+            if (this.resenaMostrada || this.avisoCarritoAbierto || (this.carritoPendiente && this.carritoPendiente.length)) return;
             const url = urlResenaSegura(this.config.googleReviewUrl);
             if (!url) return;
 
@@ -717,6 +813,7 @@ const app = {
         try {
             localStorage.setItem('doriteque_cart', JSON.stringify(this.cart));
             localStorage.setItem('doriteque_cart_t', String(Date.now()));
+            sessionStorage.setItem('doriteque_cart_sesion', '1');
         } catch (e) { }
     },
 
@@ -945,7 +1042,13 @@ const app = {
 };
 
 // Pintar al instante lo último que vio el cliente (si lo hay); si es su primera visita, mostrar el esqueleto
-app.cart = cargarCarritoGuardado();
+(function () {
+    const guardado = cargarCarritoGuardado();
+    let mismaSesion = false;
+    try { mismaSesion = sessionStorage.getItem('doriteque_cart_sesion') === '1'; } catch (e) { }
+    if (guardado.length && mismaSesion) app.cart = guardado;       // viene de "Editar carrito": se recupera solo
+    else if (guardado.length) app.carritoPendiente = guardado;      // vuelve por su cuenta: se le pregunta
+})();
 try { if (!app.renderDesdeCache()) app.mostrarEsqueleto(); } catch (e) { console.warn('Arranque rápido omitido:', e.message); }
 
 document.addEventListener('DOMContentLoaded', () => app.init());

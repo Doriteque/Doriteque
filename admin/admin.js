@@ -266,20 +266,6 @@ const admin = {
         return null;
     },
 
-    async loadQRImage(url) {
-        try {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const blob = await res.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            const img = await this.loadImage(objectUrl, false);
-            URL.revokeObjectURL(objectUrl);
-            return img;
-        } catch (e1) {
-            return await this.loadImage(url, true);
-        }
-    },
-
     roundRect(ctx, x, y, w, h, r) {
         ctx.beginPath();
         ctx.moveTo(x + r, y);

@@ -1,4 +1,4 @@
-// Funciones para interactuar con Firestore
+// Funciones para leer y guardar datos en Firestore
 
 async function saveConfig(configData) {
   try {
@@ -21,15 +21,6 @@ async function loadConfig(callback) {
   }
 }
 
-async function saveMenu(menuData) {
-  try {
-    await window.setDoc(window.doc(window.db, 'menu', 'main'), menuData);
-    console.log('Menú guardado');
-  } catch (error) {
-    console.error('Error guardando menú:', error);
-  }
-}
-
 async function loadMenu(callback) {
   try {
     window.onSnapshot(window.doc(window.db, 'menu', 'main'), (doc) => {
@@ -49,21 +40,7 @@ async function loadMenu(callback) {
   }
 }
 
-async function uploadImage(file, path) {
-  try {
-    const storageRef = window.ref(window.storage, path);
-    const snapshot = await window.uploadBytes(storageRef, file);
-    const downloadURL = await window.getDownloadURL(snapshot.ref);
-    return downloadURL;
-  } catch (error) {
-    console.error('Error subiendo imagen:', error);
-    return null;
-  }
-}
-
 // Expone funciones globales
 window.saveConfig = saveConfig;
 window.loadConfig = loadConfig;
-window.saveMenu = saveMenu;
 window.loadMenu = loadMenu;
-window.uploadImage = uploadImage;
