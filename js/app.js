@@ -353,6 +353,7 @@ const app = {
         // Si el logo es el de siempre, se usa la versión liviana (12 KB en vez de 158 KB)
         document.getElementById('header-logo').src = esLogoPorDefecto ? 'assets/logo-header.webp' : logo;
         this.revisarResena();
+        this.revisarDiagnostico();
     },
 
     // Botón verde flotante para escribir por WhatsApp
@@ -414,6 +415,107 @@ const app = {
             this.mostrarAvisoResena(url, t, false);
         } catch (e) {
             console.warn('No se pudo revisar el aviso de reseña:', e.message);
+        }
+    },
+
+    // ---------- Diagnóstico de la reseña (para el dueño) ----------
+    // Abre el menú con  #diagnostico  al final de la dirección: explica por qué sale o no sale la reseña,
+    // y permite adelantar 3 horas el último pedido para probarla sin esperar.
+    revisarDiagnostico() {
+        try {
+            if (this._diagMostrado) return;
+            if (!(window.location && window.location.hash === '#diagnostico')) return;
+            this._diagMostrado = true;
+            try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { }
+
+            const ahora = Date.now();
+            const url = urlResenaSegura(this.config.googleReviewUrl);
+            let pedido = null;
+            try { pedido = JSON.parse(localStorage.getItem('doriteque_pedido') || 'null'); } catch (e) { }
+            const t = pedido ? Number(pedido.t) : 0;
+            const hasta = Number(localStorage.getItem('doriteque_resena_hasta') || 0);
+            const yaMostrada = !!t && localStorage.getItem('doriteque_resena') === String(t);
+            const hayCarrito = this.avisoCarritoAbierto || (this.carritoPendiente && this.carritoPendiente.length > 0);
+
+            const filas = [];
+            filas.push(['Enlace de reseñas', url ? '✅ guardado en el admin' : '❌ vacío o no válido (pégalo en Configuración del admin y guarda)']);
+            if (!t) {
+                filas.push(['Pedido enviado', '❌ no hay ninguno guardado en este teléfono (si ya enviaste uno, falta subir el checkout.js nuevo)']);
+            } else {
+                const min = Math.floor((ahora - t) / 60000);
+                filas.push(['Pedido enviado', 'hace ' + min + ' min']);
+                if (ahora - t < RESENA_ESPERA_MS) filas.push(['Tiempo', '⏳ faltan ' + (Math.ceil(RESENA_ESPERA_MS / 60000) - min) + ' min para que pueda salir']);
+                else if (ahora - t > RESENA_VENCE_MS) filas.push(['Tiempo', '❌ pasaron más de 3 días: ya no se pide']);
+                else filas.push(['Tiempo', '✅ dentro del rango (2 horas a 3 días)']);
+            }
+            filas.push(['Pausa', hasta > ahora ? '⏸️ en pausa por ' + Math.ceil((hasta - ahora) / 3600000) + ' h más (por una respuesta anterior)' : '✅ sin pausa']);
+            filas.push(['Ya mostrada para este pedido', yaMostrada ? '⚠️ sí (ya salió o ya respondió)' : '✅ no']);
+            filas.push(['Pedido sin enviar por preguntar', hayCarrito ? '⚠️ sí: primero se pregunta por él y la reseña espera' : '✅ no']);
+
+            const estilo = document.createElement('style');
+            estilo.textContent =
+                '.dg-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:3500;display:flex;align-items:center;justify-content:center;padding:14px;}' +
+                '.dg-card{background:#1f1f1f;color:#fff;border:1px solid #444;border-radius:18px;padding:18px;width:100%;max-width:400px;max-height:90vh;overflow:auto;}' +
+                '.dg-card h3{margin:0 0 12px;font-size:1.05rem;font-weight:800;}' +
+                '.dg-fila{background:#2a2a2a;border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:.85rem;line-height:1.4;}' +
+                '.dg-fila b{display:block;color:#b0b0b0;font-size:.75rem;font-weight:700;margin-bottom:2px;}' +
+                '.dg-btn{display:block;width:100%;padding:12px;margin-top:8px;border:none;border-radius:12px;font-size:.92rem;font-weight:800;cursor:pointer;font-family:inherit;}' +
+                '.dg-rojo{background:#C41E3A;color:#fff;}.dg-gris{background:#333;color:#ddd;}';
+            document.head.appendChild(estilo);
+
+            const overlay = document.createElement('div');
+            overlay.className = 'dg-overlay';
+            const card = document.createElement('div');
+            card.className = 'dg-card';
+            const titulo = document.createElement('h3');
+            titulo.textContent = '🔍 Diagnóstico de la reseña';
+            card.appendChild(titulo);
+            filas.forEach(par => {
+                const f = document.createElement('div');
+                f.className = 'dg-fila';
+                const b = document.createElement('b');
+                b.textContent = par[0];
+                const v = document.createElement('span');
+                v.textContent = par[1];
+                f.appendChild(b);
+                f.appendChild(v);
+                card.appendChild(f);
+            });
+
+            const boton = (texto, clase, accion) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'dg-btn ' + clase;
+                b.textContent = texto;
+                b.addEventListener('click', accion);
+                card.appendChild(b);
+            };
+            const recargar = () => { try { window.location.reload(); } catch (e) { } };
+
+            boton('⏩ Simular que el pedido fue hace 3 horas y probar', 'dg-rojo', () => {
+                try {
+                    localStorage.setItem('doriteque_pedido', JSON.stringify({ t: Date.now() - 3 * 60 * 60 * 1000 }));
+                    localStorage.removeItem('doriteque_resena');
+                    localStorage.removeItem('doriteque_resena_hasta');
+                } catch (e) { }
+                recargar();
+            });
+            boton('🧹 Borrar pausas y avisos anteriores', 'dg-gris', () => {
+                try {
+                    localStorage.removeItem('doriteque_resena');
+                    localStorage.removeItem('doriteque_resena_hasta');
+                } catch (e) { }
+                recargar();
+            });
+            boton('Cerrar', 'dg-gris', () => {
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                if (estilo.parentNode) estilo.parentNode.removeChild(estilo);
+            });
+
+            overlay.appendChild(card);
+            document.body.appendChild(overlay);
+        } catch (e) {
+            console.warn('No se pudo mostrar el diagnóstico:', e.message);
         }
     },
 
