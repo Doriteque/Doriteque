@@ -529,6 +529,7 @@ const admin = {
         setVal('msg-before-detail', this.config.msgBeforeDetail || 'Aquí tienes el detalle de tu pedido:');
         setVal('msg-after-total', this.config.msgAfterTotal || 'Te contactaremos pronto para confirmar.');
         setVal('cfg-resena', this.config.googleReviewUrl);
+        this.renderHorarioSemana(this.config.horarioSemana);
         this.mostrarTasaAuto();
     },
 
@@ -573,6 +574,93 @@ const admin = {
         alert('Copiada. Pulsa "Guardar configuración" para dejarla como respaldo.');
     },
 
+    // ---------- Horario de atención (para el letrero Abierto / Cerrado del menú) ----------
+    DIAS_HORARIO: [[1, 'Lunes'], [2, 'Martes'], [3, 'Miércoles'], [4, 'Jueves'], [5, 'Viernes'], [6, 'Sábado'], [0, 'Domingo']],
+
+    // Horario que tiene hoy el negocio: martes a domingo de 3:00 pm a 12:00 am, lunes cerrado
+    horarioPorDefecto() {
+        const o = {};
+        for (let d = 0; d < 7; d++) o[d] = { ab: d !== 1, d: '15:00', h: '00:00' };
+        return o;
+    },
+
+    renderHorarioSemana(datos) {
+        const cont = document.getElementById('horario-semana');
+        if (!cont) return;
+        const guardado = (datos && typeof datos === 'object') ? datos : this.horarioPorDefecto();
+        cont.innerHTML = '';
+
+        this.DIAS_HORARIO.forEach(([n, nombre]) => {
+            const x = guardado[n] || guardado[String(n)] || { ab: false, d: '15:00', h: '00:00' };
+
+            const fila = document.createElement('div');
+            fila.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#252525;border:1px solid #333;border-radius:12px;padding:10px 12px;margin-bottom:8px;';
+
+            const etiqueta = document.createElement('label');
+            etiqueta.style.cssText = 'display:flex;align-items:center;gap:8px;flex:1 1 130px;margin:0;font-weight:800;cursor:pointer;';
+            const check = document.createElement('input');
+            check.type = 'checkbox';
+            check.id = 'hs-ab-' + n;
+            check.checked = !!x.ab;
+            const texto = document.createElement('span');
+            texto.textContent = nombre;
+            etiqueta.appendChild(check);
+            etiqueta.appendChild(texto);
+
+            const tiempos = document.createElement('div');
+            tiempos.style.cssText = 'display:flex;align-items:center;gap:6px;';
+            const desde = document.createElement('input');
+            desde.type = 'time';
+            desde.id = 'hs-d-' + n;
+            desde.value = x.d || '15:00';
+            desde.style.cssText = 'width:112px;padding:8px;';
+            const a = document.createElement('span');
+            a.textContent = 'a';
+            a.style.color = '#b0b0b0';
+            const hasta = document.createElement('input');
+            hasta.type = 'time';
+            hasta.id = 'hs-h-' + n;
+            hasta.value = x.h || '00:00';
+            hasta.style.cssText = 'width:112px;padding:8px;';
+            tiempos.appendChild(desde);
+            tiempos.appendChild(a);
+            tiempos.appendChild(hasta);
+
+            const cerrado = document.createElement('span');
+            cerrado.textContent = 'Cerrado';
+            cerrado.style.cssText = 'color:#b0b0b0;font-weight:700;';
+
+            const actualizar = () => {
+                tiempos.style.display = check.checked ? 'flex' : 'none';
+                cerrado.style.display = check.checked ? 'none' : 'inline';
+            };
+            check.addEventListener('change', actualizar);
+            actualizar();
+
+            fila.appendChild(etiqueta);
+            fila.appendChild(tiempos);
+            fila.appendChild(cerrado);
+            cont.appendChild(fila);
+        });
+    },
+
+    // Lee el horario escrito en el formulario. Devuelve null (y avisa) si falta alguna hora.
+    leerHorarioSemana() {
+        const resultado = {};
+        for (const [n, nombre] of this.DIAS_HORARIO) {
+            const check = document.getElementById('hs-ab-' + n);
+            if (!check) return this.horarioPorDefecto(); // el formulario aún no se dibujó
+            const d = document.getElementById('hs-d-' + n).value;
+            const h = document.getElementById('hs-h-' + n).value;
+            if (check.checked && (!d || !h)) {
+                alert('Pon la hora de apertura y de cierre del ' + nombre.toLowerCase() + ', o márcalo como cerrado.');
+                return null;
+            }
+            resultado[n] = { ab: check.checked, d: d || '15:00', h: h || '00:00' };
+        }
+        return resultado;
+    },
+
     // Acepta solo enlaces https de Google para reseñas. Devuelve el enlace limpio o ''
     urlResenaValida(texto) {
         const t = String(texto || '').trim();
@@ -598,6 +686,8 @@ const admin = {
                 alert('El enlace de reseñas no parece válido. Debe empezar con https:// y ser de Google (por ejemplo https://g.page/r/...).');
                 return;
             }
+            const horarioSemana = this.leerHorarioSemana();
+            if (!horarioSemana) return;
             const newConfig = {
                 nombre: getVal('cfg-nombre'),
                 whatsapp: getVal('cfg-whatsapp'),
@@ -613,6 +703,7 @@ const admin = {
                 msgBeforeDetail: getVal('msg-before-detail'),
                 msgAfterTotal: getVal('msg-after-total'),
                 googleReviewUrl: resenaUrl,
+                horarioSemana: horarioSemana,
                 flyer: {
                     titulo: getVal('fly-titulo'),
                     subtitulo: getVal('fly-subtitulo'),

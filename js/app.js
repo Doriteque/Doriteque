@@ -67,17 +67,39 @@ function fmtBs(valor) {
 }
 
 // ---------- Horario del local (hora de Venezuela) ----------
-// 0 = domingo, 1 = lunes ... 6 = sábado. Cada día: [abre, cierra] en horas (15 = 3:00 pm, 24 = 12:00 am). null = cerrado todo el día.
-const HORARIO_LOCAL = {
-    0: [15, 24],   // domingo
-    1: null,       // lunes: cerrado
-    2: [15, 24],   // martes
-    3: [15, 24],   // miércoles
-    4: [15, 24],   // jueves
-    5: [15, 24],   // viernes
-    6: [15, 24]    // sábado
-};
+// Se configura desde el admin. Mientras no esté guardado, se usa este horario por defecto.
+// Cada día (0 = domingo ... 6 = sábado): [abre, cierra] en horas (15 = 3:00 pm; más de 24 = cierra después de medianoche). null = cerrado.
+const HORARIO_POR_DEFECTO = [
+    [15, 24],   // domingo
+    null,       // lunes: cerrado
+    [15, 24],   // martes
+    [15, 24],   // miércoles
+    [15, 24],   // jueves
+    [15, 24],   // viernes
+    [15, 24]    // sábado
+];
 const NOMBRES_DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function horaDecimal(texto) {
+    const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(texto || '').trim());
+    return m ? parseInt(m[1], 10) + parseInt(m[2], 10) / 60 : null;
+}
+
+// Convierte lo guardado en el admin ({ "0": {ab, d, h}, ... }) en el horario que usa el menú
+function construirHorario(datos) {
+    if (!datos || typeof datos !== 'object') return HORARIO_POR_DEFECTO;
+    const res = [];
+    for (let d = 0; d < 7; d++) {
+        const x = datos[d] || datos[String(d)];
+        if (!x || typeof x !== 'object') return HORARIO_POR_DEFECTO;
+        if (!x.ab) { res.push(null); continue; }
+        const abre = horaDecimal(x.d);
+        const cierra = horaDecimal(x.h);
+        if (abre === null || cierra === null) return HORARIO_POR_DEFECTO;
+        res.push([abre, cierra <= abre ? cierra + 24 : cierra]); // "hasta 00:00" = medianoche
+    }
+    return res;
+}
 
 function formatoHora(h) {
     const hh = h % 24;
@@ -88,21 +110,61 @@ function formatoHora(h) {
     return h12 + ':' + String(mm).padStart(2, '0') + ' ' + sufijo;
 }
 
+function horaCorta(h) {
+    const hh = h % 24;
+    const sufijo = hh >= 12 ? 'pm' : 'am';
+    let h12 = Math.floor(hh) % 12;
+    if (h12 === 0) h12 = 12;
+    const mm = Math.round((hh - Math.floor(hh)) * 60);
+    return h12 + (mm ? ':' + String(mm).padStart(2, '0') : '') + sufijo;
+}
+
+// Texto del horario generado solo, por ejemplo: "Martes a Domingo 3pm - 12am (Lunes cerrado)"
+function textoHorarioAuto(horario) {
+    const orden = [1, 2, 3, 4, 5, 6, 0]; // semana que empieza el lunes
+    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    const grupos = [];
+    const cerrados = [];
+    orden.forEach((dia, pos) => {
+        const h = horario[dia];
+        if (!h) { cerrados.push(cap(NOMBRES_DIAS[dia])); return; }
+        const ult = grupos[grupos.length - 1];
+        if (ult && ult.h[0] === h[0] && ult.h[1] === h[1] && ult.fin === pos - 1) ult.fin = pos;
+        else grupos.push({ h: h, ini: pos, fin: pos });
+    });
+    const partes = grupos.map(g => {
+        const dias = g.ini === g.fin
+            ? cap(NOMBRES_DIAS[orden[g.ini]])
+            : cap(NOMBRES_DIAS[orden[g.ini]]) + ' a ' + cap(NOMBRES_DIAS[orden[g.fin]]);
+        return dias + ' ' + horaCorta(g.h[0]) + ' - ' + horaCorta(g.h[1]);
+    });
+    let t = partes.join(' · ');
+    if (!t) return 'Cerrado por ahora';
+    if (cerrados.length) t += ' (' + cerrados.join(', ') + (cerrados.length > 1 ? ' cerrados' : ' cerrado') + ')';
+    return t;
+}
+
 // Venezuela está en UTC-4 todo el año (no cambia de hora)
-function estadoLocal(ahoraMs) {
+function estadoLocal(ahoraMs, horario) {
+    const h = horario || HORARIO_POR_DEFECTO;
     const d = new Date(ahoraMs - 4 * 60 * 60 * 1000);
     const dia = d.getUTCDay();
     const hora = d.getUTCHours() + d.getUTCMinutes() / 60;
-    const hoy = HORARIO_LOCAL[dia];
 
+    // ¿Sigue abierto desde ayer? (cierra después de medianoche)
+    const ayer = h[(dia + 6) % 7];
+    if (ayer && ayer[1] > 24 && hora < ayer[1] - 24) {
+        return { abierto: true, cierra: ayer[1] - 24, minutos: Math.max(1, Math.round((ayer[1] - 24 - hora) * 60)) };
+    }
+    const hoy = h[dia];
     if (hoy && hora >= hoy[0] && hora < hoy[1]) {
         return { abierto: true, cierra: hoy[1], minutos: Math.max(1, Math.round((hoy[1] - hora) * 60)) };
     }
     if (hoy && hora < hoy[0]) return { abierto: false, abreHoy: true, abre: hoy[0] };
     for (let i = 1; i <= 7; i++) {
         const nd = (dia + i) % 7;
-        const h = HORARIO_LOCAL[nd];
-        if (h) return { abierto: false, abreHoy: false, diasFalta: i, dia: nd, abre: h[0] };
+        const x = h[nd];
+        if (x) return { abierto: false, abreHoy: false, diasFalta: i, dia: nd, abre: x[0] };
     }
     return { abierto: false, sinHorario: true };
 }
@@ -396,7 +458,8 @@ const app = {
     renderConfig() {
         const c = this.config || {};
         document.getElementById('header-nombre').textContent = c.nombre || '';
-        document.getElementById('horario-text').textContent = ' ' + (c.horario || '') + ' | Tasa: Bs ' + fmtBs(this.tasa());
+        const textoHorario = (c.horario && String(c.horario).trim()) ? String(c.horario).trim() : textoHorarioAuto(construirHorario(c.horarioSemana));
+        document.getElementById('horario-text').textContent = ' ' + textoHorario + ' | Tasa: Bs ' + fmtBs(this.tasa());
         document.getElementById('link-instagram').href = 'https://instagram.com/' + soloUsuario(c.instagram);
         document.getElementById('link-tiktok').href = 'https://tiktok.com/@' + soloUsuario(c.tiktok);
         document.getElementById('link-whatsapp').href = 'https://wa.me/' + soloDigitos(c.whatsapp);
@@ -456,7 +519,7 @@ const app = {
                 el.id = 'estado-local';
                 barra.insertBefore(el, barra.firstChild);
             }
-            const est = estadoLocal(Date.now());
+            const est = estadoLocal(Date.now(), construirHorario(this.config && this.config.horarioSemana));
             el.className = 'estado-local ' + (est.abierto ? 'abierto' : 'cerrado');
             el.textContent = textoEstadoLocal(est);
         } catch (e) {

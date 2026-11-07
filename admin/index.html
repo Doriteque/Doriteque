@@ -78,7 +78,16 @@
                 <div class="form-group"><label>Correo</label><input type="email" id="cfg-email"></div>
                 <div class="form-group"><label>Instagram (sin @)</label><input type="text" id="cfg-instagram"></div>
                 <div class="form-group"><label>TikTok (sin @)</label><input type="text" id="cfg-tiktok"></div>
-                <div class="form-group"><label>Horario</label><input type="text" id="cfg-horario"></div>
+                <div class="form-group">
+                    <label>Horario de atención</label>
+                    <div id="horario-semana"></div>
+                    <small style="color:#b0b0b0;">Con esto el menú muestra el letrero "🟢 Abierto ahora / 🔴 Cerrado". Si cierras después de medianoche, pon la hora de la madrugada (por ejemplo, hasta 02:00).</small>
+                </div>
+                <div class="form-group">
+                    <label>Texto del horario (barra roja del menú)</label>
+                    <input type="text" id="cfg-horario" placeholder="Déjalo vacío y se genera solo">
+                    <small style="color:#b0b0b0;">Si lo dejas vacío, se arma solo con el horario de arriba (por ejemplo: Martes a Domingo 3pm - 12am).</small>
+                </div>
                 <div class="form-group">
                     <label>Enlace de reseñas de Google</label>
                     <input type="url" id="cfg-resena" placeholder="https://g.page/r/...">
