@@ -57,14 +57,14 @@
         <header class="admin-header">
             <h1><i class="fa-solid fa-gear"></i> Panel Admin</h1>
             <div class="admin-header-actions">
-                <button class="btn-header" onclick="admin.openFlyerEditor()" title="Editor de flyer QR"><i class="fa-solid fa-qrcode"></i></button>
+                <button class="btn-header" onclick="admin.openFlyerEditor()" title="Menú en imagen"><i class="fa-solid fa-image"></i></button>
                 <button class="btn-header btn-logout" onclick="admin.logout()" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
         </header>
 
         <nav class="admin-tabs">
             <button class="admin-tab active" data-tab="config" onclick="admin.switchTab('config')"><i class="fa-solid fa-sliders"></i> Configuración</button>
-            <button class="admin-tab" data-tab="flyer" onclick="admin.openFlyerEditor()"><i class="fa-solid fa-qrcode"></i> Flyer QR</button>
+            <button class="admin-tab" data-tab="flyer" onclick="admin.openFlyerEditor()"><i class="fa-solid fa-image"></i> Menú imagen</button>
             <button class="admin-tab" data-tab="productos" onclick="admin.switchTab('productos')"><i class="fa-solid fa-utensils"></i> Productos</button>
             <button class="admin-tab" data-tab="categorias" onclick="admin.switchTab('categorias')"><i class="fa-solid fa-folder"></i> Categorías</button>
             <button class="admin-tab" data-tab="modificadores" onclick="admin.switchTab('modificadores')"><i class="fa-solid fa-list-check"></i> Modificadores</button>
@@ -124,55 +124,53 @@
         </section>
 
         <section id="tab-flyer" class="admin-tab-content">
-            <div class="flyer-layout">
+            <div class="admin-card">
+                <h2><i class="fa-solid fa-image"></i> Menú en imagen</h2>
+                <p class="fly-hint">Crea imágenes verticales de tu menú (una por categoría) para subirlas a Estados de WhatsApp, Instagram o TikTok. Llevan un QR que lleva a tu menú digital.</p>
 
-                <div class="admin-card">
-                    <h2><i class="fa-solid fa-qrcode"></i> Flyer con QR</h2>
-                    <p class="fly-hint">La vista previa se actualiza sola. Pulsa "Guardar cambios" para conservar lo que edites.</p>
-
-                    <div class="fly-section">
-                        <h3>✍️ Textos</h3>
-                        <div class="form-group"><label>Título (vacío = nombre del negocio)</label><input type="text" id="fly-titulo" maxlength="40" oninput="admin.previewFlyerDebounced()"></div>
-                        <div class="form-group"><label>Subtítulo</label><input type="text" id="fly-subtitulo" maxlength="40" oninput="admin.previewFlyerDebounced()"></div>
-                        <div class="form-group"><label>Texto promocional (opcional)</label><input type="text" id="fly-promo" maxlength="50" placeholder="Ej: 10% OFF en tu primer pedido" oninput="admin.previewFlyerDebounced()"></div>
-                        <div class="form-group"><label>Texto del botón (CTA)</label><input type="text" id="fly-cta" maxlength="40" oninput="admin.previewFlyerDebounced()"></div>
-                        <div class="form-group" style="margin-bottom:0;"><label>Pie de página (vacío = redes automáticas)</label><input type="text" id="fly-pie" maxlength="60" placeholder="Ej: Pedidos por WhatsApp 0424-1234567" oninput="admin.previewFlyerDebounced()"></div>
-                    </div>
-
-                    <div class="fly-section">
-                        <h3>🎨 Colores</h3>
-                        <div class="palettes">
-                            <button type="button" class="pal" onclick="admin.aplicarPaleta('clasico')"><span class="pal-dots"><i style="background:#C41E3A"></i><i style="background:#FF7A00"></i><i style="background:#FDF4EE"></i></span>Clásico</button>
-                            <button type="button" class="pal" onclick="admin.aplicarPaleta('fuego')"><span class="pal-dots"><i style="background:#B71C1C"></i><i style="background:#FFB300"></i><i style="background:#FFF8E1"></i></span>Fuego</button>
-                            <button type="button" class="pal" onclick="admin.aplicarPaleta('bosque')"><span class="pal-dots"><i style="background:#1B5E20"></i><i style="background:#8BC34A"></i><i style="background:#F1F8E9"></i></span>Bosque</button>
-                            <button type="button" class="pal" onclick="admin.aplicarPaleta('oceano')"><span class="pal-dots"><i style="background:#0D47A1"></i><i style="background:#29B6F6"></i><i style="background:#E3F2FD"></i></span>Océano</button>
-                            <button type="button" class="pal" onclick="admin.aplicarPaleta('uva')"><span class="pal-dots"><i style="background:#4A148C"></i><i style="background:#BA68C8"></i><i style="background:#F3E5F5"></i></span>Uva</button>
-                            <button type="button" class="pal" onclick="admin.aplicarPaleta('noche')"><span class="pal-dots"><i style="background:#212121"></i><i style="background:#C41E3A"></i><i style="background:#F5F5F5"></i></span>Noche</button>
-                        </div>
-                        <div class="flyer-colors">
-                            <div class="form-group"><label>Principal</label><input type="color" id="fly-color-primario" oninput="admin.previewFlyerDebounced()"></div>
-                            <div class="form-group"><label>Marco</label><input type="color" id="fly-color-marco" oninput="admin.previewFlyerDebounced()"></div>
-                            <div class="form-group"><label>Fondo</label><input type="color" id="fly-color-fondo" oninput="admin.previewFlyerDebounced()"></div>
-                        </div>
-                        <label class="switch-row" style="margin-top:4px;">
-                            <span>Mostrar logo<small>Arriba y en el centro del QR</small></span>
-                            <input type="checkbox" id="fly-logo" onchange="admin.previewFlyerDebounced()">
-                        </label>
-                    </div>
+                <div class="fly-section">
+                    <h3>✍️ Textos</h3>
+                    <div class="form-group"><label>Título (vacío = nombre del negocio)</label><input type="text" id="fly-titulo" maxlength="40"></div>
+                    <div class="form-group"><label>Texto promocional (opcional)</label><input type="text" id="fly-promo" maxlength="50" placeholder="Ej: 10% OFF en tu primer pedido"></div>
+                    <div class="form-group"><label>Texto junto al QR</label><input type="text" id="fly-cta" maxlength="40" placeholder="¡ESCANEA Y PIDE AHORA!"></div>
+                    <div class="form-group" style="margin-bottom:0;"><label>Pie de la imagen (vacío = tus redes)</label><input type="text" id="fly-pie" maxlength="60" placeholder="Ej: Pedidos por WhatsApp 0424-1234567"></div>
                 </div>
 
-                <div class="admin-card flyer-side">
-                    <div class="flyer-preview">
-                        <img id="flyer-preview" alt="Vista previa del flyer">
-                        <p id="flyer-error" style="display:none;color:#FF1744;font-size:0.9rem;"></p>
+                <div class="fly-section">
+                    <h3>🎨 Colores y opciones</h3>
+                    <div class="palettes">
+                        <button type="button" class="pal" onclick="admin.aplicarPaleta('clasico')"><span class="pal-dots"><i style="background:#C41E3A"></i><i style="background:#FF7A00"></i><i style="background:#FDF4EE"></i></span>Clásico</button>
+                        <button type="button" class="pal" onclick="admin.aplicarPaleta('fuego')"><span class="pal-dots"><i style="background:#B71C1C"></i><i style="background:#FFB300"></i><i style="background:#FFF8E1"></i></span>Fuego</button>
+                        <button type="button" class="pal" onclick="admin.aplicarPaleta('bosque')"><span class="pal-dots"><i style="background:#1B5E20"></i><i style="background:#8BC34A"></i><i style="background:#F1F8E9"></i></span>Bosque</button>
+                        <button type="button" class="pal" onclick="admin.aplicarPaleta('oceano')"><span class="pal-dots"><i style="background:#0D47A1"></i><i style="background:#29B6F6"></i><i style="background:#E3F2FD"></i></span>Océano</button>
+                        <button type="button" class="pal" onclick="admin.aplicarPaleta('uva')"><span class="pal-dots"><i style="background:#4A148C"></i><i style="background:#BA68C8"></i><i style="background:#F3E5F5"></i></span>Uva</button>
+                        <button type="button" class="pal" onclick="admin.aplicarPaleta('noche')"><span class="pal-dots"><i style="background:#212121"></i><i style="background:#C41E3A"></i><i style="background:#F5F5F5"></i></span>Noche</button>
                     </div>
-                    <div class="fly-actions">
-                        <button class="btn-save" onclick="admin.saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
-                        <button class="btn-save btn-save-dark" onclick="admin.shareFlyer()"><i class="fa-solid fa-share-nodes"></i> Compartir flyer</button>
-                        <button class="btn-save btn-save-dark" onclick="admin.downloadFlyer()"><i class="fa-solid fa-download"></i> Descargar PNG (1080×1720)</button>
+                    <div class="flyer-colors">
+                        <div class="form-group"><label>Principal</label><input type="color" id="fly-color-primario"></div>
+                        <div class="form-group"><label>Marco</label><input type="color" id="fly-color-marco"></div>
+                        <div class="form-group"><label>Fondo</label><input type="color" id="fly-color-fondo"></div>
                     </div>
+                    <label class="switch-row" style="margin-top:4px;">
+                        <span>Mostrar logo<small>Arriba de cada imagen</small></span>
+                        <input type="checkbox" id="fly-logo">
+                    </label>
+                    <label class="switch-row" style="margin-top:8px;">
+                        <span>Mostrar fotos de los productos<small>Si las fotos no cargan, apágalo</small></span>
+                        <input type="checkbox" id="fly-fotos">
+                    </label>
                 </div>
 
+                <button class="btn-save" onclick="admin.saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Guardar estos ajustes</button>
+            </div>
+
+            <div class="admin-card" style="margin-top:16px;">
+                <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Generar imágenes</h2>
+                <p class="fly-hint">Usa tus productos disponibles y los colores de arriba. Si cambias algo, vuelve a generar. Primero sale "Más vendidos" (si tienes) y luego cada categoría.</p>
+                <button class="btn-save" id="menu-img-generar" onclick="admin.generarMenuImagenes()"><i class="fa-solid fa-image"></i> Generar imágenes del menú</button>
+                <p id="menu-img-estado" style="color:#b0b0b0;font-size:0.9rem;margin:12px 0;"></p>
+                <button class="btn-save btn-save-dark" id="menu-img-todas" style="display:none;" onclick="admin.compartirTodasMenu()"><i class="fa-solid fa-share-nodes"></i> Compartir todas juntas</button>
+                <div id="menu-img-lista" style="margin-top:12px;"></div>
             </div>
         </section>
 
