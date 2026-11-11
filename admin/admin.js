@@ -191,7 +191,7 @@ const admin = {
 
     // Reparte los productos de cada grupo en imágenes (sin dejar una imagen con un solo producto suelto)
     paginarMenu(grupos, conFotos) {
-        const filas = conFotos ? 6 : 8;
+        const filas = conFotos ? 5 : 7;
         const paginas = [];
         grupos.forEach(g => {
             const n = g.productos.length;
@@ -207,6 +207,13 @@ const admin = {
             }
         });
         return paginas;
+    },
+
+    // Brillo percibido de un color (0 = negro, 1 = blanco)
+    luminancia(hex) {
+        const n = parseInt(String(hex || '#ffffff').replace('#', ''), 16);
+        if (isNaN(n)) return 1;
+        return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
     },
 
     esColorClaro(hex) {
@@ -258,6 +265,8 @@ const admin = {
     },
 
     // Dibuja UNA imagen del menú (1080 x 1920, tamaño de Estados / Stories)
+    // Diseño: banda de color arriba con bordes en triángulos (como los nachos), lista limpia con precios en
+    // etiquetas de color, y banda oscura abajo con el QR.
     async dibujarPaginaMenu(pagina, f, logo, cache, conFotos, sitio) {
         const W = 1080, H = 1920;
         const canvas = document.createElement('canvas');
@@ -267,223 +276,296 @@ const admin = {
         const claro = this.esColorClaro(f.colorFondo);
         const colorTexto = claro ? '#1a1a1a' : '#f5f5f5';
         const colorSuave = claro ? '#6b6b6b' : '#b8b8b8';
+        const textoBanda = this.esColorClaro(f.colorPrimario) ? '#1a1a1a' : '#ffffff';
 
-        // Marco degradado
-        const grad = ctx.createLinearGradient(0, 0, W, H);
-        grad.addColorStop(0, f.colorMarco);
-        grad.addColorStop(1, this.shade(f.colorMarco, -18));
-        this.roundRect(ctx, 0, 0, W, H, 64);
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // Línea punteada
-        ctx.save();
-        this.roundRect(ctx, 28, 28, W - 56, H - 56, 46);
-        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-        ctx.lineWidth = 5;
-        ctx.setLineDash([20, 14]);
-        ctx.stroke();
-        ctx.restore();
-
-        // Fondo interior
-        this.roundRect(ctx, 56, 56, W - 112, H - 112, 36);
-        ctx.fillStyle = f.colorFondo;
-        ctx.fill();
-
-        // Textura sutil de triángulos
-        ctx.save();
-        this.roundRect(ctx, 56, 56, W - 112, H - 112, 36);
-        ctx.clip();
-        ctx.fillStyle = f.colorPrimario;
-        ctx.globalAlpha = 0.04;
-        for (let ty = 56; ty < H - 56; ty += 120) {
-            for (let tx = 56; tx < W - 56; tx += 120) {
-                ctx.beginPath();
-                ctx.moveTo(tx, ty + 120);
-                ctx.lineTo(tx + 60, ty);
-                ctx.lineTo(tx + 120, ty + 120);
-                ctx.closePath();
-                ctx.fill();
-            }
+        // Si el color principal es casi negro, los precios usan el color del marco (si contrasta con el fondo)
+        let colorPrecio = f.colorPrimario;
+        if (this.luminancia(f.colorPrimario) < 0.15 &&
+            Math.abs(this.luminancia(f.colorMarco) - this.luminancia(f.colorFondo)) >= 0.25) {
+            colorPrecio = f.colorMarco;
         }
+        const textoPrecio = this.esColorClaro(colorPrecio) ? '#1a1a1a' : '#ffffff';
+        // Color de la etiqueta de categoría: el marco si contrasta con el fondo; si no, el principal
+        const colorRotulo = Math.abs(this.luminancia(f.colorMarco) - this.luminancia(f.colorFondo)) >= 0.2 ? f.colorMarco : f.colorPrimario;
+        const textoRotulo = this.esColorClaro(colorRotulo) ? '#1a1a1a' : '#ffffff';
+
+        // Si ningún producto de esta imagen tiene foto, se dibuja sin espacio para fotos (se ve más limpio)
+        if (conFotos) {
+            const fotosPagina = await Promise.all(pagina.productos.map(p => this.cargarFotoMenu(p.imagen, cache)));
+            if (!fotosPagina.some(Boolean)) conFotos = false;
+        }
+
+        const triangulo = (x, y, s) => {
+            ctx.beginPath();
+            ctx.moveTo(x, y + s);
+            ctx.lineTo(x + s / 2, y);
+            ctx.lineTo(x + s, y + s);
+            ctx.closePath();
+            ctx.fill();
+        };
+
+        // ---- Fondo con textura sutil de triángulos ----
+        ctx.fillStyle = f.colorFondo;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = f.colorPrimario;
+        ctx.globalAlpha = 0.035;
+        for (let ty = 0; ty < H; ty += 120) {
+            for (let tx = 0; tx < W; tx += 120) triangulo(tx, ty, 120);
+        }
+        ctx.globalAlpha = 1;
+
+        // ---- Banda superior con borde en dientes ----
+        const bandaH = 440, diente = 60, prof = 26;
+        const gB = ctx.createLinearGradient(0, 0, W, bandaH);
+        gB.addColorStop(0, f.colorPrimario);
+        gB.addColorStop(1, this.shade(f.colorPrimario, -28));
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(W, 0);
+        ctx.lineTo(W, bandaH);
+        for (let x = W; x > 0; x -= diente) {
+            ctx.lineTo(x - diente / 2, bandaH + prof);
+            ctx.lineTo(x - diente, bandaH);
+        }
+        ctx.closePath();
+        ctx.fillStyle = gB;
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, W, bandaH);
+        ctx.clip();
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 0.07;
+        [[60, 290, 150], [250, 40, 110], [790, 60, 180], [940, 300, 130], [560, 330, 90]].forEach(t => triangulo(t[0], t[1], t[2]));
         ctx.globalAlpha = 1;
         ctx.restore();
 
+        // ---- Logo y nombre ----
         ctx.textAlign = 'center';
-        const titulo = (f.titulo || (this.config && this.config.nombre) || 'DORITEQUE').toUpperCase();
-
-        // ---- Encabezado: logo + nombre + categoría ----
+        let titulo = (f.titulo || (this.config && this.config.nombre) || 'DORITEQUE').toUpperCase();
         if (logo) {
+            const cy = 150, r = 86;
             ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.22)';
-            ctx.shadowBlur = 20;
-            ctx.shadowOffsetY = 6;
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 24;
+            ctx.shadowOffsetY = 8;
             ctx.beginPath();
-            ctx.arc(W / 2, 190, 88, 0, Math.PI * 2);
+            ctx.arc(W / 2, cy, r + 9, 0, Math.PI * 2);
             ctx.fillStyle = '#ffffff';
             ctx.fill();
             ctx.restore();
             ctx.save();
             ctx.beginPath();
-            ctx.arc(W / 2, 190, 80, 0, Math.PI * 2);
+            ctx.arc(W / 2, cy, r, 0, Math.PI * 2);
             ctx.clip();
-            ctx.drawImage(logo, W / 2 - 80, 110, 160, 160);
+            ctx.drawImage(logo, W / 2 - r, cy - r, r * 2, r * 2);
             ctx.restore();
-            ctx.beginPath();
-            ctx.arc(W / 2, 190, 84, 0, Math.PI * 2);
-            ctx.strokeStyle = f.colorPrimario;
-            ctx.lineWidth = 6;
-            ctx.stroke();
         }
-        ctx.fillStyle = f.colorPrimario;
-        ctx.font = logo ? '900 70px Arial, sans-serif' : '900 96px Arial, sans-serif';
-        try { ctx.letterSpacing = '5px'; } catch (e) { }
-        ctx.fillText(titulo, W / 2, logo ? 372 : 290);
+        let tam = logo ? 76 : 104;
+        ctx.fillStyle = textoBanda;
+        ctx.font = '900 ' + tam + 'px Arial, sans-serif';
+        try { ctx.letterSpacing = '6px'; } catch (e) { }
+        while (ctx.measureText(titulo).width > W - 150 && tam > 36) {
+            tam -= 4;
+            ctx.font = '900 ' + tam + 'px Arial, sans-serif';
+        }
+        ctx.fillText(titulo, W / 2, logo ? 372 : 258);
         try { ctx.letterSpacing = '0px'; } catch (e) { }
 
-        // Cinta con el nombre de la categoría
+        // ---- Etiqueta con el nombre de la categoría ----
         const rotulo = pagina.titulo + (pagina.total > 1 ? '  (' + pagina.num + '/' + pagina.total + ')' : '');
-        ctx.font = '900 46px Arial, sans-serif';
-        const anchoRotulo = Math.min(W - 200, ctx.measureText(rotulo).width + 110);
-        this.roundRect(ctx, (W - anchoRotulo) / 2, 410, anchoRotulo, 84, 42);
-        ctx.fillStyle = f.colorPrimario;
+        ctx.font = '900 44px Arial, sans-serif';
+        const anchoRotulo = Math.min(W - 160, ctx.measureText(rotulo).width + 120);
+        const rotuloY = bandaH + prof + 30;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.22)';
+        ctx.shadowBlur = 16;
+        ctx.shadowOffsetY = 6;
+        this.roundRect(ctx, (W - anchoRotulo) / 2, rotuloY, anchoRotulo, 84, 42);
+        ctx.fillStyle = colorRotulo;
         ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(this.ajustarTexto(ctx, rotulo, anchoRotulo - 50, 1)[0] || rotulo, W / 2, 468);
+        ctx.restore();
+        ctx.fillStyle = textoRotulo;
+        ctx.fillText(this.ajustarTexto(ctx, rotulo, anchoRotulo - 50, 1)[0] || rotulo, W / 2, rotuloY + 58);
 
+        let yTopLista = rotuloY + 84 + 44;
         if (f.promo) {
-            ctx.fillStyle = f.colorPrimario;
-            ctx.font = '800 34px Arial, sans-serif';
-            ctx.fillText(this.ajustarTexto(ctx, f.promo, W - 220, 1)[0] || '', W / 2, 538);
+            ctx.fillStyle = colorPrecio;
+            ctx.font = '800 36px Arial, sans-serif';
+            ctx.fillText(this.ajustarTexto(ctx, f.promo, W - 200, 1)[0] || '', W / 2, yTopLista + 28);
+            yTopLista += 60;
         }
 
         // ---- Lista de productos ----
-        // Con pocos productos las filas crecen y la lista se centra, para que no quede un hueco vacío
-        const baseFila = conFotos ? 146 : 108;
-        const maxFila = conFotos ? 196 : 150;
-        const espacio = 1468 - 566 - 24;
+        const pieTop = 1500;
+        const espacio = pieTop - 30 - yTopLista;
         const nProd = Math.max(1, pagina.productos.length);
+        const baseFila = conFotos ? 148 : 106;
+        const maxFila = conFotos ? 190 : 150;
         const filaAlto = Math.min(maxFila, Math.max(baseFila, Math.floor(espacio / nProd)));
-        const foto = conFotos ? filaAlto - 30 : 0;
-        const yInicio = 566 + Math.min(110, Math.max(0, Math.floor((espacio - nProd * filaAlto) / 2)));
-        const xTarjeta = 80, anchoTarjeta = W - 160;
-        const xPrecio = W - 112;
-        const xTexto = 100 + (conFotos ? foto + 24 : 8);
-        const anchoPrecio = 210;
-        const anchoTexto = xPrecio - anchoPrecio - xTexto;
+        const yInicio = yTopLista + Math.min(70, Math.max(0, Math.floor((espacio - nProd * filaAlto) / 2)));
+        const foto = conFotos ? filaAlto - 34 : 0;
+        const xIzq = 80, xDer = W - 80;
+        const xTexto = xIzq + (conFotos ? foto + 28 : 10);
 
         for (let i = 0; i < pagina.productos.length; i++) {
             const p = pagina.productos[i];
             const y = yInicio + i * filaAlto;
-            const alto = filaAlto - 14;
 
-            // Tarjeta de la fila
-            this.roundRect(ctx, xTarjeta, y, anchoTarjeta, alto, 22);
-            ctx.fillStyle = claro ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.08)';
+            // Etiqueta de precio
+            const precioTxt = '$' + (Number(p.precio) || 0).toFixed(2);
+            ctx.font = '900 44px Arial, sans-serif';
+            const anchoPill = Math.max(150, ctx.measureText(precioTxt).width + 56);
+            const xPill = xDer - anchoPill;
+            const altoPill = 68;
+            this.roundRect(ctx, xPill, y + (filaAlto - altoPill) / 2, anchoPill, altoPill, 34);
+            ctx.fillStyle = colorPrecio;
             ctx.fill();
-            this.roundRect(ctx, xTarjeta, y, anchoTarjeta, alto, 22);
-            ctx.strokeStyle = f.colorPrimario;
-            ctx.globalAlpha = 0.16;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.globalAlpha = 1;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = textoPrecio;
+            ctx.fillText(precioTxt, xPill + anchoPill / 2, y + filaAlto / 2 + 15);
 
-            // Foto (o relleno si no hay)
+            // Foto (o el logo del negocio si no hay)
             if (conFotos) {
-                const fx = 100, fy = y + (alto - foto) / 2;
+                const fx = xIzq, fy = y + (filaAlto - foto) / 2;
                 const img = await this.cargarFotoMenu(p.imagen, cache);
                 ctx.save();
-                this.roundRect(ctx, fx, fy, foto, foto, 18);
+                ctx.shadowColor = 'rgba(0,0,0,0.25)';
+                ctx.shadowBlur = 14;
+                ctx.shadowOffsetY = 5;
+                this.roundRect(ctx, fx, fy, foto, foto, 24);
+                ctx.fillStyle = claro ? '#ffffff' : '#2c2c2c';
+                ctx.fill();
+                ctx.restore();
+                ctx.save();
+                this.roundRect(ctx, fx, fy, foto, foto, 24);
                 ctx.clip();
                 if (img) {
                     const lado = Math.min(img.width, img.height);
                     ctx.drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, fx, fy, foto, foto);
                 } else {
-                    ctx.fillStyle = claro ? '#e9e2dc' : '#2c2c2c';
+                    ctx.fillStyle = claro ? '#efe9e4' : '#2c2c2c';
                     ctx.fillRect(fx, fy, foto, foto);
-                    // Plato dibujado (sin emoji, para que se vea igual en todos los teléfonos)
                     const pcx = fx + foto / 2, pcy = fy + foto / 2;
-                    ctx.strokeStyle = f.colorPrimario;
-                    ctx.globalAlpha = 0.85;
-                    ctx.lineWidth = 5;
-                    ctx.beginPath();
-                    ctx.arc(pcx, pcy, foto * 0.30, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(pcx, pcy, foto * 0.17, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.globalAlpha = 1;
+                    if (logo) {
+                        const d = foto * 0.62;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(pcx, pcy, d / 2, 0, Math.PI * 2);
+                        ctx.clip();
+                        ctx.drawImage(logo, pcx - d / 2, pcy - d / 2, d, d);
+                        ctx.restore();
+                    } else {
+                        ctx.strokeStyle = f.colorPrimario;
+                        ctx.globalAlpha = 0.85;
+                        ctx.lineWidth = 5;
+                        ctx.beginPath();
+                        ctx.arc(pcx, pcy, foto * 0.30, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(pcx, pcy, foto * 0.17, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.globalAlpha = 1;
+                    }
                 }
                 ctx.restore();
             }
 
             // Nombre y descripción
+            const anchoTexto = xPill - 28 - xTexto;
             ctx.textAlign = 'left';
-            ctx.font = '800 36px Arial, sans-serif';
+            ctx.font = '800 38px Arial, sans-serif';
             const lineasNombre = this.ajustarTexto(ctx, String(p.nombre || '').toUpperCase(), anchoTexto, 2);
             const maxDesc = lineasNombre.length === 1 ? (conFotos ? 2 : 1) : 0;
             let lineasDesc = [];
             if (maxDesc > 0 && p.descripcion) {
-                ctx.font = '500 25px Arial, sans-serif';
+                ctx.font = '500 26px Arial, sans-serif';
                 lineasDesc = this.ajustarTexto(ctx, p.descripcion, anchoTexto, maxDesc);
             }
-            const altoBloque = lineasNombre.length * 42 + lineasDesc.length * 30;
-            let ty = y + (alto - altoBloque) / 2 + 32;
+            const altoBloque = lineasNombre.length * 44 + lineasDesc.length * 31;
+            let ty = y + (filaAlto - altoBloque) / 2 + 34;
             ctx.fillStyle = colorTexto;
-            ctx.font = '800 36px Arial, sans-serif';
-            lineasNombre.forEach(l => { ctx.fillText(l, xTexto, ty); ty += 42; });
+            ctx.font = '800 38px Arial, sans-serif';
+            lineasNombre.forEach(l => { ctx.fillText(l, xTexto, ty); ty += 44; });
             ctx.fillStyle = colorSuave;
-            ctx.font = '500 25px Arial, sans-serif';
+            ctx.font = '500 26px Arial, sans-serif';
             ty -= 8;
-            lineasDesc.forEach(l => { ctx.fillText(l, xTexto, ty); ty += 30; });
+            lineasDesc.forEach(l => { ctx.fillText(l, xTexto, ty); ty += 31; });
 
-            // Precio
-            ctx.textAlign = 'right';
-            ctx.fillStyle = f.colorPrimario;
-            ctx.font = '900 46px Arial, sans-serif';
-            ctx.fillText('$' + (Number(p.precio) || 0).toFixed(2), xPrecio, y + alto / 2 + 16);
+            // Línea punteada entre productos
+            if (i < pagina.productos.length - 1) {
+                ctx.save();
+                ctx.strokeStyle = f.colorPrimario;
+                ctx.globalAlpha = 0.3;
+                ctx.lineWidth = 3;
+                ctx.setLineDash([3, 11]);
+                ctx.beginPath();
+                ctx.moveTo(xIzq, y + filaAlto - 1);
+                ctx.lineTo(xDer, y + filaAlto - 1);
+                ctx.stroke();
+                ctx.restore();
+            }
         }
 
-        // ---- Tarjeta inferior con el QR ----
-        const cardX = 90, cardW = W - 180, cardY = 1468, cardH = 372;
+        // ---- Banda inferior oscura con dientes y el QR ----
+        const colorPie = this.esColorClaro(f.colorPrimario) ? '#1a1a1a' : this.shade(f.colorPrimario, -45);
+        ctx.beginPath();
+        ctx.moveTo(0, H);
+        ctx.lineTo(0, pieTop);
+        for (let x = 0; x < W; x += diente) {
+            ctx.lineTo(x + diente / 2, pieTop - prof);
+            ctx.lineTo(x + diente, pieTop);
+        }
+        ctx.lineTo(W, H);
+        ctx.closePath();
+        ctx.fillStyle = colorPie;
+        ctx.fill();
+
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.12)';
+        ctx.beginPath();
+        ctx.rect(0, pieTop, W, H - pieTop);
+        ctx.clip();
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 0.06;
+        [[700, 1560, 160], [880, 1700, 120], [980, 1520, 90], [560, 1740, 100]].forEach(t => triangulo(t[0], t[1], t[2]));
+        ctx.globalAlpha = 1;
+        ctx.restore();
+
+        const qrCard = 330, qrX = 66, qrY = pieTop + 62;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
         ctx.shadowBlur = 24;
         ctx.shadowOffsetY = 8;
-        this.roundRect(ctx, cardX, cardY, cardW, cardH, 28);
-        ctx.fillStyle = '#FFFFFF';
+        this.roundRect(ctx, qrX, qrY, qrCard, qrCard, 30);
+        ctx.fillStyle = '#ffffff';
         ctx.fill();
         ctx.restore();
-        this.roundRect(ctx, cardX, cardY, cardW, cardH, 28);
-        ctx.strokeStyle = f.colorPrimario;
-        ctx.globalAlpha = 0.2;
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
+        QRGen.draw(ctx, sitio.url, qrX + 25, qrY + 25, qrCard - 50, f.colorPrimario, '#FFFFFF', 'H');
 
-        const qr = 290;
-        QRGen.draw(ctx, sitio.url, cardX + 36, cardY + 34, qr, f.colorPrimario, '#FFFFFF', 'H');
-
-        const tx = cardX + 36 + qr + 40;
-        const anchoDer = cardX + cardW - 36 - tx;
+        const tx = qrX + qrCard + 44;
+        const anchoDer = W - 64 - tx;
         ctx.textAlign = 'left';
-        ctx.fillStyle = f.colorPrimario;
-        ctx.font = '900 42px Arial, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 46px Arial, sans-serif';
         const lineasCta = this.ajustarTexto(ctx, f.cta, anchoDer, 3);
-        let cy = cardY + 92;
-        lineasCta.forEach(l => { ctx.fillText(l, tx, cy); cy += 50; });
-        ctx.fillStyle = '#555555';
-        ctx.font = '600 26px Arial, sans-serif';
-        ctx.fillText(this.ajustarTexto(ctx, sitio.texto, anchoDer, 1)[0] || '', tx, cy + 6);
+        let cy2 = qrY + 52;
+        lineasCta.forEach(l => { ctx.fillText(l, tx, cy2); cy2 += 54; });
+        cy2 += 2;
+        ctx.globalAlpha = 0.92;
+        ctx.font = '700 28px Arial, sans-serif';
+        ctx.fillText(this.ajustarTexto(ctx, sitio.texto, anchoDer, 1)[0] || '', tx, cy2);
+        cy2 += 42;
         if (sitio.pie) {
-            ctx.fillStyle = f.colorPrimario;
-            ctx.font = '700 26px Arial, sans-serif';
-            this.ajustarTexto(ctx, sitio.pie, anchoDer, 2).forEach((l, k) => ctx.fillText(l, tx, cy + 46 + k * 32));
+            ctx.globalAlpha = 0.72;
+            ctx.font = '500 25px Arial, sans-serif';
+            this.ajustarTexto(ctx, sitio.pie, anchoDer, 2).forEach(l => { ctx.fillText(l, tx, cy2); cy2 += 32; });
         }
+        ctx.globalAlpha = 0.7;
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#888888';
-        ctx.font = '500 23px Arial, sans-serif';
-        ctx.fillText('Precios en USD · Bs según la tasa del día', cardX + cardW / 2, cardY + cardH - 14);
+        ctx.font = '500 26px Arial, sans-serif';
+        ctx.fillText('Precios en USD · Bs según la tasa del día', W / 2, H - 52);
+        ctx.globalAlpha = 1;
 
         return canvas.toDataURL('image/jpeg', 0.92);
     },
